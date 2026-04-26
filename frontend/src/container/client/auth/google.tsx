@@ -12,7 +12,7 @@ const Google = () => {
   };
   return (
     <>
-      <div className="w-full h-full flex flex-col items-center justify-center">
+      <div className="w-screen h-screen flex flex-col items-center justify-center">
         {isLoading && (
           <div className="animate-spin rounded-full h-16 w-16 border-4 border-yellow-400 border-t-transparent mb-4"></div>
         )}

@@ -12,7 +12,7 @@ const Kakao = () => {
   };
   return (
     <>
-      <div className="w-full h-full flex flex-col items-center justify-center bg-gray-50">
+      <div className="w-screen h-screen flex flex-col items-center justify-center">
         {/* 로딩 스피너 */}
         {isLoading && (
           <div className="animate-spin rounded-full h-16 w-16 border-4 border-yellow-400 border-t-transparent mb-4"></div>
