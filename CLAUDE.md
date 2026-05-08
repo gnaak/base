@@ -25,7 +25,7 @@
 ## 작업 원칙
 
 1. Phase 단위로 작업. 한 번에 여러 Phase 수행 금지.
-2. 매 Phase 완료 시 `agent-progress.md` 업데이트 후 커밋.
+2. 매 Phase 완료 시 `PROGRESS.md` 업데이트 후 커밋.
 3. 테스트 통과 후 다음 Phase 진행.
 4. 불확실하면 멈추고 질문.
 5. 과도한 추상화 금지.
