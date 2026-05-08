@@ -9,20 +9,20 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class RawEnv(BaseSettings):
-    # PostgreSQL 설정
-    postgres_port: int = 5432
+    # MySQL 설정
+    mysql_port: int = 3306
 
     # LOCAL
-    local_postgres_user: str
-    local_postgres_password: str
-    local_postgres_host: str
-    local_postgres_db: str
+    local_mysql_user: str
+    local_mysql_password: str
+    local_mysql_host: str
+    local_mysql_db: str
 
     # PROD
-    prod_postgres_user: str
-    prod_postgres_password: str
-    prod_postgres_host: str
-    prod_postgres_db: str
+    prod_mysql_user: str
+    prod_mysql_password: str
+    prod_mysql_host: str
+    prod_mysql_db: str
 
     jwt_secret: str
     hash_key: str
@@ -72,36 +72,36 @@ class Settings:
             return "prod"
         return "local"
 
-    # PostgreSQL 설정
+    # MySQL 설정
     @property
-    def postgres_user(self) -> str:
-        return getattr(self.raw, f"{self.env}_postgres_user")
+    def mysql_user(self) -> str:
+        return getattr(self.raw, f"{self.env}_mysql_user")
 
     @property
-    def postgres_password(self) -> str:
-        return getattr(self.raw, f"{self.env}_postgres_password")
+    def mysql_password(self) -> str:
+        return getattr(self.raw, f"{self.env}_mysql_password")
 
     @property
-    def postgres_host(self) -> str:
-        return getattr(self.raw, f"{self.env}_postgres_host")
+    def mysql_host(self) -> str:
+        return getattr(self.raw, f"{self.env}_mysql_host")
 
     @property
-    def postgres_db(self) -> str:
-        return getattr(self.raw, f"{self.env}_postgres_db")
+    def mysql_db(self) -> str:
+        return getattr(self.raw, f"{self.env}_mysql_db")
 
     @property
-    def postgres_port(self) -> int:
-        return self.raw.postgres_port
+    def mysql_port(self) -> int:
+        return self.raw.mysql_port
 
     # SQLAlchemy용 비동기 DB URL
     @property
     def database_url(self) -> str:
-        user = quote_plus(self.postgres_user)
-        password = quote_plus(self.postgres_password)
-        host = self.postgres_host
+        user = quote_plus(self.mysql_user)
+        password = quote_plus(self.mysql_password)
+        host = self.mysql_host
         return (
-            f"postgresql+asyncpg://{user}:{password}"
-            f"@{host}:{self.postgres_port}/{self.postgres_db}"
+            f"mysql+aiomysql://{user}:{password}"
+            f"@{host}:{self.mysql_port}/{self.mysql_db}"
         )
 
     @property

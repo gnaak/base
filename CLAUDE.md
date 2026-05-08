@@ -8,7 +8,6 @@
 |------|------|
 | Frontend | React 19 + TypeScript + Vite + TanStack Query v5 + Tailwind CSS v3 |
 | Backend | FastAPI + SQLAlchemy 2.0 (async) + PostgreSQL + Redis + Alembic |
-| 인프라 | Docker + Docker Compose (postgres:16, redis:7) |
 | 인증 | JWT + OAuth (Google, Kakao) |
 
 ## 네이밍 규칙
