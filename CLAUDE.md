@@ -7,7 +7,7 @@
 | 영역 | 기술 |
 |------|------|
 | Frontend | React 19 + TypeScript + Vite + TanStack Query v5 + Tailwind CSS v3 |
-| Backend | FastAPI + SQLAlchemy 2.0 (async) + PostgreSQL + Redis + Alembic |
+| Backend | FastAPI + SQLAlchemy 2.0 (async) + MySQL + Redis + Alembic |
 | 인증 | JWT + OAuth (Google, Kakao) |
 
 ## 네이밍 규칙
