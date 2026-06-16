@@ -4,7 +4,7 @@ import KakaoLoginBtn from "@/hooks/auth/kakaoLogin";
 
 const ClientMain = () => {
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center gap-3">
+    <div className="w-screen h-screen flex flex-col items-center justify-center gap-3">
       <GoogleLoginBtn />
       <GoogleLoginPopup />
       <KakaoLoginBtn />

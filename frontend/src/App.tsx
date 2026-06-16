@@ -11,7 +11,6 @@ import ClientLayOut from "./container/client/layout";
 import ClientMain from "./container/client/main";
 import Google from "./container/client/auth/google";
 import Kakao from "./container/client/auth/kakao";
-import Test from "./container/test";
 
 function App() {
   const queryClient = new QueryClient();
@@ -27,8 +26,6 @@ function App() {
                 <Route path="/kakao/login" element={<Kakao />} />
                 <Route path="/google/login" element={<Google />} />
               </Route>
-
-              <Route path="/test" element={<Test />}></Route>
 
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route element={<AdminLayout />}>

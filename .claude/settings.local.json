@@ -5,7 +5,14 @@
     "CLAUDE_CODE_SUBAGENT_MODEL": "haiku"
   },
   "permissions": {
-    "allow": ["Bash(*)", "PowerShell(*)"],
+    "allow": [
+      "Bash(*)",
+      "PowerShell(*)",
+      "WebSearch",
+      "Read(//d/AI/stable-diffusion-webui-forge/**)",
+      "WebFetch(domain:github.com)",
+      "Read(//d/AI/sd-webui-forge-neo/**)"
+    ],
     "deny": [
       "Bash(rm -rf *)",
       "Bash(rm -fr *)",
@@ -17,7 +24,6 @@
       "Bash(rm -rf /*)",
       "Bash(sudo rm *)",
       "Bash(sudo rm -rf *)",
-      "Bash(:(){ :|:& };:)",
       "Bash(mkfs* *)",
       "Bash(dd if=* of=/dev/*)",
       "Bash(chmod -R 777 /)",
