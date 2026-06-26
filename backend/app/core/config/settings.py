@@ -68,7 +68,7 @@ class Settings:
         if app_env in ("local", "development"):
             return "local"
         hostname = socket.gethostname().lower()
-        if hostname == "homeserver":
+        if hostname.startswith("ip-") or hostname.startswith("ec2-"):
             return "prod"
         return "local"
 
