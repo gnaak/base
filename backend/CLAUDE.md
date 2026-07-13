@@ -6,20 +6,19 @@
 app/
 ├── main.py
 ├── core/
-│   ├── config/settings.py         # 환경변수 (local/prod 자동 감지)
+│   ├── config/settings.py          # 환경변수 (local_/prod_ 접두사로 환경별 분리)
 │   ├── database/ (base.py, redis.py)
-│   ├── exception/handler.py       # 전역 예외 핸들러
-│   ├── middleware/ (cors.py, register.py, secure_headers_middleware.py)
+│   ├── exception/handler.py        # 전역 예외 핸들러
+│   ├── logging/                    # 로깅 설정·컨텍스트 (request_id 연동)
+│   ├── middleware/ (cors.py, register.py, request_id.py, security.py)
 │   ├── provider/
 │   │   ├── http/ (endpoint.py, login.py, service.py)
-│   │   └── web_socket/
-│   └── utils/response.py          # success() / fail()
+│   │   └── web_socket/ (동일 구성)
+│   └── utils/response.py           # success() / fail()
 └── module/
-    ├── __init__.py                 # register_routers()
-    ├── auth/ user/ admin/
-    ├── infra/
-    │   └── google/ kakao/ redis/
-    └── web_socket/
+    ├── __init__.py                  # 모델 import + register_routers()
+    ├── auth/ user/ admin/ web_socket/
+    └── infra/ (google/ kakao/ redis/ gpt/)
 ```
 
 ## 도메인 모듈 — 4파일 세트
@@ -42,9 +41,8 @@ module/[domain]/
 
 | 모듈 | 역할 |
 |------|------|
-| `infra/claude/` | Anthropic SDK 래핑, 스트리밍, prompt caching |
-| `infra/google/` | Google OAuth 호출 |
-| `infra/kakao/` | Kakao OAuth 호출 |
+| `infra/gpt/` | OpenAI SDK 래핑 (스트리밍, 오디오) |
+| `infra/google/` `infra/kakao/` | OAuth 호출 |
 | `infra/redis/` | Redis 전용 repository |
 
 ## 라우터 패턴
@@ -61,12 +59,14 @@ async def example(p: ServiceProvider):
     return success(result)
 
 @router.get("/me")
-@with_login                             # 로그인 필요, p.user 사용 가능
-async def get_me(p: ServiceProvider):
+@with_login()                           # 로그인 필요, p.user 사용 가능. 괄호 필수!
+async def get_me(p: ServiceProvider):   # 관리자 전용은 @with_login("admin")
     return success(p.user)
 ```
 
-응답: `success(data)` → `{success:true, data}` / `fail("msg")` → `{success:false, message}`
+- `success(data)` → `{success:true, data}` 응답
+- `fail("msg")` → HTTPException을 **raise** (return 아님). 전역 핸들러가 `{success:false, message}`로 변환
+- WebSocket은 `with_provider_web_socket` / `with_login_web_socket` 사용
 
 ## ServiceProvider — lazy-load 프로퍼티
 

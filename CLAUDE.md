@@ -18,9 +18,8 @@
 | 타입 / 인터페이스 | PascalCase | `UserInfo`, `BaseResponse<T>` |
 | 함수 / 변수 / 훅 | camelCase | `handleSubmit`, `useAuth` |
 | 이벤트 핸들러 | `handle` 접두사 | `handleClick` |
-| 폴더명 | camelCase (소문자 시작) | `sideBar/`, `web_socket/` |
-| 파일명 (Frontend) | camelCase | `inputbox.tsx`, `useAPI.ts` |
-| 파일명 (Backend) | snake_case | `user_service.py` |
+| 폴더/파일 (Frontend) | camelCase | `sideBar/`, `useAPI.ts` |
+| 폴더/파일 (Backend) | snake_case | `web_socket/`, `user_service.py` |
 
 ## 작업 원칙
 
