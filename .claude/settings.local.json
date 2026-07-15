@@ -1,17 +1,10 @@
 {
-  "env": {
-    "MAX_OUTPUT_TOKENS": "16000",
-    "MAX_THINKING_TOKENS": "10000",
-    "CLAUDE_CODE_SUBAGENT_MODEL": "haiku"
-  },
   "permissions": {
     "allow": [
       "Bash(*)",
       "PowerShell(*)",
       "WebSearch",
-      "Read(//d/AI/stable-diffusion-webui-forge/**)",
-      "WebFetch(domain:github.com)",
-      "Read(//d/AI/sd-webui-forge-neo/**)"
+      "WebFetch(*)"
     ],
     "deny": [
       "Bash(rm -rf *)",
