@@ -47,11 +47,11 @@ const KakaoLoginBtn = ({
 
   return (
     <button
-      className="relative bg-[#FEE500] flex flex-row w-[300px] py-3 rounded-lg items-center justify-center text-black font-semibold"
+      className="w-full py-3.5 rounded-xl flex items-center justify-center gap-3 active:scale-[0.98] transition-all bg-[#FEE500] hover:bg-[#FDD835]"
       onClick={() => kakaoAuth()}
     >
-      <img src={kakao} alt="kakao login" className="absolute w-5 h-5 left-10" />
-      <span>카카오 로그인</span>{" "}
+      <img src={kakao} alt="kakao login" className="w-5 h-5" />
+      <span className="text-sm font-semibold text-[#191919]">카카오로 계속하기</span>
     </button>
   );
 };
