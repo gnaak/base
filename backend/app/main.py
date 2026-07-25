@@ -16,10 +16,10 @@ logger = get_logger(__name__)
 # 1. Lifespan 설정: 서버 시작과 종료 시 실행될 로직
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("🚀 Xerovatar Backend 시작 중...")
+    print("🚀 Backend 시작 중...")
 
     yield
-    print("🛑 Xerovatar Backend 종료 중...")
+    print("🛑 Backend 종료 중...")
     # 예: await ws_manager.close_all()
 
 

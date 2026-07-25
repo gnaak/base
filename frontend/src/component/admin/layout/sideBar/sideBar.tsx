@@ -6,7 +6,7 @@ import { usePost } from "@/hooks/common/useAPI";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { AdminSidebarProps } from "@/types/admin/sidebar";
-import { parseUserInfo } from "@/hooks/common/getCookie";
+import { useAuth } from "@/hooks/common/useAuth";
 import Modal from "@/component/admin/ui/feedback/modal";
 
 const AdminSidebar = ({
@@ -17,12 +17,16 @@ const AdminSidebar = ({
   const navigate = useNavigate();
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
   const logoutMutation = usePost<void, void>("api/auth/logout_admin");
-  const user = parseUserInfo("admin");
-  const roleLabel = user?.role === "MD" ? "MD" : "관리자";
+  const { admin, setAdmin } = useAuth();
+  // email은 백엔드 session_info에 추가했을 때만 내려온다
+  const displayName = admin?.email ?? admin?.user_nickname ?? "";
 
   const handleLogout = () => {
     logoutMutation.mutate(undefined, {
-      onSuccess: () => navigate("/admin/login"),
+      onSuccess: () => {
+        setAdmin(null);
+        navigate("/admin/login", { replace: true });
+      },
     });
   };
 
@@ -62,7 +66,7 @@ const AdminSidebar = ({
   `}
           >
             <h1 className="text-xl font-bold whitespace-nowrap tracking-tight">
-              Xerovatar
+              Admin
             </h1>
           </div>
 
@@ -102,18 +106,16 @@ const AdminSidebar = ({
           <div className="group flex items-center h-[62px] relative">
             <div className="flex items-center justify-center w-16 shrink-0">
               <div className="w-8 h-8 rounded-full bg-sub1 flex items-center justify-center text-white font-bold text-xs shrink-0">
-                {user?.email?.[0]?.toUpperCase() ?? "A"}
+                {displayName[0]?.toUpperCase() ?? "A"}
               </div>
             </div>
             <div
               className={`transition-all duration-300 ease-in-out overflow-hidden ${collapsed ? "opacity-0 w-0" : "opacity-100 w-full"}`}
             >
               <p className="text-xs font-bold text-white truncate w-28">
-                {user?.email ?? ""}
+                {displayName}
               </p>
-              <p className="text-[10px] text-sub2/60 truncate w-28">
-                {roleLabel}
-              </p>
+              <p className="text-[10px] text-sub2/60 truncate w-28">관리자</p>
             </div>
             <button
               type="button"

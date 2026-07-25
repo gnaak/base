@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePost } from "../common/useAPI";
-import { parseUserInfo } from "../common/getCookie";
 import { useAuth } from "../common/useAuth";
 
 interface KakaoProps {
@@ -41,7 +40,7 @@ const KakaoCallBack = ({
   apiURL,
 }: KakaoProps) => {
   const navigate = useNavigate();
-  const { setUser } = useAuth();
+  const { syncAuth } = useAuth();
   const code = new URL(document.location.toString()).searchParams.get("code");
   const device_info = navigator.userAgent;
 
@@ -50,8 +49,8 @@ const KakaoCallBack = ({
     if (!code) return;
     try {
       const data = await kakaoLogin.mutateAsync({ code, device_info });
-      const updatedUser = parseUserInfo();
-      setUser(updatedUser);
+      // 로그인 응답으로 내려온 쿠키를 Context에 반영
+      syncAuth();
       onSuccess?.(data);
       navigate(redirectURL, { replace: true });
     } catch (err) {

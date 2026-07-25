@@ -1,6 +1,6 @@
-import { parseUserInfo, refreshExp } from "@/hooks/common/getCookie";
-import { useRefreshToken } from "@/hooks/common/useAPI";
-import { useEffect, useState } from "react";
+import { refreshExp } from "@/hooks/common/getCookie";
+import { useAuth } from "@/hooks/common/useAuth";
+import { useEffect, useRef, useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import AdminSidebar from "@/component/admin/layout/sideBar/sideBar";
 import { AdminMenuItem } from "@/types/admin/sidebar";
@@ -63,30 +63,32 @@ const getHeaderInfoByPath = (pathname: string) => {
 };
 
 const AdminLayout = () => {
-  const user = parseUserInfo("admin");
-  const isRefresh = refreshExp("admin");
-  const refresh = useRefreshToken();
+  const { admin, isLoading, refreshAuth } = useAuth();
   const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // refresh는 1회만 시도한다 (실패 후 effect가 다시 돌아 무한 호출되는 것 방지)
+  const refreshTried = useRef(false);
+
+  const isAdmin = admin?.auth_type === "admin";
 
   useEffect(() => {
-    if (!user && isRefresh) {
-      refresh()
-        .then(() => {
-          window.location.reload();
-        })
-        .catch(() => {
-          navigate("/admin/login");
-        });
+    if (isLoading || isAdmin) return;
+
+    // access 쿠키만 만료된 상태라면 refresh 후 Context를 갱신한다 (페이지 새로고침 없음)
+    if (!refreshTried.current && refreshExp("admin")) {
+      refreshTried.current = true;
+      refreshAuth("admin").then((next) => {
+        if (next?.auth_type !== "admin") {
+          navigate("/admin/login", { replace: true });
+        }
+      });
       return;
     }
 
-    if (!user || user.auth_type !== "admin") {
-      navigate("/admin/login");
-    }
-  }, [user, isRefresh, navigate, refresh]);
+    navigate("/admin/login", { replace: true });
+  }, [isLoading, isAdmin, navigate, refreshAuth]);
 
-  if (!user || user.auth_type !== "admin") {
+  if (isLoading || !isAdmin) {
     return null;
   }
 

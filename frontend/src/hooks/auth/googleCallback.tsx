@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { baseURL } from "@/hooks/common/useAPI";
+import { useAuth } from "@/hooks/common/useAuth";
 
 interface GoogleCallbackProps {
   apiURL: string;
@@ -11,6 +12,7 @@ interface GoogleCallbackProps {
 
 const GoogleCallback = ({ apiURL, redirectURL, onSuccess, onError }: GoogleCallbackProps) => {
   const navigate = useNavigate();
+  const { syncAuth } = useAuth();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -25,7 +27,9 @@ const GoogleCallback = ({ apiURL, redirectURL, onSuccess, onError }: GoogleCallb
     let stateObj: { next?: string; isPopup?: boolean } = {};
     try {
       if (rawState) stateObj = JSON.parse(decodeURIComponent(rawState));
-    } catch {}
+    } catch {
+      // state가 없거나 깨진 경우 기본값으로 진행
+    }
 
     const exchange = async () => {
       try {
@@ -45,8 +49,10 @@ const GoogleCallback = ({ apiURL, redirectURL, onSuccess, onError }: GoogleCallb
           window.opener.postMessage({ type: "GOOGLE_LOGIN_SUCCESS", next: stateObj.next }, window.location.origin);
           window.close();
         } else {
+          // 로그인 응답으로 내려온 쿠키를 Context에 반영 (새로고침 없이 user 상태 갱신)
+          syncAuth();
           onSuccess();
-          navigate(stateObj.next || redirectURL);
+          navigate(stateObj.next || redirectURL, { replace: true });
         }
       } catch {
         onError({ message: "네트워크 오류" });

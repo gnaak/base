@@ -1,5 +1,4 @@
 # app/module/__init__.py
-from modulefinder import test
 from fastapi import FastAPI
 
 # --- 라우터 등록 함수 ---

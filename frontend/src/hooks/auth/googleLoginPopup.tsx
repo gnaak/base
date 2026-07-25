@@ -1,6 +1,6 @@
 import google from "@/assets/client/login/google.svg";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../common/useAuth";
-import { parseUserInfo } from "../common/getCookie";
 
 interface GoogleLoginPopupProps {
   client_id?: string;
@@ -20,7 +20,8 @@ const GoogleLoginPopup = ({
   className = "",
   text = "Google 계정으로 로그인",
 }: GoogleLoginPopupProps) => {
-  const { setUser } = useAuth();
+  const { syncAuth } = useAuth();
+  const navigate = useNavigate();
 
   const handlePopupLogin = () => {
     const searchParams = new URLSearchParams(window.location.search);
@@ -39,7 +40,7 @@ const GoogleLoginPopup = ({
     const left = window.screenX + (window.innerWidth - width) / 2;
     const top = window.screenY + (window.innerHeight - height) / 2;
 
-    const popup = window.open(
+    window.open(
       authUrl,
       "googleLoginPopup",
       `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`,
@@ -51,12 +52,12 @@ const GoogleLoginPopup = ({
       if (event.origin !== window.location.origin) return;
 
       if (event.data?.type === "GOOGLE_LOGIN_SUCCESS") {
-        const updatedUser = parseUserInfo();
-        setUser(updatedUser);
+        // 팝업이 심어준 쿠키를 Context에 반영 (새로고침 없이 user 상태 갱신)
+        syncAuth();
 
         // 리스너 제거 및 페이지 이동
         window.removeEventListener("message", handleMessage);
-        window.location.href = event.data.next || "/";
+        navigate(event.data.next || "/", { replace: true });
       }
     };
 

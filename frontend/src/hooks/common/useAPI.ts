@@ -15,47 +15,45 @@ export interface BaseResponse<T> {
 }
 
 /**
- * Refresh Token을 사용해 세션을 갱신하는 함수
+ * Refresh Token으로 세션을 갱신한다. (훅이 아니므로 어디서든 호출 가능)
  *
- * 현재 경로가 `/admin`으로 시작하면 admin refresh API를,
- * 그 외에는 user refresh API를 호출합니다.
+ * 쿠키 기반(refresh_token)이며 credentials: "include"로 요청된다.
+ * throw 하지 않고 성공 여부만 boolean으로 돌려준다.
  *
- * 쿠키 기반(refresh_token)를 사용하며,
- * credentials: "include"로 요청됩니다.
+ * @param type "user" | "admin" — 호출할 refresh 엔드포인트를 결정
  *
- * ⚠️ 주의
- * - refresh API가 401을 반환해도 throw 하지 않습니다.
- * - 항상 true를 반환합니다.
- * - redirect / logout 처리는 호출 측에서 판단해야 합니다.
+ * @example
+ * const ok = await requestRefresh("admin");
+ */
+export const requestRefresh = async (
+  type: "user" | "admin" = "user",
+): Promise<boolean> => {
+  const refreshUrl =
+    type === "admin" ? "api/auth/refresh_token_admin" : "api/auth/refresh_token";
+
+  const response = await fetch(`${baseURL}/${refreshUrl}`, {
+    method: "POST",
+    credentials: "include",
+  });
+
+  return response.ok;
+};
+
+/**
+ * 현재 경로를 기준으로 refresh 대상을 정하는 훅.
+ * `/admin`으로 시작하면 admin refresh API를, 그 외에는 user refresh API를 호출한다.
  *
- * @returns {() => Promise<boolean>}
- * refresh 요청을 수행하는 비동기 함수
+ * ⚠️ 세션 상태를 Context에 반영해야 한다면 `useAuth().refreshAuth()`를 쓸 것.
+ * 이 훅은 useGet/usePost 내부의 401 재시도 전용이다.
  *
  * @example
  * const refreshToken = useRefreshToken();
  * await refreshToken();
  */
 export const useRefreshToken = () => {
-  const { pathname } = window.location;
+  const type = window.location.pathname.startsWith("/admin") ? "admin" : "user";
 
-  const refreshUrl = pathname.startsWith("/admin")
-    ? "api/auth/refresh_token_admin"
-    : "api/auth/refresh_token";
-
-  const refresh = async () => {
-    const response = await fetch(`${baseURL}/${refreshUrl}`, {
-      method: "POST",
-      credentials: "include",
-    });
-
-    if (response.status === 401) {
-      return false;
-    }
-
-    return true;
-  };
-
-  return refresh;
+  return () => requestRefresh(type);
 };
 
 /**
