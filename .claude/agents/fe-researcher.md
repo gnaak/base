@@ -10,8 +10,8 @@ allowed-tools: Read, Grep, Glob
 1. 관련 컴포넌트/컨테이너 파일 목록 (/src/component/, /src/container/ 탐색)
 2. 재사용 가능한 기존 컴포넌트 패턴
 3. 관련 타입 정의 (/src/types/ 탐색)
-4. 관련 훅 (/src/hooks/common/ 탐색)
-5. WebSocket 연동이 필요한 경우 useAudioWs.ts 패턴 확인
+4. 관련 훅 (/src/hooks/common/ 탐색 — useAPI.ts, useAuth.ts, getCookie.ts)
+5. 인증이 얽힌 화면이면 AuthProvider와 useAuth 사용처 확인
 6. 주의해야 할 의존성
 
 코드 구현 절대 하지 말고 요약만 반환.

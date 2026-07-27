@@ -78,9 +78,12 @@ const AdminLayout = () => {
     if (!refreshTried.current && refreshExp("admin")) {
       refreshTried.current = true;
       refreshAuth("admin").then((next) => {
-        if (next?.auth_type !== "admin") {
-          navigate("/admin/login", { replace: true });
+        if (next?.auth_type === "admin") {
+          // 갱신 성공 — 나중에 세션이 또 끊기면 다시 시도할 수 있게 가드를 푼다
+          refreshTried.current = false;
+          return;
         }
+        navigate("/admin/login", { replace: true });
       });
       return;
     }

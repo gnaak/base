@@ -11,8 +11,10 @@ fe-researcher 결과를 바탕으로:
 2. 페이지 컨테이너 → /src/container/{admin|client}/
 
 규칙:
-- Tailwind CSS 사용 (tailwind.config.js 참고)
-- 색상은 index.css에 정의된 CSS 변수 활용
+- Tailwind CSS 사용. 쓰려는 클래스가 tailwind.config.js에 실제로 있는지 확인할 것
+  (없는 클래스는 에러 없이 조용히 무시된다)
+- 색상은 시맨틱 토큰 우선 — bg-bg-card, text-text-main, border-line 등
+  전체 목록은 frontend/CLAUDE.md "스타일 — Tailwind" 참고
 - 공통 UI 컴포넌트가 있으면 반드시 재사용, 직접 만들지 않는다
   - feedback: Alert, Modal, FormModal, Toast → /src/component/admin/ui/feedback/
   - form: Button, InputBox, SelectBox, TextareaBox, Checkbox, RadioButton, Toggle, Calendar → /src/component/admin/ui/form/

@@ -1,8 +1,8 @@
 // src/context/AuthProvider.tsx
 
-import { useCallback, useEffect, useRef, useState, ReactNode } from "react";
-import { parseUserInfo } from "@/hooks/common/getCookie";
-import { requestRefresh } from "@/hooks/common/useAPI";
+import { useCallback, useEffect, useState, ReactNode } from "react";
+import { clearAuthCookies, parseUserInfo } from "@/hooks/common/getCookie";
+import { AUTH_EXPIRED_EVENT, requestRefresh } from "@/hooks/common/useAPI";
 import { AuthContext } from "@/hooks/common/useAuth";
 import { AuthType } from "@/types/auth";
 import { UserInfo } from "@/types/user";
@@ -19,11 +19,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [admin, setAdmin] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 동일 타입의 refresh 요청이 동시에 여러 번 날아가지 않도록 진행 중인 Promise를 공유한다.
-  const pendingRef = useRef<Partial<Record<AuthType, Promise<UserInfo | null>>>>(
-    {},
-  );
-
   const syncAuth = useCallback((type: AuthType = "user") => {
     const parsed: UserInfo | null = parseUserInfo(type);
     if (type === "admin") setAdmin(parsed);
@@ -32,23 +27,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const refreshAuth = useCallback(
-    (type: AuthType = "user") => {
-      const pending = pendingRef.current[type];
-      if (pending) return pending;
+    async (type: AuthType = "user") => {
+      // 동시 호출은 requestRefresh 내부에서 하나로 합쳐진다.
+      const ok = await requestRefresh(type);
 
-      const task = requestRefresh(type)
-        .catch(() => false)
-        .then((ok) => {
-          // 성공/실패와 무관하게 현재 쿠키 기준으로 상태를 맞춘다.
-          const next = syncAuth(type);
-          return ok ? next : null;
-        })
-        .finally(() => {
-          delete pendingRef.current[type];
-        });
+      // 실패했으면 쿠키를 지워서 로그인 상태를 확실히 해제한다.
+      // (남겨두면 401 → refresh 실패를 계속 반복하게 된다)
+      if (!ok) clearAuthCookies(type);
 
-      pendingRef.current[type] = task;
-      return task;
+      const next = syncAuth(type);
+      return ok ? next : null;
     },
     [syncAuth],
   );
@@ -57,6 +45,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     syncAuth("user");
     syncAuth("admin");
     setIsLoading(false);
+  }, [syncAuth]);
+
+  // useAPI에서 세션이 만료되면(refresh까지 실패) 쿠키가 지워진 상태로 이벤트가 온다.
+  // 여기서 Context를 비워야 라우트 가드가 로그인 화면으로 보낼 수 있다.
+  useEffect(() => {
+    const handleExpired = (event: Event) => {
+      const { type } = (event as CustomEvent<{ type: AuthType }>).detail ?? {};
+      syncAuth(type ?? "user");
+    };
+
+    window.addEventListener(AUTH_EXPIRED_EVENT, handleExpired);
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, handleExpired);
   }, [syncAuth]);
 
   return (
