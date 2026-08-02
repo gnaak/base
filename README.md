@@ -2,11 +2,11 @@
 
 풀스택 프로젝트 베이스 템플릿.
 
-| 영역 | 기술 |
-|------|------|
+| 영역     | 기술                                                                                   |
+| -------- | -------------------------------------------------------------------------------------- |
 | Frontend | React 19 + TypeScript + Vite 6 + TanStack Query v5 + Tailwind CSS v3 + react-router v7 |
-| Backend | FastAPI + SQLAlchemy 2.0 (async) + MySQL(aiomysql) + Redis + Alembic |
-| 인증 | 쿠키 기반 JWT + OAuth (Google, Kakao) |
+| Backend  | FastAPI + SQLAlchemy 2.0 (async) + MySQL(aiomysql) + Redis + Alembic                   |
+| 인증     | 쿠키 기반 JWT + OAuth (Google, Kakao)                                                  |
 
 작업 규칙은 [CLAUDE.md](CLAUDE.md), [frontend/CLAUDE.md](frontend/CLAUDE.md), [backend/CLAUDE.md](backend/CLAUDE.md) 참고.
 
@@ -61,30 +61,42 @@ APP_ENV=prod uvicorn app.main:app     # 운영
 > Docker나 Cloud Run에 올리면 조용히 `local`로 떨어져서 쿠키가 `secure=False`로 나가고
 > 세션이 안 잡힌다. **배포 시 반드시 명시할 것.** 기동 로그에 인식된 env가 찍히니 확인하면 된다.
 
-| 키 | 설명 |
-|----|------|
-| `{env}_mysql_*`, `{env}_redis_*` | DB / Redis 접속 정보 |
-| `{env}_cors_origins` | CORS 허용 오리진 (쉼표 구분) |
-| `{env}_cookie_domain` | 쿠키 도메인. 비우면 host-only. 서브도메인 공유 시 `.example.com` |
-| `jwt_secret`, `hash_key` | 토큰 서명 / 해시 |
-| `{kakao,google}_client_*`, `{env}_*_redirect_uri` | OAuth |
-| `openai_api_key` | GPT 연동 (선택) |
+| 키                                                | 설명                                                                       |
+| ------------------------------------------------- | -------------------------------------------------------------------------- |
+| `{env}_mysql_*`, `{env}_redis_*`                  | DB / Redis 접속 정보                                                       |
+| `{env}_domain`                                    | 사이트 도메인 (쉼표 구분). **CORS 오리진과 쿠키 도메인이 여기서 유도된다** |
+| `jwt_secret`, `hash_key`                          | 토큰 서명 / 해시                                                           |
+| `{kakao,google}_client_*`, `{env}_*_redirect_uri` | OAuth                                                                      |
+| `openai_api_key`                                  | GPT 연동 (선택)                                                            |
+
+`{env}_domain`에는 **스킴 없이 도메인만** 적는다. 스킴은 env가 정하고(local→`http`, prod→`https`),
+포트는 CORS에만 반영된다 (쿠키는 포트를 구분하지 않는다).
+
+```bash
+local_domain=localhost:3000,127.0.0.1:3000
+prod_domain=gnaak.com          # 같은 호스트 배포 → 쿠키는 host-only
+prod_domain=.gnaak.com,api.gnaak.com   # 서브도메인 분리 → 점 찍은 쪽 기준으로 쿠키 공유
+```
+
+앞에 점을 찍은 항목이 있을 때만 쿠키가 서브도메인까지 공유된다. 점이 없으면 host-only(가장 안전).
 
 프론트는 `frontend/.env`(개발) / `frontend/.env.production`(빌드). `VITE_APP_PUBLIC_BASE_URL`이 백엔드 주소다.
+프론트·백엔드가 같은 호스트라면(`gnaak.com` + `gnaak.com/api`) **비워두면 된다** —
+빈 값이면 요청이 `/api/...` 상대경로로 나가서 자동으로 same-origin이 된다.
 
 ---
 
 ## 새 프로젝트로 가져갈 때
 
-| 위치 | 할 일 |
-|------|-------|
-| `backend/.env`, `frontend/.env*` | **키 전부 교체.** 특히 `jwt_secret`·`hash_key`는 프로젝트마다 새로 만들 것 |
-| `prod_cors_origins`, `prod_cookie_domain` | 실제 도메인으로 채우기 |
-| `frontend/.env.production` | `VITE_APP_PUBLIC_BASE_URL`이 비어 있음 |
-| `backend/.gitignore` | `alembic/versions/*.py` 제외 줄을 **삭제** — 안 지우면 마이그레이션이 커밋되지 않는다 |
-| `frontend/src/container/admin/layout.tsx` | `adminMenu` 샘플 메뉴 |
-| `docker-compose.yml` | DB 이름·비밀번호 |
-| `PROJECT.md` / `PROGRESS.md` | 새로 작성 (템플릿에는 없다) |
+| 위치                                      | 할 일                                                                                 |
+| ----------------------------------------- | ------------------------------------------------------------------------------------- |
+| `backend/.env`, `frontend/.env*`          | **키 전부 교체.** 특히 `jwt_secret`·`hash_key`는 프로젝트마다 새로 만들 것            |
+| `prod_domain`                             | 실제 도메인으로 채우기 (`gnaak.com`)                                                  |
+| `frontend/.env.production`                | `VITE_APP_PUBLIC_BASE_URL`이 비어 있음                                                |
+| `backend/.gitignore`                      | `alembic/versions/*.py` 제외 줄을 **삭제** — 안 지우면 마이그레이션이 커밋되지 않는다 |
+| `frontend/src/container/admin/layout.tsx` | `adminMenu` 샘플 메뉴                                                                 |
+| `docker-compose.yml`                      | DB 이름·비밀번호                                                                      |
+| `PROJECT.md` / `PROGRESS.md`              | 새로 작성 (템플릿에는 없다)                                                           |
 
 관리자 계정은 아직 생성 수단이 없다. `tb_admins`에 argon2 해시를 직접 넣거나
 `auth_service.hash_password()`로 만들어서 INSERT할 것.

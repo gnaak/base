@@ -4,33 +4,33 @@
 
 ## 기술 스택
 
-| 영역 | 기술 |
-|------|------|
+| 영역     | 기술                                                                                   |
+| -------- | -------------------------------------------------------------------------------------- |
 | Frontend | React 19 + TypeScript + Vite 6 + TanStack Query v5 + Tailwind CSS v3 + react-router v7 |
-| Backend | FastAPI + SQLAlchemy 2.0 (async) + MySQL(aiomysql) + Redis + Alembic |
-| 인증 | 쿠키 기반 JWT + OAuth (Google, Kakao) |
+| Backend  | FastAPI + SQLAlchemy 2.0 (async) + MySQL(aiomysql) + Redis + Alembic                   |
+| 인증     | 쿠키 기반 JWT + OAuth (Google, Kakao)                                                  |
 
 ## 네이밍 규칙
 
-| 대상 | 규칙 | 예시 |
-|------|------|------|
-| 컴포넌트 / 클래스 | PascalCase | `UserCard`, `AuthService` |
-| 타입 / 인터페이스 | PascalCase | `UserInfo`, `BaseResponse<T>` |
-| 함수 / 변수 / 훅 | camelCase | `handleSubmit`, `useAuth` |
-| 이벤트 핸들러 | `handle` 접두사 | `handleClick` |
-| 폴더/파일 (Frontend) | camelCase | `sideBar/`, `useAPI.ts` |
-| 폴더/파일 (Backend) | snake_case | `web_socket/`, `user_service.py` |
+| 대상                 | 규칙            | 예시                             |
+| -------------------- | --------------- | -------------------------------- |
+| 컴포넌트 / 클래스    | PascalCase      | `UserCard`, `AuthService`        |
+| 타입 / 인터페이스    | PascalCase      | `UserInfo`, `BaseResponse<T>`    |
+| 함수 / 변수 / 훅     | camelCase       | `handleSubmit`, `useAuth`        |
+| 이벤트 핸들러        | `handle` 접두사 | `handleClick`                    |
+| 폴더/파일 (Frontend) | camelCase       | `sideBar/`, `useAPI.ts`          |
+| 폴더/파일 (Backend)  | snake_case      | `web_socket/`, `user_service.py` |
 
 ## 인증 계약 (프론트·백엔드 공통)
 
 로그인/refresh 성공 시 백엔드가 내려주는 쿠키 4종. 접두사는 `user_` 또는 `admin_`.
 
-| 쿠키 | httponly | 수명 | 용도 |
-|------|----------|------|------|
-| `{p}access_token` | ✅ | 1h | API 인증 |
-| `{p}refresh_token` | ✅ | 6h | 세션 갱신 |
-| `{p}user_info` | ❌ | 1h | 프론트가 읽는 세션 정보 (base64 JSON) |
-| `{p}refresh_exp` | ❌ | 6h | "refresh 세션이 살아있다"는 마커 |
+| 쿠키               | httponly | 수명 | 용도                                  |
+| ------------------ | -------- | ---- | ------------------------------------- |
+| `{p}access_token`  | ✅       | 1h   | API 인증                              |
+| `{p}refresh_token` | ✅       | 6h   | 세션 갱신                             |
+| `{p}user_info`     | ❌       | 1h   | 프론트가 읽는 세션 정보 (base64 JSON) |
+| `{p}refresh_exp`   | ❌       | 6h   | "refresh 세션이 살아있다"는 마커      |
 
 - `user_info`의 필드는 `auth_token.create_jwt_token()`의 `session_info`와 프론트 `types/user.ts`의 `UserInfo`가 **1:1로 일치**해야 한다.
 - `user_`와 `admin_`은 완전히 독립된 세션이다. 동시에 둘 다 살아있을 수 있다.
@@ -64,8 +64,10 @@ cd frontend && npm run build
 > `PROJECT.md`, `PROGRESS.md`는 템플릿에 없다. 새 프로젝트를 시작할 때 만든다.
 
 **Phase 양식** (`PROJECT.md`):
+
 ```markdown
 ## Phase N: [이름]
+
 **목표**: ...
 **수행 내용**: ...
 **완료 기준**: - [ ] ...
@@ -73,8 +75,10 @@ cd frontend && npm run build
 ```
 
 **진행 기록 양식** (`PROGRESS.md`):
+
 ```markdown
 ## N 단계: [이름]
+
 - 상태: ⬜ 대기 / 🔄 진행중 / ✅ 완료 / ❌ 실패
 - 완료 시각:
 - 수행 내용:
@@ -83,15 +87,14 @@ cd frontend && npm run build
 
 ## 새 프로젝트로 가져갈 때 교체할 것
 
-| 위치 | 내용 |
-|------|------|
-| `backend/.env` / `frontend/.env` | DB·JWT·OAuth 키 전부. **`jwt_secret`·`hash_key`는 프로젝트마다 새로 생성할 것** |
-| `backend/.env` → `prod_cors_origins` | 운영 도메인. 비어 있으면 브라우저 요청이 전부 CORS로 막힌다 |
-| `backend/.env` → `prod_cookie_domain` | 같은 호스트면 비워둔다. 서브도메인을 넘나들 때만 `.example.com` |
-| `backend/.gitignore` | `alembic/versions/*.py` 제외 줄을 **삭제.** 템플릿에서만 유효한 설정이고, 안 지우면 마이그레이션이 커밋되지 않는다 |
-| `frontend/.env.production` | `VITE_APP_PUBLIC_BASE_URL`이 비어 있음 |
-| `frontend/src/container/admin/layout.tsx` | `adminMenu` 샘플 메뉴 |
-| `docker-compose.yml` | DB 이름·비밀번호 (`backend/.env`의 `local_*`과 일치시킬 것) |
+| 위치                                      | 내용                                                                                                               |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `backend/.env` / `frontend/.env`          | DB·JWT·OAuth 키 전부. **`jwt_secret`·`hash_key`는 프로젝트마다 새로 생성할 것**                                    |
+| `backend/.env` → `prod_domain`            | 운영 도메인 (`gnaak.com`). CORS 오리진과 쿠키 도메인이 여기서 유도된다                                             |
+| `backend/.gitignore`                      | `alembic/versions/*.py` 제외 줄을 **삭제.** 템플릿에서만 유효한 설정이고, 안 지우면 마이그레이션이 커밋되지 않는다 |
+| `frontend/.env.production`                | `VITE_APP_PUBLIC_BASE_URL`이 비어 있음                                                                             |
+| `frontend/src/container/admin/layout.tsx` | `adminMenu` 샘플 메뉴                                                                                              |
+| `docker-compose.yml`                      | DB 이름·비밀번호 (`backend/.env`의 `local_*`과 일치시킬 것)                                                        |
 
 **배포 시 `APP_ENV=prod`를 반드시 명시할 것.** 안 주면 호스트명으로 추측하는데, 이 추측은 EC2
 기본 호스트명에서만 맞는다. Docker·Cloud Run에 올리면 조용히 `local`로 떨어져서 쿠키가
@@ -102,11 +105,11 @@ cd frontend && npm run build
 
 ## 트러블슈팅
 
-| 상황 | 대응 |
-|------|------|
-| 로그인은 200인데 세션이 안 잡힘 | 쿠키 자체가 저장됐는지 확인 (도메인·SameSite·호스트 불일치) |
-| 무한 새로고침 / 401 반복 | 위 "무한 새로고침 주의" 참고. `user_info` 쿠키가 남아있는지부터 확인 |
-| 외부 API 키 없음 | mock 데이터로 fallback, 키 확보 후 교체 |
-| 테스트 실패 | 원인 파악 후 수정. 우회 금지 |
-| 불명확한 요구사항 | 추측 말고 질문 후 진행 |
-| 예상치 못한 파일 발견 | 삭제 전 반드시 확인 요청 |
+| 상황                            | 대응                                                                 |
+| ------------------------------- | -------------------------------------------------------------------- |
+| 로그인은 200인데 세션이 안 잡힘 | 쿠키 자체가 저장됐는지 확인 (도메인·SameSite·호스트 불일치)          |
+| 무한 새로고침 / 401 반복        | 위 "무한 새로고침 주의" 참고. `user_info` 쿠키가 남아있는지부터 확인 |
+| 외부 API 키 없음                | mock 데이터로 fallback, 키 확보 후 교체                              |
+| 테스트 실패                     | 원인 파악 후 수정. 우회 금지                                         |
+| 불명확한 요구사항               | 추측 말고 질문 후 진행                                               |
+| 예상치 못한 파일 발견           | 삭제 전 반드시 확인 요청                                             |

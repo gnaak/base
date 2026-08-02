@@ -1,7 +1,5 @@
 from functools import wraps
 
-from app.module.auth.auth_token import AuthToken
-
 
 def with_login(type: str = "user"):
     """
@@ -14,6 +12,11 @@ def with_login(type: str = "user"):
     def decorator(func):
         @wraps(func)
         async def wrapper(p, *args, **kwargs):
+            # import를 함수 안에서 한다 (ServiceProvider와 같은 이유).
+            # app.module이 라우터를 통해 이 모듈을 import하므로, 최상단에 두면
+            # 이 모듈을 app.module보다 먼저 import했을 때 순환 import로 깨진다.
+            from app.module.auth.auth_token import AuthToken
+
             token_util = AuthToken()
             user_id, auth_type = await token_util.get_token_info(p.request, type)
             p.request.user_id = user_id

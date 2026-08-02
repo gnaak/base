@@ -1,4 +1,5 @@
 # app/core/config/settings.py
+import ipaddress
 import os
 import socket
 from pathlib import Path
@@ -51,14 +52,16 @@ class RawEnv(BaseSettings):
     prod_redis_port: int
     prod_redis_password: Optional[str] = None
 
-    # CORS 허용 오리진 (쉼표 구분)
-    local_cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
-    prod_cors_origins: str = ""
-
-    # 쿠키 도메인. 비워두면 host-only 쿠키가 된다 (프론트·백엔드가 같은 호스트일 때).
-    # 서브도메인을 넘나들어야 하면 ".example.com" 처럼 지정한다.
-    local_cookie_domain: Optional[str] = None
-    prod_cookie_domain: Optional[str] = None
+    # 사이트 도메인 (쉼표 구분). CORS 허용 오리진과 쿠키 도메인을 여기서 함께 유도한다.
+    #
+    #   local_domain=localhost:3000,127.0.0.1:3000
+    #   prod_domain=gnaak.com
+    #
+    # - 스킴은 쓰지 않는다. env에 따라 자동으로 붙는다 (local→http, prod→https)
+    # - 앞에 점을 찍으면(.gnaak.com) 쿠키를 서브도메인까지 공유한다.
+    #   점이 없으면 host-only 쿠키 — 범위가 제일 좁아 안전하고, 대부분 이게 맞다
+    local_domain: str = "localhost:3000,127.0.0.1:3000"
+    prod_domain: str = ""
 
     model_config = SettingsConfigDict(env_file=os.path.join(os.path.dirname(__file__), "..", "..", "..", ".env"), env_file_encoding="utf-8")
 
@@ -172,17 +175,53 @@ class Settings:
     def redis_password(self) -> Optional[str]:
         return getattr(self.raw, f"{self.env}_redis_password")
 
-    # CORS / 쿠키 설정
+    # 도메인 설정 — CORS 오리진과 쿠키 도메인을 {env}_domain 하나에서 유도한다
+    @property
+    def domains(self) -> list[str]:
+        """`.env`에 적힌 도메인 목록. 앞의 점(서브도메인 공유 표시)은 그대로 둔다."""
+        raw = getattr(self.raw, f"{self.env}_domain") or ""
+        return [entry.strip() for entry in raw.split(",") if entry.strip()]
+
+    @property
+    def scheme(self) -> str:
+        return "https" if self.env == "prod" else "http"
+
     @property
     def cors_origins(self) -> list[str]:
-        raw = getattr(self.raw, f"{self.env}_cors_origins") or ""
-        return [origin.strip() for origin in raw.split(",") if origin.strip()]
+        """
+        CORS 허용 오리진. 도메인마다 스킴을 붙여서 만든다.
+
+        CORS는 포트까지 따지므로 `localhost:3000`처럼 포트를 적은 그대로 써야 한다.
+        (쿠키는 반대로 포트를 구분하지 않는다 — cookie_domain 참고)
+        """
+        return [f"{self.scheme}://{entry.lstrip('.')}" for entry in self.domains]
 
     @property
     def cookie_domain(self) -> Optional[str]:
-        """비어 있으면 None. 브라우저는 domain 속성이 없는 쿠키를 host-only로 저장한다."""
-        value = getattr(self.raw, f"{self.env}_cookie_domain")
-        return value.strip() or None if value else None
+        """
+        쿠키의 domain 속성. **기본은 None(host-only)** 이다.
+
+        `.gnaak.com`처럼 앞에 점을 찍은 항목이 있을 때만 그 도메인을 돌려주고,
+        그러면 쿠키가 해당 도메인과 **모든 서브도메인**에 실린다.
+        프론트·백엔드가 서로 다른 서브도메인일 때만 이렇게 쓴다.
+
+        - 포트는 뗀다. 쿠키는 포트를 구분하지 않는다
+        - localhost나 IP에는 domain 속성을 붙이지 않는다 (브라우저가 거부하거나 무시한다)
+        """
+        for entry in self.domains:
+            if not entry.startswith("."):
+                continue
+
+            host = entry.lstrip(".").split(":")[0]
+            if host == "localhost":
+                return None
+            try:
+                ipaddress.ip_address(host)
+            except ValueError:
+                return host  # 정상적인 도메인
+            return None  # IP 주소
+
+        return None
 
     @property
     def cookie_secure(self) -> bool:
@@ -204,9 +243,10 @@ class Settings:
             warnings.append(
                 "APP_ENV가 없어 local로 동작합니다. 배포 환경이라면 쿠키가 secure=False로 나가 세션이 잡히지 않습니다."
             )
-        if not self.cors_origins:
+        if not self.domains:
             warnings.append(
-                f"{self.env}_cors_origins 가 비어 있습니다. 브라우저에서 오는 모든 요청이 CORS로 차단됩니다."
+                f"{self.env}_domain 이 비어 있습니다. 프론트가 백엔드와 다른 오리진(포트만 달라도 해당)에 "
+                "있으면 CORS로 전부 차단됩니다. 완전한 same-origin 배포라면 무시해도 됩니다."
             )
 
         return warnings
@@ -217,7 +257,8 @@ class Settings:
             f"db={self.mysql_host}:{self.mysql_port}/{self.mysql_db} | "
             f"redis={self.redis_host}:{self.redis_port} | "
             f"cors={self.cors_origins} | "
-            f"cookie(domain={self.cookie_domain}, secure={self.cookie_secure}, samesite={self.cookie_samesite})"
+            f"cookie(domain={self.cookie_domain or 'host-only'}, "
+            f"secure={self.cookie_secure}, samesite={self.cookie_samesite})"
         )
 
 

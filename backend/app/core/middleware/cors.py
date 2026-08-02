@@ -8,7 +8,7 @@ from app.core.config.settings import settings
 
 # FastAPI 앱에 CORS 설정 미들웨어를 추가
 def setup_cors(app: FastAPI):
-    # 허용 오리진은 .env의 {local|prod}_cors_origins (쉼표 구분)에서 읽는다.
+    # 허용 오리진은 .env의 {local|prod}_domain에서 유도된다 (스킴은 env가 붙인다).
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,

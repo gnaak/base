@@ -6,10 +6,10 @@ import uuid
 from datetime import timedelta
 
 import jwt
-from fastapi import HTTPException
 
 from app.core.config.settings import settings
 from app.core.database.base import now_kst
+from app.core.utils.response import fail
 
 
 class AuthToken:
@@ -18,7 +18,7 @@ class AuthToken:
         self.hash_key = settings.hash_key
         self.algorithm = "HS256"
         self.env = settings.env
-        # 쿠키 속성은 전부 settings에서 온다 (.env의 {local|prod}_cookie_domain)
+        # 쿠키 속성은 전부 settings에서 온다 (.env의 {local|prod}_domain에서 유도)
         self.samesite = settings.cookie_samesite
         self.domain = settings.cookie_domain
         self.secure = settings.cookie_secure
@@ -45,7 +45,7 @@ class AuthToken:
 
         access_token = cookies.get(f"{prefix}access_token")
         if not access_token:
-            raise HTTPException(status_code=401, detail="ACCESS_TOKEN_MISSING")
+            raise fail("access token missing", "ACCESS_TOKEN_MISSING", 401)
 
         try:
             payload = jwt.decode(
@@ -54,15 +54,16 @@ class AuthToken:
                 algorithms=[self.algorithm],
             )
         except jwt.ExpiredSignatureError:
-            raise HTTPException(status_code=401, detail="ACCESS_TOKEN_EXPIRED")
+            raise fail("access token expired", "ACCESS_TOKEN_EXPIRED", 401)
         except jwt.InvalidTokenError:
-            raise HTTPException(status_code=401, detail="ACCESS_TOKEN_INVALID")
+            raise fail("invalid access token", "ACCESS_TOKEN_INVALID", 401)
 
         if payload.get("type") != "access":
-            raise HTTPException(status_code=401, detail="INVALID_TOKEN_TYPE")
+            raise fail("not an access token", "INVALID_TOKEN_TYPE", 401)
 
+        # user 토큰으로 admin API에 접근하는 경우 (혹은 그 반대)
         if payload.get("user") != auth_type:
-            raise HTTPException(status_code=401, detail="INVALID_TOKEN_TYPE")
+            raise fail("auth type mismatch", "INVALID_TOKEN_TYPE", 401)
 
         return int(payload["sub"]), payload["user"]
 
@@ -150,12 +151,12 @@ class AuthToken:
         - auth_type: "user" | "admin"
         """
         if auth_type not in ("user", "admin"):
-            raise HTTPException(status_code=400, detail="INVALID_AUTH_TYPE")
+            raise fail("invalid auth type", "INVALID_AUTH_TYPE", 400)
 
         prefix = self._cookie_prefix(auth_type)
         refresh_token = request.cookies.get(f"{prefix}refresh_token")
         if not refresh_token:
-            raise HTTPException(status_code=401, detail="REFRESH_TOKEN_MISSING")
+            raise fail("refresh token missing", "REFRESH_TOKEN_MISSING", 401)
 
         try:
             payload = jwt.decode(
@@ -164,18 +165,18 @@ class AuthToken:
                 algorithms=[self.algorithm],
             )
         except jwt.ExpiredSignatureError:
-            raise HTTPException(status_code=401, detail="REFRESH_TOKEN_EXPIRED")
+            raise fail("refresh token expired", "REFRESH_TOKEN_EXPIRED", 401)
         except jwt.InvalidTokenError:
-            raise HTTPException(status_code=401, detail="INVALID_REFRESH_TOKEN")
+            raise fail("invalid refresh token", "INVALID_REFRESH_TOKEN", 401)
 
         if payload.get("type") != "refresh":
-            raise HTTPException(status_code=401, detail="INVALID_TOKEN_TYPE")
+            raise fail("not a refresh token", "INVALID_TOKEN_TYPE", 401)
 
         user_id = payload.get("sub")
         token_type = payload.get("user")
 
         if not user_id or token_type != auth_type:
-            raise HTTPException(status_code=401, detail="INVALID_REFRESH_PAYLOAD")
+            raise fail("invalid refresh payload", "INVALID_REFRESH_PAYLOAD", 401)
 
         return int(user_id), auth_type
 

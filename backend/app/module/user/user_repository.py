@@ -1,7 +1,5 @@
 # app/module/user/user_repository.py
 
-import os
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,6 +29,19 @@ class UserRepository:
 
         self.db.add(user)
         await self.db.commit()
+
+    async def update_last_login(self, user: User) -> User:
+        """
+        로그인 시각 갱신.
+
+        commit 후 refresh를 꼭 해야 한다. 세션이 expire_on_commit=True라서
+        commit 직후에는 user의 속성이 만료 상태인데, 그대로 두면 호출부에서
+        `user.id` 같은 걸 읽는 순간 async 컨텍스트 밖 lazy load가 일어나 터진다.
+        """
+        user.last_login_at = now_kst()
+        await self.db.commit()
+        await self.db.refresh(user)
+        return user
 
     async def get_or_create_user(self, email: str, name: str, picture: str) -> User | None:
         result = await self.db.execute(select(User).filter(User.email == email))

@@ -41,15 +41,21 @@ class AuthService:
         email = body.get("email")
         password = body.get("password")
         auth_type = body.get("type")
-        
+
         if auth_type == "user":
             user_obj = await self.user_repo.get_user_by_email(email)
         elif auth_type == "admin":
             user_obj = await self.admin_repo.get_admin_by_email(email)
         else:
-            fail("invalid type", "INVALID_TYPE", 400)
-        if not user_obj or not verify_password(password, user_obj.password if auth_type == "admin" else user_obj.password):
-            fail("user does not exists", "USER_DOES_NOT_EXISTS", 404)
+            raise fail("invalid type", "INVALID_TYPE", 400)
+
+        if not user_obj or not verify_password(password, user_obj.password):
+            raise fail("user does not exists", "USER_DOES_NOT_EXISTS", 404)
+
+        # 로그인 시각 기록. tb_admins에는 last_login_at 컬럼이 없어서 user만 갱신한다.
+        # (OAuth 로그인은 user_repo.get_or_create_user가 알아서 갱신한다)
+        if auth_type == "user":
+            user_obj = await self.user_repo.update_last_login(user_obj)
 
         return user_obj, auth_type
 
