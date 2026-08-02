@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
     "paths": {
       "@/*": ["./src/*"],
@@ -10,6 +11,10 @@
     "moduleResolution": "bundler",
     "noEmit": true,
     "noImplicitAny": false,
-    "strictNullChecks": false
-  }
+    "strictNullChecks": false,
+    // 라이브러리 .d.ts는 검사하지 않는다.
+    // 없으면 vite/vitest 타입 정의가 Node 전역(Buffer 등)을 못 찾아 수백 개 에러가 난다.
+    "skipLibCheck": true
+  },
+  "exclude": ["node_modules", "dist"]
 }

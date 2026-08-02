@@ -11,14 +11,19 @@ src/
 │   ├── admin/               # layout, login, main, group
 │   └── client/              # layout, main, auth/(google, kakao)
 ├── component/               # 순수 UI (props만 받아 렌더링)
+│   ├── common/              # errorBoundary
 │   └── admin/               # layout/ modal/ ui/(feedback, form, table, loading, pagination)
 ├── hooks/
-│   ├── auth/                # OAuth 로그인·콜백, publicRoute
+│   ├── auth/                # OAuth 로그인·콜백, publicRoute, privateRoute
 │   └── common/              # useAPI.ts useAuth.ts getCookie.ts
 ├── context/AuthProvider.tsx
 ├── types/                   # auth.ts user.ts admin/
 └── utils/format/            # date.ts number.ts time.ts
 ```
+
+**Provider 순서** (`App.tsx`) — `ErrorBoundary > QueryClientProvider > BrowserRouter > AuthProvider`.
+`AuthProvider`가 Router 안에 있어야 인증 로직에서 `navigate`를 쓸 수 있다.
+`QueryClient`는 **컴포넌트 밖**에서 만든다. 안에서 만들면 리렌더마다 캐시가 날아간다.
 
 `component/admin/ui/`의 컴포넌트(button, inputbox, modal, table 등)는 참고용.
 프로젝트마다 필요한 컴포넌트를 새로 만들어 사용해도 된다.
@@ -105,6 +110,32 @@ loginMutation.mutate(body, {
 - `window.location.reload()` / `location.href = <현재 URL>`로 세션을 다시 읽지 말 것. 쿠키가 그대로라 루프가 돈다
 - effect 안에서 refresh를 호출할 땐 `useRef` 가드로 마운트당 1회로 제한할 것 (`container/admin/layout.tsx` 참고)
 - refresh 시도 전에 `refreshExp(type)`로 세션 마커를 먼저 확인할 것 — 없으면 시도 자체가 무의미하다
+
+## 라우트 가드
+
+| 컴포넌트 | 용도 |
+|----------|------|
+| `hooks/auth/privateRoute.tsx` | 로그인 필요. 세션이 없고 `refresh_exp`가 살아있으면 refresh 1회 시도 후 판단 |
+| `hooks/auth/publicRoute.tsx` | 로그인 상태면 들여보내지 않음 (로그인/회원가입 화면) |
+
+```tsx
+<Route path="/mypage" element={<PrivateRoute><MyPage /></PrivateRoute>} />
+<Route path="/admin/x" element={<PrivateRoute authType="admin"><AdminX /></PrivateRoute>} />
+```
+
+`authType`을 안 주면 `"user"`. 세션이 없으면 `authType`에 따라 `/` 또는 `/admin/login`으로 보내고,
+원래 가려던 경로를 `location.state.from`에 담아준다.
+
+> `/admin` 하위는 지금 `AdminLayout`이 같은 로직을 인라인으로 갖고 있다. 둘 중 하나만 쓰면 된다.
+
+## 에러 처리
+
+`component/common/errorBoundary.tsx`가 `App.tsx` 최상단을 감싼다. 렌더 중 터진 에러를 잡아
+화면이 백지가 되는 것을 막는다.
+
+- **에러 바운더리는 클래스 컴포넌트로만 만들 수 있다.** "function 키워드 금지" 규칙의 유일한 예외
+- 이벤트 핸들러·비동기 콜백·SSR 에러는 못 잡는다 → try/catch나 React Query의 `error` 상태로
+- 복구는 상태 초기화로만. `location.reload()`는 쓰지 않는다
 
 ## 스타일 — Tailwind
 

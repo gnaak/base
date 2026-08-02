@@ -5,8 +5,6 @@ import { clearAuthCookies } from "@/hooks/common/getCookie";
 import { AuthType } from "@/types/auth";
 
 // baseURL 설정
-export const hostname = window.location.hostname;
-
 export const baseURL = import.meta.env.VITE_APP_PUBLIC_BASE_URL;
 
 // 공통 응답 타입

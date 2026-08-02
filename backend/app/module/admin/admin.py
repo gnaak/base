@@ -10,4 +10,4 @@ class Admin(Base):
     id = Column(Integer, primary_key=True, autoincrement=True, index=True)
     email = Column(String(100), unique=True, nullable=False)
     password = Column(String(255), nullable=False)
-    created_at = Column(DateTime, default=now_kst)
+    created_at = Column(DateTime(timezone=True), default=now_kst)

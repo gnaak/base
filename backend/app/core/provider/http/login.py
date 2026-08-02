@@ -1,7 +1,5 @@
 from functools import wraps
 
-from fastapi import HTTPException
-
 from app.module.auth.auth_token import AuthToken
 
 
@@ -9,20 +7,17 @@ def with_login(type: str = "user"):
     """
     로그인 필수 (기본: user)
     admin API에서는 with_login("admin") 사용
+
+    토큰이 없거나 무효하면 get_token_info가 401 HTTPException을 던지고,
+    전역 예외 핸들러가 BaseResponse로 변환한다.
     """
     def decorator(func):
         @wraps(func)
         async def wrapper(p, *args, **kwargs):
             token_util = AuthToken()
-            try:
-                user_id, auth_type = await token_util.get_token_info(
-                    p.request,
-                    type,
-                )
-                p.request.user_id = user_id
-                p.request.auth_type = auth_type
-            except HTTPException as e:
-                raise e
+            user_id, auth_type = await token_util.get_token_info(p.request, type)
+            p.request.user_id = user_id
+            p.request.auth_type = auth_type
             return await func(p, *args, **kwargs)
         return wrapper
     return decorator

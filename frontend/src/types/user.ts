@@ -9,8 +9,12 @@ export interface UserInfo {
   email?: string;
 }
 
-// /me 호출 시 넘어오는 데이터
+// GET api/user/me 응답
+// 백엔드 `user_service.get_me()`가 반환하는 dict와 1:1로 맞춰야 한다.
 export interface UserDetail {
+  id: number;
+  email: string;
   name: string;
-  profile_image: string;
+  profile_image: string | null;
+  created_at: string | null;
 }

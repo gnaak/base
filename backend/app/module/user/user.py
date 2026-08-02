@@ -12,5 +12,7 @@ class User(Base):
     name = Column(String(20), nullable=False)
     profile_image = Column(String(200), nullable=True)
     active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=now_kst)
+    # 시간 컬럼은 전부 DateTime(timezone=True) + now_kst()로 통일한다.
+    # (MySQL DATETIME은 오프셋을 저장하지 않으므로 실제로는 KST 벽시계 값이 들어간다)
+    created_at = Column(DateTime(timezone=True), default=now_kst)
     last_login_at = Column(DateTime(timezone=True))

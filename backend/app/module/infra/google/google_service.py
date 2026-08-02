@@ -32,13 +32,13 @@ class GoogleService:
 
         async with httpx.AsyncClient() as client:
             token_resp = await client.post(GOOGLE_TOKEN_URL, data=token_data)
-            token_resp.raise_for_status()
-        
+
             try:
                 token_resp.raise_for_status()
             except httpx.HTTPStatusError as e:
                 raise HTTPException(status_code=401, detail=f"google token request failed: {e.response.text}")
-                
+
+
             access_token = token_resp.json().get("access_token")
 
             if not access_token:

@@ -1,7 +1,7 @@
 # app/module/infra/redis_service.py
 import redis.asyncio as redis
-from app.core.config.settings import settings
-from typing import Optional
+
+from app.core.database.redis import get_redis
 
 
 class RedisService:
@@ -9,22 +9,15 @@ class RedisService:
     Redis 접근을 단순화하기 위한 공통 서비스 클래스
     - Redis를 DB처럼 쓰지 않고
     - 캐시 / 상태 관리 / 동시성 제어 용도로만 사용
-    """
 
-    def __init__(
-        self, host: str = None, port: int = None, password: Optional[str] = None
-    ):
-        self._host = host or settings.redis_host
-        self._port = port or settings.redis_port
-        self._client: Optional[redis.Redis] = None
+    연결은 `core/database/redis.py`의 공용 클라이언트 하나를 공유한다.
+    (예전에는 여기서 클라이언트를 따로 만들면서 password를 빠뜨려, redis에 비밀번호가
+    걸려 있으면 NOAUTH로 죽었다)
+    """
 
     @property
     def client(self) -> redis.Redis:
-        if not self._client:
-            self._client = redis.Redis(
-                host=self._host, port=self._port, decode_responses=True
-            )
-        return self._client
+        return get_redis()
 
     # =====================================================
     # Key - Value (String)

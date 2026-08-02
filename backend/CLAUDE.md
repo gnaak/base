@@ -105,16 +105,24 @@ WebSocket은 `with_provider_web_socket` / `with_login_web_socket` 사용.
 
 **`user_info`의 `session_info` 필드를 바꾸면 프론트 `types/user.ts`의 `UserInfo`도 같이 고칠 것.** 1:1로 맞춰져 있다.
 
-**환경별 쿠키 속성** (`settings.env`는 `"local"` 또는 `"prod"`):
+**환경별 쿠키 속성** — 전부 `settings`에서 온다. `auth_token.py`에 하드코딩된 값은 없다.
 
 | | local | prod |
 |---|---|---|
 | `secure` | `False` | `True` |
 | `samesite` | `Lax` | `None` |
-| `domain` | `None` | `"none.net"` ← **플레이스홀더. 반드시 교체** |
+| `domain` | `.env`의 `local_cookie_domain` | `.env`의 `prod_cookie_domain` |
 
-> ⚠️ `domain`을 안 고치고 prod로 배포하면 브라우저가 쿠키를 전부 거부한다.
+`cookie_domain`이 비어 있으면 domain 속성 없이(host-only) 쿠키를 심는다. 프론트와 백엔드가
+같은 호스트면 이게 정답이고, 서브도메인을 넘나들어야 할 때만 `.example.com` 형태로 채운다.
+
+> ⚠️ 실제 서비스 도메인과 맞지 않는 `domain` 값을 넣으면 브라우저가 쿠키를 **전부 거부한다.**
 > 로그인은 200이 뜨는데 세션이 안 잡혀서 로그인 화면이 무한 반복되는 증상이 난다.
+
+**환경 판정** — `settings.env`는 `APP_ENV` 환경변수로 정해진다 (`prod`/`production` → prod,
+`local`/`development` → local). 없으면 호스트명(`ip-`, `ec2-`)으로 추측하고, 그것도 아니면 local.
+기동 시 `settings.describe()`가 인식된 env와 판단 근거를 로그로 남기고,
+`settings.config_warnings()`가 위험한 조합(추측으로 잡힌 prod, 빈 CORS 등)을 경고한다.
 
 ## ServiceProvider — lazy-load 프로퍼티
 
@@ -150,6 +158,10 @@ class ExampleRepository:
 
 ## 기타
 
-- 시간은 `core/database/base.py`의 `now_kst()` 사용 (tz-aware, Asia/Seoul)
+- 시간은 `core/database/base.py`의 `now_kst()` 사용 (tz-aware, Asia/Seoul).
+  시간 컬럼은 `DateTime(timezone=True)`로 통일한다 (MySQL은 오프셋을 저장하지 않으므로 실제로는 KST 벽시계 값)
 - 비밀번호 해싱은 `auth_service.py`의 `hash_password()` / `verify_password()` (argon2)
-- CORS 허용 오리진은 `core/middleware/cors.py`에 하드코딩되어 있다 — 배포 전 교체
+- CORS 허용 오리진은 `.env`의 `{local|prod}_cors_origins` (쉼표 구분)
+- Redis 연결은 `core/database/redis.py`의 `get_redis()` 하나를 공유한다.
+  `RedisService`도 이걸 쓴다 — 클라이언트를 따로 만들지 말 것 (password를 빠뜨리기 쉽다)
+- 보안 헤더는 `middleware/security.py`. HSTS는 prod에서만 붙는다

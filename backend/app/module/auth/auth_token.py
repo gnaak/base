@@ -13,20 +13,28 @@ from app.core.database.base import now_kst
 
 
 class AuthToken:
-    env = getattr(settings, "env", "dev")
-    samesite = "None" if env == "prod" else "Lax"
-    domain = "none.net" if env == "prod" else None
-
     def __init__(self):
         self.jwt_secret = settings.jwt_secret
         self.hash_key = settings.hash_key
         self.algorithm = "HS256"
-        self.env = getattr(settings, "env", "dev")
-        self.samesite = "None" if self.env == "prod" else "Lax"
-        # TODO: domain 변경
-        self.domain = "none.net" if self.env == "prod" else None
-        self.secure = True if self.env == "prod" else False
-    
+        self.env = settings.env
+        # 쿠키 속성은 전부 settings에서 온다 (.env의 {local|prod}_cookie_domain)
+        self.samesite = settings.cookie_samesite
+        self.domain = settings.cookie_domain
+        self.secure = settings.cookie_secure
+
+    def _cookie_common(self) -> dict:
+        """4종 쿠키에 공통으로 붙는 속성. domain은 설정된 경우에만 넣는다."""
+        common = {
+            "secure": self.secure,
+            "samesite": self.samesite,
+            "path": "/",
+        }
+        if self.domain:
+            common["domain"] = self.domain
+        return common
+
+
     # --- 쿠키 접두사 생성 ---
     def _cookie_prefix(self, auth_type: str):
         return "admin_" if auth_type == "admin" else "user_"
@@ -103,14 +111,7 @@ class AuthToken:
         ).decode("utf-8")
 
         # 프론트에서 읽어야 하므로 httponly=False
-        cookie_common = {
-            "secure": self.secure,
-            "samesite": self.samesite,
-            "path": "/",
-        }
-        # prod일 때만 domain 붙이기
-        if self.domain:
-            cookie_common["domain"] = self.domain
+        cookie_common = self._cookie_common()
 
         response.set_cookie(
             key=f"{prefix}user_info",
@@ -181,14 +182,7 @@ class AuthToken:
     async def delete_token(self, response, auth_type: str):
         """토큰 삭제 및 로그아웃 처리"""
         prefix = self._cookie_prefix(auth_type)
-        cookie_common = {
-            "secure": self.secure,
-            "samesite": self.samesite,
-            "path": "/",
-        }
-        # prod일 때만 domain 붙이기
-        if self.domain:
-            cookie_common["domain"] = self.domain
+        cookie_common = self._cookie_common()
 
         response.delete_cookie(f"{prefix}access_token", **cookie_common)
         response.delete_cookie(f"{prefix}refresh_token", **cookie_common)

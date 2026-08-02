@@ -50,6 +50,13 @@
 4. 불확실하면 멈추고 질문.
 5. 과도한 추상화 금지.
 
+**검증 명령** (Phase 완료 전 실행):
+
+```bash
+cd frontend && npm run check:types
+cd frontend && npm run build
+```
+
 ## Phase 관리
 
 **시작 순서**: `PROJECT.md`에 기능 정의 작성 → Claude가 Phase 계획 수립 → 사용자 승인 → Phase 1부터 개발
@@ -78,11 +85,18 @@
 
 | 위치 | 내용 |
 |------|------|
-| `backend/app/module/auth/auth_token.py` | `domain = "none.net"` — **플레이스홀더.** 안 고치고 prod로 띄우면 브라우저가 쿠키를 전부 거부한다 |
-| `backend/app/core/middleware/cors.py` | `origins` 하드코딩 (`localhost:3000`) |
-| `backend/.env` / `frontend/.env` | DB·JWT·OAuth 키 전부 |
+| `backend/.env` / `frontend/.env` | DB·JWT·OAuth 키 전부. **`jwt_secret`·`hash_key`는 프로젝트마다 새로 생성할 것** |
+| `backend/.env` → `prod_cors_origins` | 운영 도메인. 비어 있으면 브라우저 요청이 전부 CORS로 막힌다 |
+| `backend/.env` → `prod_cookie_domain` | 같은 호스트면 비워둔다. 서브도메인을 넘나들 때만 `.example.com` |
+| `backend/.gitignore` | `alembic/versions/*.py` 제외 줄을 **삭제.** 템플릿에서만 유효한 설정이고, 안 지우면 마이그레이션이 커밋되지 않는다 |
 | `frontend/.env.production` | `VITE_APP_PUBLIC_BASE_URL`이 비어 있음 |
 | `frontend/src/container/admin/layout.tsx` | `adminMenu` 샘플 메뉴 |
+| `docker-compose.yml` | DB 이름·비밀번호 (`backend/.env`의 `local_*`과 일치시킬 것) |
+
+**배포 시 `APP_ENV=prod`를 반드시 명시할 것.** 안 주면 호스트명으로 추측하는데, 이 추측은 EC2
+기본 호스트명에서만 맞는다. Docker·Cloud Run에 올리면 조용히 `local`로 떨어져서 쿠키가
+`secure=False` / `SameSite=Lax`로 나가고 세션이 안 잡힌다. 기동 로그에 인식된 env와 쿠키 설정이
+찍히니 배포 후 한 번 확인할 것.
 
 **로컬 개발 시**: 프론트와 백엔드 호스트를 반드시 통일할 것 (`localhost`끼리 또는 `127.0.0.1`끼리). 섞으면 cross-site가 돼서 `SameSite=Lax` 쿠키가 안 실리고, 로그인은 성공하는데 세션이 안 잡히는 증상이 난다.
 
