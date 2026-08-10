@@ -91,7 +91,6 @@ cd frontend && npm run build
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `backend/.env` / `frontend/.env`          | DB·JWT·OAuth 키 전부. **`jwt_secret`·`hash_key`는 프로젝트마다 새로 생성할 것**                                    |
 | `backend/.env` → `prod_domain`            | 운영 도메인 (`gnaak.com`). CORS 오리진과 쿠키 도메인이 여기서 유도된다                                             |
-| `backend/.gitignore`                      | `alembic/versions/*.py` 제외 줄을 **삭제.** 템플릿에서만 유효한 설정이고, 안 지우면 마이그레이션이 커밋되지 않는다 |
 | `frontend/.env.production`                | `VITE_APP_PUBLIC_BASE_URL`이 비어 있음                                                                             |
 | `frontend/src/container/admin/layout.tsx` | `adminMenu` 샘플 메뉴                                                                                              |
 

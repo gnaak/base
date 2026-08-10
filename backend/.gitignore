@@ -9,4 +9,3 @@ logs/
 
 alembic/README
 !alembic/versions/
-alembic/versions/*.py
