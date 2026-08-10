@@ -16,7 +16,7 @@ app/
 │   ├── provider/
 │   │   ├── http/ (endpoint.py, login.py, service.py)
 │   │   └── web_socket/ (동일 구성)
-│   └── utils/response.py           # success() / fail()
+│   └── utils/                      # response.py: success()/fail() · http_client.py: 공용 아웃바운드 HTTP
 └── module/
     ├── __init__.py                  # 모델 import + setup_routers()
     ├── auth/ user/ admin/ web_socket/
@@ -199,4 +199,11 @@ class ExampleRepository:
 - CORS 허용 오리진은 `.env`의 `{local|prod}_domain`에서 유도된다 (위 "도메인 설정" 참고)
 - Redis 연결은 `core/database/redis.py`의 `get_redis()` 하나를 공유한다.
   `RedisService`도 이걸 쓴다 — 클라이언트를 따로 만들지 말 것 (password를 빠뜨리기 쉽다)
+- 외부 HTTP 호출은 `core/utils/http_client.py`의 `request_json()`을 쓴다 —
+  `httpx.AsyncClient`를 직접 만들지 말 것. 타임아웃·아웃바운드 로깅·에러→`fail()` 변환·쿠키 격리가
+  전부 여기에 있다 (공유 클라이언트는 lifespan이 열고 닫는다)
+- 무인증 헬스체크는 `GET /api/health` — 도메인이 아니라서 `main.py`에 직접 선언되어 있다.
+  경로 상수는 `middleware/request_id.py`의 `HEALTH_PATH` (액세스 로그 제외 대상과 공유)
+- 로그는 콘솔과 `backend/logs/app.log`(자정 로테이션, 14일 보관)에 함께 남는다 — `core/logging/config.py`.
+  액세스 로그(latency 포함)는 `middleware/request_id.py`가 남기고, uvicorn 기본 액세스 로그는 꺼져 있다
 - 보안 헤더는 `middleware/security.py`. HSTS는 prod에서만 붙는다

@@ -94,14 +94,13 @@ cd frontend && npm run build
 | `backend/.gitignore`                      | `alembic/versions/*.py` 제외 줄을 **삭제.** 템플릿에서만 유효한 설정이고, 안 지우면 마이그레이션이 커밋되지 않는다 |
 | `frontend/.env.production`                | `VITE_APP_PUBLIC_BASE_URL`이 비어 있음                                                                             |
 | `frontend/src/container/admin/layout.tsx` | `adminMenu` 샘플 메뉴                                                                                              |
-| `docker-compose.yml`                      | DB 이름·비밀번호 (`backend/.env`의 `local_*`과 일치시킬 것)                                                        |
 
 **배포 시 `APP_ENV=prod`를 반드시 명시할 것.** 안 주면 호스트명으로 추측하는데, 이 추측은 EC2
 기본 호스트명에서만 맞는다. Docker·Cloud Run에 올리면 조용히 `local`로 떨어져서 쿠키가
 `secure=False` / `SameSite=Lax`로 나가고 세션이 안 잡힌다. 기동 로그에 인식된 env와 쿠키 설정이
 찍히니 배포 후 한 번 확인할 것.
 
-**로컬 개발 시**: 프론트와 백엔드 호스트를 반드시 통일할 것 (`localhost`끼리 또는 `127.0.0.1`끼리). 섞으면 cross-site가 돼서 `SameSite=Lax` 쿠키가 안 실리고, 로그인은 성공하는데 세션이 안 잡히는 증상이 난다.
+**로컬 개발 시**: 프론트와 백엔드 호스트를 반드시 통일할 것 (`localhost`끼리 또는 `127.0.0.1`끼리). 섞으면 cross-site가 돼서 `SameSite=Lax` 쿠키가 안 실리고, 로그인은 성공하는데 세션이 안 잡히는 증상이 난다. 또한 로컬 MySQL·Redis가 `backend/.env`의 `local_*` 값과 맞게 떠 있어야 한다 — 서버가 기동 시 연결을 검증(fail-fast)하고, 실패하면 원인을 로그에 남기고 그대로 종료된다.
 
 ## 트러블슈팅
 

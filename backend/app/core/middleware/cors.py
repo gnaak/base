@@ -15,4 +15,6 @@ def setup_cors(app: FastAPI):
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        # 프론트 JS가 읽을 수 있게 노출 (로그 상관관계 추적용)
+        expose_headers=["x-request-id", "x-process-time"],
     )

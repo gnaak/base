@@ -5,6 +5,7 @@ venv/
 __pycache__/
 *.pyc
 migrations/
+logs/
 
 alembic/README
 !alembic/versions/

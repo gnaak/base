@@ -1,6 +1,7 @@
+import asyncio
 import json
 from fastapi import WebSocket
-from typing import Dict, Set, Optional
+from typing import Dict, List, Set, Optional
 
 from app.core.logging.logger import get_logger
 
@@ -54,12 +55,14 @@ class ConnectionManager:
         if websocket in self.active_connections:
             self.active_connections.remove(websocket)
 
-        # 2. 방 목록에서 제거
-        if room_id and room_id in self.rooms:
-            self.rooms[room_id].discard(websocket)
-            # 방에 아무도 없으면 방 정보 삭제 (메모리 최적화)
-            if not self.rooms[room_id]:
-                del self.rooms[room_id]
+        # 2. 방 목록에서 제거 — room_id를 모르면 모든 방을 뒤져서 제거 (broadcast_all 정리 경로)
+        room_ids = [room_id] if room_id else list(self.rooms)
+        for rid in room_ids:
+            if rid in self.rooms:
+                self.rooms[rid].discard(websocket)
+                # 방에 아무도 없으면 방 정보 삭제 (메모리 최적화)
+                if not self.rooms[rid]:
+                    del self.rooms[rid]
 
         # 3. 유저 레지스트리 제거
         if websocket in self.user_registry:
@@ -71,6 +74,33 @@ class ConnectionManager:
         """특정 개인에게 메시지 전송 (JSON)"""
         await websocket.send_text(json.dumps(message, ensure_ascii=False))
 
+    async def _send_many(
+        self,
+        connections: List[WebSocket],
+        message: dict,
+        exclude: Optional[WebSocket] = None,
+        room_id: Optional[str] = None,
+    ):
+        """여러 소켓에 병렬 전송하고, 실패한(죽은) 소켓은 일괄 정리합니다.
+
+        - 병렬 전송: 느린 클라이언트 하나가 전체 브로드캐스트를 막지 않게
+        - 예외 격리: 죽은 소켓 하나 때문에 나머지 전송·발신자 연결까지 끊기지 않게
+        """
+        targets = [c for c in connections if c != exclude]
+        if not targets:
+            return
+        msg_str = json.dumps(message, ensure_ascii=False)
+        results = await asyncio.gather(
+            *(c.send_text(msg_str) for c in targets), return_exceptions=True
+        )
+        dead = [c for c, r in zip(targets, results) if isinstance(r, BaseException)]
+        if dead:
+            logger.warning(
+                f"🧹 전송 실패한 소켓 {len(dead)}개 정리" + (f" (room [{room_id}])" if room_id else "")
+            )
+            for connection in dead:
+                self.disconnect(connection, room_id)
+
     async def broadcast_to_room(
         self, room_id: str, message: dict, exclude: Optional[WebSocket] = None
     ):
@@ -78,16 +108,13 @@ class ConnectionManager:
         특정 방에 있는 모든 사람에게 메시지 전송 (보낸 사람 제외 가능)
         """
         if room_id in self.rooms:
-            msg_str = json.dumps(message, ensure_ascii=False)
-            for connection in self.rooms[room_id]:
-                if connection != exclude:
-                    await connection.send_text(msg_str)
+            await self._send_many(
+                list(self.rooms[room_id]), message, exclude=exclude, room_id=room_id
+            )
 
     async def broadcast_all(self, message: dict):
         """서버에 접속한 모든 유저에게 공지사항 등을 전송"""
-        msg_str = json.dumps(message, ensure_ascii=False)
-        for connection in self.active_connections:
-            await connection.send_text(msg_str)
+        await self._send_many(list(self.active_connections), message)
 
 
 # 싱글톤 인스턴스 생성

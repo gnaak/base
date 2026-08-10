@@ -19,6 +19,8 @@ def get_redis() -> redis.Redis:
             password=settings.redis_password or None,
             db=0,
             decode_responses=True,
+            health_check_interval=30,  # idle 후 첫 명령 전에 ping으로 연결 확인
+            socket_keepalive=True,     # 방화벽/NAT의 idle 컷 방어
         )
     return _client
 

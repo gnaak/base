@@ -1,11 +1,12 @@
 # app/module/infra/google/google_service.py
 
-import httpx
-from fastapi import HTTPException
-
 from app.core.config.settings import settings
+from app.core.logging import get_logger
+from app.core.utils.http_client import request_json
 from app.core.utils.response import fail
 from app.module.user.user_repository import UserRepository
+
+logger = get_logger(__name__)
 
 
 class GoogleService:
@@ -21,40 +22,44 @@ class GoogleService:
 
         if not code:
             raise fail("Authorization code not provided", "AUTH_CODE_NOT_PROVIDED", 400)
-        
-        token_data = {
-            "code": code,
-            "client_id": settings.google_client_id,
-            "client_secret": settings.google_client_secret,
-            "redirect_uri": settings.google_redirect_uri,
-            "grant_type": "authorization_code",
-        }
 
-        async with httpx.AsyncClient() as client:
-            token_resp = await client.post(GOOGLE_TOKEN_URL, data=token_data)
+        token = await request_json(
+            "POST",
+            GOOGLE_TOKEN_URL,
+            data={
+                "code": code,
+                "client_id": settings.google_client_id,
+                "client_secret": settings.google_client_secret,
+                "redirect_uri": settings.google_redirect_uri,
+                "grant_type": "authorization_code",
+            },
+            context="google token",
+            error_code="OAUTH_TOKEN_FAILED",
+            fail_status=401,
+        )
 
-            try:
-                token_resp.raise_for_status()
-            except httpx.HTTPStatusError as e:
-                raise HTTPException(status_code=401, detail=f"google token request failed: {e.response.text}")
+        access_token = token.get("access_token")
+        if not access_token:
+            logger.warning("google token response missing access_token")
+            raise fail("google access token missing", "OAUTH_TOKEN_MISSING", 502)
 
+        userinfo = await request_json(
+            "GET",
+            GOOGLE_USERINFO_URL,
+            headers={"Authorization": f"Bearer {access_token}"},
+            context="google userinfo",
+            error_code="OAUTH_USERINFO_FAILED",
+            fail_status=502,
+        )
 
-            access_token = token_resp.json().get("access_token")
+        email = userinfo.get("email")
+        if not email:
+            # email 없이 유저를 만들면 email=NULL 행끼리 서로 매칭되는 사고가 난다
+            raise fail("google account has no email", "OAUTH_EMAIL_REQUIRED", 400)
 
-            if not access_token:
-                raise HTTPException(status_code=500, detail="access token missing")
-            
-            userinfo_resp = await client.get(
-                GOOGLE_USERINFO_URL,
-                headers={"Authorization": f"Bearer {access_token}"}
-            )
-            userinfo_resp.raise_for_status()
-            userinfo = userinfo_resp.json()
+        name = userinfo.get("name") or ""
+        picture = userinfo.get("picture", "")
 
-            email = userinfo.get("email")
-            name = userinfo.get("name")
-            picture = userinfo.get("picture", "")
-        
         user = await self.user_repo.get_or_create_user(email, name, picture)
-        
-        return user 
+
+        return user

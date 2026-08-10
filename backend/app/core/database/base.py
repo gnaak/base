@@ -11,7 +11,9 @@ from app.core.config.settings import DATABASE_URL
 KST = pytz.timezone("Asia/Seoul")
 
 # --- ✅ DB 엔진/세션 설정 ---
-engine = create_async_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
+# pool_pre_ping: 커넥션 체크아웃 시 살아있는지 확인 (사후 감지)
+# pool_recycle: 1시간 지난 커넥션은 선제 교체 — MySQL wait_timeout·방화벽이 끊기 전에 (사전 예방)
+engine = create_async_engine(DATABASE_URL, echo=False, pool_pre_ping=True, pool_recycle=3600)
 
 SessionLocal = sessionmaker(
     autocommit=False,
