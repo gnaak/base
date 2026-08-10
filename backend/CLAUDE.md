@@ -44,7 +44,8 @@ module/[domain]/
 
 - **로컬**: 모델 변경 후 `sh migrate.sh "메시지"` — 리비전 생성 + 로컬 DB 적용.
   생성된 `alembic/versions/*.py`는 **반드시 커밋**한다 (서버가 이 파일로 upgrade한다)
-- **서버**: 배포 시 `alembic upgrade head`만 실행. **autogenerate 금지** — 환경마다 히스토리가 갈라진다
+- **서버**: 배포 시 `sh migrate_server.sh` (= `alembic upgrade head`)만 실행.
+  **autogenerate 금지** — 환경마다 히스토리가 갈라진다
 - 기존에 다른 방식으로 스키마를 만든 서버 DB에 처음 도입할 때는, 스키마가 모델과 일치하는지
   확인한 뒤 `alembic stamp head`를 1회 실행해 기준점을 맞춘다 (안 하면 upgrade가 처음부터 다시 돈다)
 
