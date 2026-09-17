@@ -1,0 +1,33 @@
+# ─────────────────────────────────────────────────────────────
+# 환경 변수 — 시크릿은 저장소에 올리지 않는다.
+# 키 목록은 backend/.env.example, frontend/.env.example 참고.
+# ─────────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# 로그
+# ⚠️ 여기에 `logs/`를 쓰면 안 된다. 앞에 슬래시가 없는 디렉토리 패턴은 모든 깊이에 적용돼서
+#    backend/logs 자체가 제외되고, 그러면 Git이 그 안으로 내려가지 않아
+#    backend/.gitignore의 `!logs/.keep` 이 먹지 않는다. 디렉토리 유지는 각 하위 .gitignore에 맡긴다.
+*.log
+
+# OS / 에디터
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

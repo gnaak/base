@@ -1,11 +1,15 @@
 media/*
 !media/.keep
 
+# 로그 파일은 올리지 않되 디렉토리는 남긴다 (clone 직후에도 backend/logs/ 가 있도록)
+logs/*
+!logs/.keep
+
 venv/
+.venv/
 __pycache__/
 *.pyc
 migrations/
-logs/
 
 alembic/README
 !alembic/versions/
