@@ -83,6 +83,10 @@ class RequestIdMiddleware:
                     status,
                     elapsed_ms,
                     client[0] if client else "-",
+                    # status를 메시지 문자열이 아니라 레코드 속성으로도 실어 보낸다.
+                    # logging/config.py의 채널 필터가 이걸 보고 access.log / error.log를 가른다
+                    # — 포맷을 바꿔도 분기가 깨지지 않게.
+                    extra={"status_code": status},
                 )
 
 
