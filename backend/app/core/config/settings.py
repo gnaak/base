@@ -25,6 +25,10 @@ class RawEnv(BaseSettings):
     prod_mysql_host: str
     prod_mysql_db: str
 
+    # TEST — pytest 전용 DB 이름. 접속 정보는 local_* 을 그대로 쓴다.
+    # 매 테스트 세션마다 테이블을 만들고 지우므로 반드시 전용 DB를 줄 것.
+    test_mysql_db: str = "db_base_test"
+
     jwt_secret: str
     hash_key: str
 
@@ -123,6 +127,22 @@ class Settings:
         return (
             f"mysql+aiomysql://{user}:{password}"
             f"@{host}:{self.mysql_port}/{self.mysql_db}"
+        )
+
+    @property
+    def test_database_url(self) -> str:
+        """
+        pytest 전용 DB URL.
+
+        접속 정보는 **항상 local_* 을 쓰고** DB 이름만 test_mysql_db 로 바꾼다.
+        self.env를 타지 않는 게 핵심이다 — APP_ENV=prod 인 셸에서 실수로 pytest를
+        돌려도 운영 DB에 붙지 않는다. 테스트는 테이블을 drop 하므로 이 보호가 필요하다.
+        """
+        user = quote_plus(self.raw.local_mysql_user)
+        password = quote_plus(self.raw.local_mysql_password)
+        return (
+            f"mysql+aiomysql://{user}:{password}"
+            f"@{self.raw.local_mysql_host}:{self.raw.mysql_port}/{self.raw.test_mysql_db}"
         )
 
     @property

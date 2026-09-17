@@ -55,7 +55,11 @@
 ```bash
 cd frontend && npm run check:types
 cd frontend && npm run build
+cd backend && .venv/Scripts/python.exe -m pytest   # 라우터를 건드렸다면
 ```
+
+도메인 라우터를 하나 끝낼 때마다 `/test {도메인}` 으로 엣지 케이스까지 테스트를 붙인다.
+테스트가 앱 코드의 버그를 잡으면 **테스트를 느슨하게 고치지 말고 앱을 고친다.**
 
 ## Phase 관리
 

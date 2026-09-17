@@ -200,6 +200,29 @@ class ExampleRepository:
         return result.scalar_one_or_none()
 ```
 
+## 테스트 — 라우터 하나 끝나면 바로
+
+```bash
+cd backend && .venv/Scripts/python.exe -m pytest        # 전체
+.venv/Scripts/python.exe -m pytest tests/test_user_router.py -v   # 한 파일
+```
+
+**사전 준비 1회**: `CREATE DATABASE db_base_test;` — `.env`의 `test_mysql_db`와 같은 이름.
+
+- 테스트는 **전용 DB만** 쓴다. 접속 정보는 `local_*`을 쓰되 DB 이름만 `test_mysql_db`로 바꾼다
+  (`settings.test_database_url`). `APP_ENV=prod` 셸에서 pytest를 돌려도 운영 DB에 붙지 않는다 —
+  테이블을 drop 하므로 이 보호가 필요하다
+- 테스트 하나당 트랜잭션 하나. 끝나면 롤백된다. 앱 코드가 `commit()`을 불러도
+  SAVEPOINT로 잡히므로 (`join_transaction_mode="create_savepoint"`) 데이터가 남지 않는다
+- Redis는 fakeredis로 대체된다. 실제 Redis가 없어도 테스트는 돈다
+- **인증은 목킹하지 않는다.** `auth_header(user_id)`가 진짜 JWT를 발급해
+  `auth_token.py`의 검증 경로를 그대로 탄다
+- 요청은 `client.get(url, headers=auth_header(id))`. `cookies=` 인자는 쓰지 말 것 —
+  httpx에서 deprecated고 테스트 간에 쿠키가 샌다
+- 새 라우터 테스트는 `tests/test_user_router.py`를 본보기로. 정상 경로 하나로 끝내지 말고
+  인증·입력·상태·응답규약 엣지 케이스를 붙인다 (`.claude/agents/be-test-writer.md`에 목록)
+- 테스트가 앱 버그를 잡으면 **테스트를 느슨하게 고치지 말고 앱을 고친다**
+
 ## 기타
 
 - 시간은 `core/database/base.py`의 `now_kst()` 사용 (tz-aware, Asia/Seoul).

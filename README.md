@@ -22,6 +22,7 @@
 |---|---|---|
 | **인증** | 로그인/로그아웃/refresh, Google·Kakao OAuth, 이중 세션 | 회원가입 화면·라우트, 비밀번호 재설정, 이메일 인증 |
 | **백엔드** | 계층 구조, DI, 공통 응답, 예외 핸들러, 로깅, Alembic | 도메인 로직 (직접 채울 것) |
+| **테스트** | pytest 기반 라우터 통합 테스트 + 픽스처, 샘플 14개 | 프론트 테스트 |
 | **프론트** | 관리자 레이아웃·사이드바, UI 킷(폼/테이블/모달/토스트), 라우트 가드 | 디자인 시스템, 실제 화면 |
 | **인프라** | 헬스체크, 요청 ID, CORS·보안 헤더 | Docker, CI, 배포 스크립트 |
 
@@ -46,6 +47,7 @@ Spring은 프레임워크가 계층을 강제하지만 FastAPI는 아무것도 �
 | **Database** | MySQL 8 (aiomysql) + Alembic |
 | **Cache / Session** | Redis 7 |
 | **인증** | PyJWT (HS256) + HttpOnly Cookie + Argon2 + OAuth (Google, Kakao) |
+| **테스트** | pytest + pytest-asyncio + httpx AsyncClient + fakeredis |
 | **로깅** | 표준 logging + QueueHandler 비동기 파이프라인 + 요청 ID |
 
 ---
@@ -510,6 +512,64 @@ APP_ENV=prod sh migrate_server.sh   # upgrade head 만
 
 ---
 
+### 6.7 테스트
+
+라우터 하나를 끝낼 때마다 엣지 케이스까지 붙여서 돌리는 것을 기본 흐름으로 잡았습니다.
+
+```bash
+# 최초 1회 — .env 의 test_mysql_db 와 같은 이름으로
+mysql -u root -p -e "CREATE DATABASE db_base_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+
+cd backend
+.venv/Scripts/python.exe -m pytest                              # 전체
+.venv/Scripts/python.exe -m pytest tests/test_user_router.py -v # 한 파일
+```
+
+**설계**
+
+| | 방식 | 이유 |
+|---|------|------|
+| **DB** | 전용 MySQL (`test_mysql_db`) | 운영과 같은 엔진. SQLite로 대체하면 `DateTime(timezone=True)` round-trip이 달라진다 |
+| **격리** | 테스트당 트랜잭션 + 롤백 | 앱이 `commit()`을 불러도 SAVEPOINT로 잡혀서 데이터가 안 남는다 |
+| **Redis** | fakeredis | 실제 Redis 없이도 돈다 |
+| **인증** | 진짜 JWT 발급 | 목킹하면 `auth_token.py`의 검증 로직이 테스트되지 않는다 |
+
+**운영 DB 보호** — `settings.test_database_url`은 `self.env`를 타지 않고 항상 `local_*` 접속
+정보에 `test_mysql_db`만 붙입니다. `APP_ENV=prod` 셸에서 실수로 pytest를 돌려도 운영 DB에
+붙지 않습니다. 테스트가 매 세션 테이블을 drop 하므로 필요한 보호이고, `test_mysql_db`가
+`local_mysql_db`·`prod_mysql_db`와 같으면 `conftest.py`가 기동 시점에 중단시킵니다.
+
+**쓸 수 있는 픽스처**
+
+| 이름 | 용도 |
+|------|------|
+| `client` | httpx AsyncClient. 테스트 DB와 fakeredis가 물려 있다 |
+| `db` | AsyncSession. 끝나면 자동 롤백 |
+| `make_user` / `make_admin` | 데이터 팩토리 |
+| `auth_header(id, auth_type="user", **kw)` | 로그인 상태 Cookie 헤더 |
+| `cookie_header(**cookies)` | 임의 쿠키 조립 |
+| `make_token(...)` | 만료·refresh·서명불일치 등 엣지 케이스용 JWT |
+
+```python
+async def test_내_정보를_반환한다(client, make_user):
+    user = await make_user(email="me@example.com")
+
+    res = await client.get("/api/user/me", headers=auth_header(user.id))
+
+    assert res.status_code == 200
+    assert res.json()["data"]["email"] == "me@example.com"
+```
+
+> 요청에 `cookies=` 인자를 쓰지 마세요. httpx에서 deprecated고, `client.cookies`에 심으면
+> 다음 요청까지 남습니다. `headers=auth_header(...)` 로 요청 단위로 통제합니다.
+
+**Claude Code로 돌릴 때** — `/test {도메인}` 커맨드가 `be-researcher` → `be-test-writer` 순으로
+돌린 뒤 pytest를 실행합니다. 덮어야 할 엣지 케이스 목록은 `.claude/agents/be-test-writer.md`에
+있습니다. 테스트가 앱 버그를 잡으면 에이전트는 **고치지 않고 멈춰서 보고**하도록 되어 있습니다 —
+기대값에 맞춰 테스트를 느슨하게 만드는 게 제일 흔한 실패 방식이라서.
+
+---
+
 ## 7. 인증
 
 ### 7.1 쿠키 4종
@@ -632,6 +692,7 @@ rm -rf .git && git init
 - [ ] `backend/.env`의 `prod_domain` — 운영 도메인. CORS 오리진과 쿠키 도메인이 여기서 유도됩니다
 - [ ] `frontend/.env.production`의 `VITE_APP_PUBLIC_BASE_URL`
 - [ ] `container/admin/layout.tsx`의 `adminMenu` 샘플 교체
+- [ ] 테스트 DB 생성 — `CREATE DATABASE db_base_test;` (`.env`의 `test_mysql_db`와 같은 이름)
 - [ ] `backend/alembic/versions/` 초기화 여부 결정 (User·Admin 테이블을 그대로 쓸지)
 - [ ] OAuth 콘솔에 새 redirect URI 등록
 - [ ] 배포 시 `APP_ENV=prod` 명시
