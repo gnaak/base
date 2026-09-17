@@ -6,29 +6,15 @@ import AdminSidebar from "@/component/admin/layout/sideBar/sideBar";
 import { AdminMenuItem } from "@/types/admin/sidebar";
 import { LucideIcon } from "lucide-react";
 import AdminHeader from "@/component/admin/layout/header/header";
-import {
-  ChartColumnIcon,
-  UsersIcon,
-} from "lucide-react";
+import { ChartColumnIcon } from "lucide-react";
 
+// 프로젝트마다 교체하는 샘플 메뉴. 접히는 그룹 메뉴는 README "관리자 메뉴 추가" 참고.
 const adminMenu: AdminMenuItem[] = [
   {
     type: "link",
     label: "대시보드",
     to: "/admin",
     icon: ChartColumnIcon,
-  },
-  {
-    type: "group",
-    title: "그룹 관리",
-    icon: UsersIcon,
-    children: [
-      {
-        label: "고객사별 통계",
-        to: "/admin/group",
-        icon: UsersIcon,
-      },
-    ],
   },
 ];
 

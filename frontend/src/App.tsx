@@ -7,7 +7,6 @@ import NotFoundPage from "./container/notfound";
 import AdminLogin from "./container/admin/login";
 import AdminLayout from "./container/admin/layout";
 import AdminMain from "./container/admin/main";
-import AdminGroup from "./container/admin/group";
 import ClientLayOut from "./container/client/layout";
 import ClientMain from "./container/client/main";
 import Google from "./container/client/auth/google";
@@ -39,7 +38,6 @@ function App() {
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route element={<AdminLayout />}>
                 <Route path="/admin" element={<AdminMain />} />
-                <Route path="/admin/group" element={<AdminGroup />} />
               </Route>
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
