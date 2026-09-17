@@ -363,17 +363,111 @@ tail -f backend/logs/error.log
 - 헬스체크(`/api/health`)와 `/media/*`는 액세스 로그에서 제외
 - 쿼리스트링의 `code`·`token` 등 민감 값은 `***`로 가려서 기록
 
-**도메인별 파일 추가** — `logging/config.py`의 상수 한 줄이면 됩니다.
+> `--workers N`으로 멀티 프로세스 기동하면 파일 로테이션이 충돌합니다.
+> 그땐 파일 핸들러 대신 stdout 수집(systemd/docker 로그 드라이버)으로 전환하세요.
+
+#### 도메인별 로그 파일 추가하기
+
+외부 API 연동처럼 "이것만 따로 보고 싶은" 영역은 전용 파일로 뺄 수 있습니다.
+`gemini.log`를 추가한다고 해봅시다.
+
+**① 채널을 가르는 원리를 먼저 알아둘 것**
+
+파일을 나누는 주체는 로거가 아니라 **핸들러에 달린 필터**입니다.
+모든 로그는 하나의 큐를 지나 리스너 스레드로 가고, 리스너가 들고 있는 싱크마다
+"이 레코드가 내 것인가"를 필터로 판단합니다.
+
+```
+logger.info(...)
+    → QueueHandler (여기서 request_id 부착)
+        → Queue
+            → QueueListener (별도 스레드)
+                ├─ console        필터 없음        → 전부
+                ├─ app.log        필터 없음        → 전부
+                ├─ access.log     AccessOkFilter   → status 2xx/3xx
+                ├─ error.log      ErrorFilter      → status 4xx/5xx 또는 ERROR 이상
+                └─ gemini.log     LoggerPrefixFilter("app.module.infra.gemini")
+                                                   → 그 프리픽스 하위 로거만
+```
+
+이 구조라서 **전용 파일에 남는 로그는 `app.log`에도 그대로 남습니다.** 빠지는 게 아니라 복사되는 겁니다.
+그리고 로거에 핸들러를 직접 붙이지 않으므로, 파일을 아무리 늘려도 쓰기는 전부 리스너 스레드에서만 일어납니다
+(= 이벤트 루프를 막지 않습니다).
+
+**② 로거 이름을 확인한다** — 이게 유일하게 틀리기 쉬운 부분입니다.
+
+`LoggerPrefixFilter`는 **로거 이름의 앞부분**을 봅니다. 이 템플릿은 대부분
+`get_logger(__name__)`을 쓰므로 로거 이름 = 모듈의 점 경로입니다.
+
+| 파일 | `__name__` (= 로거 이름) |
+|------|--------------------------|
+| `app/module/infra/gemini/gemini_service.py` | `app.module.infra.gemini.gemini_service` |
+| `app/module/infra/gemini/client.py` | `app.module.infra.gemini.client` |
+
+두 파일을 한 로그로 모으려면 **공통 조상**인 `app.module.infra.gemini`를 프리픽스로 쓰면 됩니다.
+필터는 `이름 == 프리픽스` 이거나 `이름이 프리픽스 + "."으로 시작`할 때 통과시키므로,
+그 패키지 아래 파일을 나중에 더 만들어도 자동으로 포함됩니다.
+
+**③ 상수에 한 줄 추가한다** — `backend/app/core/logging/config.py`
 
 ```python
 EXTRA_LOG_CHANNELS: dict[str, str] = {
-    "openai":    "app.module.infra.gpt",
-    "anthropic": "app.module.infra.claude",   # ← 추가
+    "openai": "app.module.infra.gpt",
+    "gemini": "app.module.infra.gemini",   # ← 추가. 키가 파일명(gemini.log)이 된다
 }
 ```
 
-> `--workers N`으로 멀티 프로세스 기동하면 파일 로테이션이 충돌합니다.
-> 그땐 파일 핸들러 대신 stdout 수집(systemd/docker 로그 드라이버)으로 전환하세요.
+이게 전부입니다. `setup_logging()`이 이 dict를 돌면서 싱크를 만들어 붙입니다.
+
+**④ 서비스에서 그냥 평소대로 로깅한다**
+
+```python
+# app/module/infra/gemini/gemini_service.py
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)      # → app.module.infra.gemini.gemini_service
+
+class GeminiService:
+    async def generate(self, prompt: str):
+        logger.info("gemini 호출 model=%s", model)     # gemini.log + app.log
+        ...
+        logger.exception("gemini 호출 실패")           # gemini.log + app.log + error.log
+```
+
+특별한 로거를 따로 만들 필요가 없습니다. `__name__`만 쓰면 위치가 곧 채널이 됩니다.
+
+**⑤ 확인**
+
+```bash
+ls backend/logs/          # app.log  access.log  error.log  openai.log  gemini.log
+tail -f backend/logs/gemini.log
+```
+
+**모듈 경로와 무관한 이름으로 묶고 싶다면**
+
+`__name__` 대신 이름을 직접 주면 됩니다. 이 템플릿도 액세스 로그에 이 방식을 씁니다
+(`get_logger("http.access")`, `get_logger("http.outbound")`).
+
+```python
+logger = get_logger("llm.gemini")        # 파일 위치와 상관없이 이 이름
+```
+
+```python
+EXTRA_LOG_CHANNELS = { "gemini": "llm.gemini" }
+```
+
+여러 폴더에 흩어진 코드를 한 파일로 모을 때 편합니다. 대신 이름을 사람이 관리해야 하므로,
+특별한 이유가 없으면 `__name__` 쪽을 권합니다.
+
+**주의할 점**
+
+- **프리픽스는 점(`.`) 경계로만 매칭됩니다.** `app.module.infra.gpt`는
+  `app.module.infra.gpt_v2`를 잡지 않습니다 (`gpt.`로 시작하지 않으므로). 의도한 동작입니다
+- **오타가 나도 에러가 안 납니다.** 존재하지 않는 프리픽스를 적으면 빈 파일만 생깁니다.
+  파일이 0바이트면 프리픽스를 의심하세요
+- 채널을 늘리면 **열린 파일 핸들도 같이 늘어납니다.** 자정마다 전부 로테이션되므로
+  수십 개씩 만들 거라면 stdout 수집 + 외부 수집기(Loki 등)를 쓰는 편이 낫습니다
+- `EXTRA_LOG_CHANNELS`의 키는 그대로 파일명이 되므로 경로 구분자나 공백은 넣지 마세요
 
 ### 6.5 마이그레이션
 
