@@ -73,7 +73,27 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 - **`frontend/src/assets/`** · `public/image.png` — 샘플 이미지 교체
 - **git 재시작** 여부 — `rm -rf .git && git init` 을 했는지
 
-## ⑤ 동작 확인
+## ⑤ 배포 설정 (`deploy/`)
+
+배포까지 간다면 `CHANGE` 표시를 채운다. 상세는 `deploy/README.md`.
+
+| 파일 | 바꿀 것 |
+| ---- | ------ |
+| `deploy/site.conf` | 도메인, `root`(frontend/dist), `/media` alias, 인증서 경로 |
+| `deploy/fastapi.service` | `User`·`WorkingDirectory`·`PATH`·`ReadWritePaths` |
+| `deploy/nginx.conf` | 보통 그대로. `user` 만 배포판에 맞게 |
+
+**TLS 를 누가 끝내는지 먼저 물어본다** — Cloudflare / AWS ALB / EC2 직접(certbot).
+답에 따라 `site.conf` 의 443 블록을 남길지 지울지가 갈린다.
+
+> ⚠️ **어느 형태든 HTTP→HTTPS 리다이렉트가 있어야 한다.** 없으면 평문으로 들어온
+> 사용자에게 `Secure` 쿠키가 저장되지 않아 "로그인은 200인데 세션이 안 잡힘" 이 난다.
+> 앞단(Cloudflare·ALB)이 TLS 를 끝내면 nginx 는 이걸 모르므로 **앞단에서** 켜야 한다.
+
+`fastapi.service` 의 `Environment="APP_ENV=prod"` 가 있는지 반드시 확인한다 —
+없으면 호스트명 추측으로 떨어져 쿠키가 통째로 어긋난다.
+
+## ⑥ 동작 확인
 
 승인받고 아래를 순서대로 돌려서 **실제로 뜨는지** 확인한다.
 

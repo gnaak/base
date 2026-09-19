@@ -24,7 +24,7 @@
 | **백엔드** | 계층 구조, DI, 공통 응답·에러코드, 예외 핸들러, 로깅, Alembic, 페이지네이션, 파일 업로드, ruff | 도메인 로직 (직접 채울 것) |
 | **테스트** | pytest 84개 + vitest 8개, 픽스처 일습 | E2E |
 | **프론트** | 관리자 레이아웃·사이드바, UI 킷(폼/테이블/모달/토스트), 라우트 가드, vitest | 디자인 시스템, 실제 화면 |
-| **인프라** | 헬스체크, 요청 ID, CORS·보안 헤더, 레이트리밋, docker-compose(MySQL·Redis), 배포용 Dockerfile, nginx 설정, GitHub Actions CI | 프론트 Dockerfile, 배포 자동화, SSR/프리렌더(레시피만 문서화) |
+| **인프라** | 헬스체크, 요청 ID, CORS·보안 헤더, 레이트리밋, docker-compose(MySQL·Redis), 배포용 Dockerfile, nginx·systemd 설정, GitHub Actions CI | 프론트 Dockerfile, 무중단 배포, SSR/프리렌더(레시피만 문서화) |
 
 ### 이 템플릿에서 집중한 것
 

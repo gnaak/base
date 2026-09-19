@@ -119,15 +119,24 @@ CI에서 다시 볼 일이 없다.
 
 ## 배포
 
-`deploy/nginx.conf` — 프론트 정적 + `/api`·`/media` 프록시 + WebSocket 업그레이드.
-`CHANGE` 표시 네 곳(도메인·경로)만 바꾸면 된다.
+`deploy/` — nginx(`nginx.conf` + `site.conf`) · systemd(`fastapi.service`) · 배포 절차(`README.md`).
+`CHANGE` 표시만 채우면 된다. `/setup` 이 같이 훑어준다.
 
-- **`X-Forwarded-For` 세 줄이 레이트리밋의 전제다.** 없으면 모든 방문자가 `127.0.0.1` 하나로
-  뭉쳐서 서비스 전체가 10req/분으로 묶인다
-- `client_max_body_size` 는 `upload.py` 의 `MAX_UPLOAD_BYTES` 보다 넉넉해야 한다.
-  작으면 앱이 413을 주기 전에 nginx가 끊어서 프론트가 `BaseResponse` 가 아닌 HTML을 받는다
-- SPA fallback 때문에 **없는 경로도 200** 을 준다. 공개 검색 노출이 목표면 파일 하단의
-  프리렌더 주석을 볼 것
+**먼저 정할 것 — TLS 를 누가 끝내는가.** Cloudflare / AWS ALB / EC2 직접(certbot)에 따라
+nginx 가 443 을 듣는지가 갈린다.
+
+> ⚠️ **어느 형태든 HTTP→HTTPS 리다이렉트가 반드시 있어야 한다.** 없으면 평문으로 들어온
+> 사용자에게 `Secure` 쿠키가 저장되지 않아 **"로그인은 200인데 세션이 안 잡힘"** 이 난다.
+> 앞단이 TLS 를 끝내면 nginx 는 이걸 모르므로 앞단에서 켠다 (CF: Always Use HTTPS / ALB: 리스너 규칙).
+
+- **`fastapi.service` 의 `APP_ENV=prod`** — 없으면 호스트명 추측으로 떨어져 쿠키가 통째로 어긋난다.
+  기동 로그의 `설정: env=prod (근거: APP_ENV)` 로 확인
+- **`X-Forwarded-For` 프록시 헤더가 레이트리밋의 전제다.** 없으면 모든 방문자가
+  `127.0.0.1` 하나로 뭉쳐서 서비스 전체가 한 한도로 묶인다
+- **`location /api/auth` 를 `/auth` 로 적지 말 것** — 실제 라우트는 `/api/auth/**` 라
+  매칭되지 않고, 로그인에 빡센 한도가 안 걸린 채 조용히 지나간다
+- `client_max_body_size` 는 `upload.py` 의 `MAX_UPLOAD_BYTES` 보다 넉넉해야 한다
+- `--workers` 를 올리지 말 것 — 파일 로그 로테이션이 충돌한다 (`fastapi.service` 주석)
 
 ## 새 프로젝트로 가져갈 때 교체할 것
 
