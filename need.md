@@ -22,7 +22,7 @@
 | [A4](#a4-prod에서-csrf가-실제로-뚫린다) | ~~prod CSRF 무방비~~ | 보안 | ✅ 완료 (Origin 검증은 선택) |
 | [A5](#a5-로그인-레이트리밋이-없다) | ~~로그인 레이트리밋 없음~~ | 보안 | ✅ 완료 |
 | [A6](#a6-토큰-무효화가-불가능하고-active가-검사되지-않는다) | ~~토큰 무효화 불가 + `active` 미검사~~ | 보안/버그 | ✅ 완료 |
-| [B7](#b7-docker-compose) | docker-compose (MySQL + Redis) | 인프라 | 반나절 |
+| [B7](#b7-docker-compose) | ~~docker-compose (MySQL + Redis)~~ | 인프라 | ✅ 완료 |
 | [B8](#b8-ci) | CI (pytest + tsc + build) | 인프라 | 1시간 |
 | [B9](#b9-ruff) | ruff (백엔드 린터·포매터) | 품질 | 1시간 |
 | [B10](#b10-requirements-분리) | requirements dev/prod 분리 | 품질 | 30분 |
@@ -33,7 +33,7 @@
 | [B15](#b15-에러코드-상수화) | 에러코드 상수화 (백엔드 + 프론트 타입) | 품질 | 1시간 |
 | [B16](#b16-prod-실행-스크립트) | prod 실행 스크립트 | 인프라 | 30분 |
 
-**남은 순서**: B7(docker-compose) → B8(CI) → 나머지 B
+**남은 순서**: B8(CI) → 나머지 B
 
 **A·C 전부 완료.** 요청·응답 양쪽에 타입이 붙었고, 로그인은 IP·계정 두 층으로 막혀 있고,
 세션은 끊을 수 있고(로그아웃·전체 종료·로테이션·재사용 탐지), 쿠키는 `SameSite=Lax`다.
@@ -450,14 +450,24 @@ Redis가 죽었다고 로그인까지 막을 이유가 없다. 이 구분은 테
 
 ## B7. docker-compose
 
-- [ ] 처리
+- [x] **완료** — 루트 `docker-compose.yml` + `docker/mysql/init.sql`
 
-README 의 "clone 후 `.env` 만 채우면 됨" 이 지금은 사실이 아니다. MySQL 8 과 Redis 7 을
-직접 설치해야 한다. `docker-compose.yml` 한 장이면 진짜가 된다. **가성비 1위.**
+MySQL 8 + Redis 7 만 띄운다. **앱은 컨테이너에 넣지 않았다** — 로컬에서 `sh run.sh` /
+`npm run dev` 로 띄우는 게 이 템플릿의 개발 흐름이고, 여기는 매번 새로 까는 게 귀찮은 것만 담는다.
 
-- MySQL 8 (`utf8mb4_unicode_ci`), Redis 7
-- 테스트 DB(`db_base_test`)까지 init 스크립트로 같이 생성
-- `.env.example` 기본값을 compose 포트와 맞출 것
+- `db_example` + `db_base_test` 를 init 스크립트로 자동 생성 (utf8mb4_unicode_ci)
+- 값이 `backend/.env.example` 의 `local_*` 기본값과 **정확히 일치** — `.env` 복사만 하면 붙는다
+- `127.0.0.1` 에만 바인딩 (root 비밀번호가 비어 있으므로 네트워크에 열면 안 된다)
+- `--default-time-zone=+09:00` — 이 템플릿이 KST 벽시계로 저장하는 것과 맞춤
+- healthcheck 는 `mysqladmin ping -h 127.0.0.1` (TCP). 소켓 ping 을 쓰면 초기화 중
+  임시 서버가 응답해서 `init.sql` 이 끝나기 전에 healthy 로 잡힌다 — B8(CI)에서
+  `service_healthy` 로 기다릴 때 중요하다
+- 포트 충돌 대비: `MYSQL_PORT` / `REDIS_PORT` 로 바꿀 수 있다 (루트 `.env`)
+
+**검증 상태** — `docker compose config` 통과, 포트 오버라이드 동작 확인.
+**실제 기동은 확인하지 못했다** (작업 환경에서 Docker Desktop 엔진이 꺼져 있었고,
+3306·6379 는 네이티브 MySQL·Redis 가 점유 중이었다). 처음 쓸 때 `docker compose ps` 로
+둘 다 `healthy` 인지, `pytest` 가 통과하는지 확인할 것.
 
 ## B8. CI
 

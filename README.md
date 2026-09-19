@@ -24,7 +24,7 @@
 | **백엔드** | 계층 구조, DI, 공통 응답, 예외 핸들러, 로깅, Alembic | 도메인 로직 (직접 채울 것) |
 | **테스트** | pytest 기반 라우터 통합 테스트 + 픽스처, 샘플 76개 | 프론트 테스트 |
 | **프론트** | 관리자 레이아웃·사이드바, UI 킷(폼/테이블/모달/토스트), 라우트 가드 | 디자인 시스템, 실제 화면 |
-| **인프라** | 헬스체크, 요청 ID, CORS·보안 헤더, 레이트리밋 | Docker, CI, 배포 스크립트 |
+| **인프라** | 헬스체크, 요청 ID, CORS·보안 헤더, 레이트리밋, docker-compose(MySQL·Redis) | 앱 Dockerfile, CI, 배포 스크립트 |
 
 ### 이 템플릿에서 집중한 것
 
@@ -63,8 +63,25 @@ Spring은 프레임워크가 계층을 강제하지만 FastAPI는 아무것도 �
 ### 3.1 사전 준비
 
 - Python 3.11+, Node 20+
-- MySQL 8 과 Redis 7 이 로컬에 떠 있을 것 (`backend/.env`의 `local_*` 값과 일치해야 함)
-- 빈 데이터베이스 하나 생성 (`CREATE DATABASE db_example;`)
+- Docker — MySQL·Redis를 띄우는 데만 씁니다 (앱은 로컬에서 실행)
+
+```bash
+docker compose up -d     # MySQL 8 + Redis 7
+docker compose ps        # 둘 다 healthy 인지 확인
+```
+
+DB 두 개(`db_example`, `db_base_test`)가 자동으로 만들어지고, 값은 `backend/.env.example`의
+`local_*` 기본값과 맞춰져 있어 `.env`만 복사하면 바로 붙습니다.
+
+> **이미 MySQL/Redis를 직접 설치해 쓰고 있다면** 포트가 충돌합니다. 기존 서비스를 끄거나,
+> 저장소 루트에 `.env`를 만들어 `MYSQL_PORT=3307` / `REDIS_PORT=6380` 으로 바꾸고
+> `backend/.env`의 `mysql_port`·`local_redis_port`도 같은 값으로 맞추세요.
+> Docker를 안 쓰고 직접 설치한 것을 그대로 써도 됩니다 — 그때는 아래 두 DB를 직접 만드세요.
+>
+> ```sql
+> CREATE DATABASE db_example    CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+> CREATE DATABASE db_base_test  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+> ```
 
 ### 3.2 환경 변수
 
@@ -568,7 +585,8 @@ APP_ENV=prod sh migrate_server.sh   # upgrade head 만
 라우터 하나를 끝낼 때마다 엣지 케이스까지 붙여서 돌리는 것을 기본 흐름으로 잡았습니다.
 
 ```bash
-# 최초 1회 — .env 의 test_mysql_db 와 같은 이름으로
+# docker compose 를 썼다면 db_base_test 는 이미 만들어져 있습니다.
+# 직접 설치한 MySQL 을 쓴다면 최초 1회 — .env 의 test_mysql_db 와 같은 이름으로
 mysql -u root -p -e "CREATE DATABASE db_base_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
 
 cd backend

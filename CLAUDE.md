@@ -103,7 +103,9 @@ cd backend && .venv/Scripts/python.exe -m pytest   # 라우터를 건드렸다�
 `secure=False` / `SameSite=Lax`로 나가고 세션이 안 잡힌다. 기동 로그에 인식된 env와 쿠키 설정이
 찍히니 배포 후 한 번 확인할 것.
 
-**로컬 개발 시**: 프론트와 백엔드 호스트를 반드시 통일할 것 (`localhost`끼리 또는 `127.0.0.1`끼리). 섞으면 cross-site가 돼서 `SameSite=Lax` 쿠키가 안 실리고, 로그인은 성공하는데 세션이 안 잡히는 증상이 난다. 또한 로컬 MySQL·Redis가 `backend/.env`의 `local_*` 값과 맞게 떠 있어야 한다 — 서버가 기동 시 연결을 검증(fail-fast)하고, 실패하면 원인을 로그에 남기고 그대로 종료된다.
+**로컬 개발 시**: 프론트와 백엔드 호스트를 반드시 통일할 것 (`localhost`끼리 또는 `127.0.0.1`끼리). 섞으면 cross-site가 돼서 `SameSite=Lax` 쿠키가 안 실리고, 로그인은 성공하는데 세션이 안 잡히는 증상이 난다.
+
+MySQL·Redis는 `docker compose up -d` 로 띄운다 (루트 `docker-compose.yml`). DB 두 개(`db_example`, `db_base_test`)가 자동 생성되고 값은 `backend/.env.example`과 맞춰져 있다. 직접 설치한 것을 써도 되지만 `backend/.env`의 `local_*` 값과 맞아야 한다 — 서버가 기동 시 연결을 검증(fail-fast)하고, 실패하면 원인을 로그에 남기고 그대로 종료된다.
 
 ## 트러블슈팅
 

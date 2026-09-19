@@ -1,0 +1,76 @@
+# 로컬 개발용 인프라 (MySQL 8 + Redis 7).
+#
+#   docker compose up -d       # 띄우기
+#   docker compose ps          # 상태 (healthy 확인)
+#   docker compose down        # 내리기 (데이터는 볼륨에 남는다)
+#   docker compose down -v     # 데이터까지 삭제
+#
+# 값은 backend/.env.example 의 local_* 기본값과 **정확히 맞춰져 있다.**
+# 그래서 `.env` 를 복사만 하면 바로 붙는다.
+#
+# 이미 MySQL/Redis 를 직접 설치해 쓰고 있다면 포트가 충돌한다. 둘 중 하나:
+#   1) 기존 서비스를 끄고 이걸 쓴다 (권장 — 설치본을 안 건드려도 됨)
+#   2) 저장소 루트에 `.env` 를 만들어 포트를 바꾸고, backend/.env 의 mysql_port·
+#      local_redis_port 도 같은 값으로 맞춘다
+#        MYSQL_PORT=3307
+#        REDIS_PORT=6380
+#
+# ⚠️ 앱(FastAPI/Vite)은 컨테이너에 넣지 않는다. 로컬에서 `sh run.sh` / `npm run dev` 로
+#    띄우는 것이 이 템플릿의 개발 흐름이고, 여기는 매번 새로 까는 게 귀찮은 것만 담는다.
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: base-mysql
+    restart: unless-stopped
+    environment:
+      # .env.example 의 local_mysql_password 가 비어 있는 것과 맞춘다.
+      # 비밀번호를 쓰려면 아래를 MYSQL_ROOT_PASSWORD 로 바꾸고 .env 도 같이 고칠 것.
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_DATABASE: db_example
+      TZ: Asia/Seoul
+    command:
+      # 이모지·한글이 깨지지 않게 서버 기본 문자셋을 맞춘다 (테이블 생성 시 상속된다)
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      # 이 템플릿은 시간을 KST 벽시계로 저장한다(core/database/base.py 의 now_kst).
+      # 서버 기본 타임존을 맞춰두면 raw SQL 의 NOW() 도 같은 기준이 된다.
+      - --default-time-zone=+09:00
+    ports:
+      # ⚠️ 127.0.0.1 에만 바인딩한다. root 비밀번호가 비어 있으므로
+      #    0.0.0.0 으로 열면 같은 네트워크의 누구나 접속할 수 있다.
+      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      # 최초 기동 시 1회 실행된다 (볼륨이 비어 있을 때만).
+      # 이미 만든 뒤 바꾸려면 `docker compose down -v` 로 볼륨을 지우고 다시 올릴 것.
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      # ⚠️ -h 127.0.0.1 로 TCP 확인을 해야 한다. 초기화 중 임시 서버는 소켓으로만
+      #    응답하므로, 소켓 ping 을 쓰면 init.sql 이 끝나기 전에 healthy 로 잡힌다.
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: base-redis
+    restart: unless-stopped
+    # .env.example 의 local_redis_password 가 비어 있는 것과 맞춘다.
+    # 비밀번호를 쓰려면 --requirepass <값> 을 추가하고 .env 도 같이 고칠 것.
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  mysql_data:
+  redis_data:
