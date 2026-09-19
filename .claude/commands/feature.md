@@ -7,7 +7,10 @@ $ARGUMENTS 기능을 구현하세요:
 
 1. be-researcher 호출 → 관련 코드 탐색
 2. be-db-modeler 호출 → 모델 작성
-3. be-api-builder 호출 → router/service/repository 작성
+3. be-api-builder 호출 → schema/repository/service/router 작성
+
+스키마(`XxxIn`/`XxxOut`)와 `response_model`이 빠지면 `/docs`와 검증이 비므로,
+be-api-builder 보고에 그 두 가지가 포함됐는지 확인할 것.
 
 터미널 명령 실행 금지.
 완료 후 생성된 파일 목록과 API 엔드포인트 목록 보고.

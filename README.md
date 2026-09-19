@@ -99,7 +99,7 @@ cp frontend/.env.example frontend/.env
 | `backend/.env` | `jwt_secret` / `hash_key` | **프로젝트마다 새로 생성** (아래 참고) |
 | `frontend/.env` | `VITE_APP_PUBLIC_BASE_URL` | 백엔드 오리진 |
 
-> 의존성은 두 갈래입니다 — `requirements.txt`(운영) / `requirements-dev.txt`(pytest·fakeredis).
+> 의존성은 두 갈래입니다 — `requirements.txt`(운영) / `requirements-dev.txt`(pytest·fakeredis·ruff).
 > 운영 이미지에는 앞의 것만 설치됩니다.
 
 ```bash
@@ -821,6 +821,19 @@ rm -rf .git && git init
 - [ ] 배포 시 `APP_ENV=prod` 명시
 
 Claude Code로 개발한다면 `CLAUDE.md`, `frontend/CLAUDE.md`, `backend/CLAUDE.md`에 규칙이 정리돼 있습니다.
+
+### `.claude/` 에 들어있는 것
+
+| | |
+|---|---|
+| `commands/` | `/feature` `/design` `/fullstack` `/fix` `/test` — 에이전트 호출 순서를 묶은 슬래시 커맨드 |
+| `agents/` | 백엔드·프론트 탐색/작성 전담 서브에이전트 7종 |
+| `skills/seo/` | SEO·AEO·GEO·LLMO·NEO(네이버) 진단·구현 스킬 |
+
+> `skills/seo` 는 [fire-your-seo-agency](https://github.com/leopard627/fire-your-seo-agency)(MIT)를
+> 가져와 이 템플릿에 맞게 손본 것입니다. **이 템플릿의 프론트는 CSR이라 `curl` 로 받으면 본문이
+> 없습니다** — 검색 노출이 목표라면 스킬이 안내하는 대로 렌더링 전략(프리렌더/SSR)부터
+> 정해야 하고, 로그인 뒤에서만 쓰는 도구라면 손댈 필요가 없습니다.
 
 ---
 

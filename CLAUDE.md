@@ -25,16 +25,27 @@
 
 로그인/refresh 성공 시 백엔드가 내려주는 쿠키 4종. 접두사는 `user_` 또는 `admin_`.
 
-| 쿠키               | httponly | 수명 | 용도                                  |
-| ------------------ | -------- | ---- | ------------------------------------- |
-| `{p}access_token`  | ✅       | 1h   | API 인증                              |
-| `{p}refresh_token` | ✅       | 6h   | 세션 갱신                             |
-| `{p}user_info`     | ❌       | 1h   | 프론트가 읽는 세션 정보 (base64 JSON) |
-| `{p}refresh_exp`   | ❌       | 6h   | "refresh 세션이 살아있다"는 마커      |
+| 쿠키               | httponly | 수명      | 용도                                  |
+| ------------------ | -------- | --------- | ------------------------------------- |
+| `{p}access_token`  | ✅       | access    | API 인증                              |
+| `{p}refresh_token` | ✅       | refresh   | 세션 갱신                             |
+| `{p}user_info`     | ❌       | access    | 프론트가 읽는 세션 정보 (base64 JSON) |
+| `{p}refresh_exp`   | ❌       | refresh   | "refresh 세션이 살아있다"는 마커      |
 
-- `user_info`의 필드는 `auth_token.create_jwt_token()`의 `session_info`와 프론트 `types/user.ts`의 `UserInfo`가 **1:1로 일치**해야 한다.
+수명은 `.env`의 `access_token_minutes`(기본 30) / `refresh_token_hours`(기본 168=7일)에서 온다.
+**`access_token_minutes`는 무효화가 적용되기까지의 최대 지연**이기도 하다 — 무효화 확인을
+refresh 시점에만 하기 때문이고, 그게 "access는 15~30분" 권고의 근거다.
+
+- `user_info`의 필드는 `auth_token.create_jwt_token()`이 반환하는 `SessionOut`과 프론트
+  `types/user.ts`의 `UserInfo`가 **1:1로 일치**해야 한다. 쿠키와 응답 `data`가 **같은 객체**에서
+  나오므로 어긋날 수가 없다 (`create_jwt_token`이 하나를 만들어 쿠키에 싣고 그대로 반환)
 - `user_`와 `admin_`은 완전히 독립된 세션이다. 동시에 둘 다 살아있을 수 있다.
 - 백엔드가 필드를 추가하면 `UserInfo`도 같이 고칠 것.
+- **refresh는 쓸 때마다 로테이션된다.** 갱신하면 옛 토큰이 죽고, 죽은 토큰이 다시 오면
+  유출로 보고 그 계정의 모든 세션을 끊는다(`SESSION_REUSE_DETECTED`). 자세한 건
+  `backend/CLAUDE.md`의 "세션 무효화".
+- **`errorCode`는 상수로 비교한다** — 백엔드 `core/utils/error_code.py` ↔ 프론트
+  `types/errorCode.ts`가 1:1이다. 문자열 리터럴을 쓰면 오타가 조용히 통과한다.
 
 **무한 새로고침 주의** — 이 템플릿에서 반복적으로 터졌던 버그다. `user_info` 쿠키가 남아있으면 프론트는 로그인 상태로 믿는데, 토큰이 무효라 API는 401을 준다. 이때 전체 새로고침(`location.reload()` / 같은 URL로 `location.href` 대입)을 하면 쿠키가 그대로라 루프가 돈다.
 
@@ -53,13 +64,30 @@
 **검증 명령** (Phase 완료 전 실행):
 
 ```bash
-cd frontend && npm run check:types
+cd backend  && .venv/Scripts/ruff.exe check .        # 린트
+cd backend  && .venv/Scripts/python.exe -m pytest    # 라우터를 건드렸다면
+cd frontend && npm run check:types && npm run lint
+cd frontend && npm test                              # vitest
 cd frontend && npm run build
-cd backend && .venv/Scripts/python.exe -m pytest   # 라우터를 건드렸다면
 ```
+
+이 다섯 줄이 `.github/workflows/ci.yml`이 돌리는 것과 같다 — 푸시 전에 여기서 걸러내면
+CI에서 다시 볼 일이 없다.
 
 도메인 라우터를 하나 끝낼 때마다 `/test {도메인}` 으로 엣지 케이스까지 테스트를 붙인다.
 테스트가 앱 코드의 버그를 잡으면 **테스트를 느슨하게 고치지 말고 앱을 고친다.**
+
+## Claude Code 설정
+
+| | |
+| --- | --- |
+| `.claude/commands/` | `/feature` `/design` `/fullstack` `/fix` `/test` |
+| `.claude/agents/` | 탐색·작성 전담 서브에이전트 7종 |
+| `.claude/skills/seo/` | SEO·AEO·GEO·LLMO·NEO 진단·구현 ([원본](https://github.com/leopard627/fire-your-seo-agency), MIT) |
+
+> **SEO 스킬 주의** — 이 템플릿의 프론트는 CSR이라 `curl`로 받은 HTML에 본문이 없다.
+> 검색 노출이 목표면 렌더링 전략(프리렌더/SSR)부터 정해야 하고, 로그인 뒤에서만 쓰는
+> 관리자 도구라면 애초에 손댈 필요가 없다. 스킬이 그 선택지를 먼저 제시한다.
 
 ## Phase 관리
 
@@ -113,6 +141,10 @@ MySQL·Redis는 `docker compose up -d` 로 띄운다 (루트 `docker-compose.yml
 | ------------------------------- | -------------------------------------------------------------------- |
 | 로그인은 200인데 세션이 안 잡힘 | 쿠키 자체가 저장됐는지 확인 (도메인·SameSite·호스트 불일치)          |
 | 무한 새로고침 / 401 반복        | 위 "무한 새로고침 주의" 참고. `user_info` 쿠키가 남아있는지부터 확인 |
+| 갑자기 429가 뜸                 | 로그인 빈도 제한. IP 10회/분 · 계정 5회 실패/10분 (`core/utils/rate_limit.py`) |
+| 로그인했는데 곧 401 `SESSION_REVOKED` | 비번 변경·계정 정지로 전체 세션이 끊겼거나, refresh 토큰이 이미 로테이션됨 |
+| 401 `SESSION_REUSE_DETECTED`    | 죽은 refresh 토큰이 다시 왔다 = 유출 신호. 전체 세션이 종료된 상태     |
+| `/docs`가 비어 보임             | 라우터가 `p.request.json()`을 쓰고 있거나 `response_model`이 없다      |
 | 외부 API 키 없음                | mock 데이터로 fallback, 키 확보 후 교체                              |
 | 테스트 실패                     | 원인 파악 후 수정. 우회 금지                                         |
 | 불명확한 요구사항               | 추측 말고 질문 후 진행                                               |
