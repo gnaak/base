@@ -24,7 +24,7 @@
 | **백엔드** | 계층 구조, DI, 공통 응답, 예외 핸들러, 로깅, Alembic | 도메인 로직 (직접 채울 것) |
 | **테스트** | pytest 기반 라우터 통합 테스트 + 픽스처, 샘플 76개 | 프론트 테스트 |
 | **프론트** | 관리자 레이아웃·사이드바, UI 킷(폼/테이블/모달/토스트), 라우트 가드 | 디자인 시스템, 실제 화면 |
-| **인프라** | 헬스체크, 요청 ID, CORS·보안 헤더, 레이트리밋, docker-compose(MySQL·Redis) | 앱 Dockerfile, CI, 배포 스크립트 |
+| **인프라** | 헬스체크, 요청 ID, CORS·보안 헤더, 레이트리밋, docker-compose(MySQL·Redis), 배포용 Dockerfile, GitHub Actions CI | 프론트 Dockerfile, nginx 설정, 배포 스크립트 |
 
 ### 이 템플릿에서 집중한 것
 
@@ -99,6 +99,9 @@ cp frontend/.env.example frontend/.env
 | `backend/.env` | `jwt_secret` / `hash_key` | **프로젝트마다 새로 생성** (아래 참고) |
 | `frontend/.env` | `VITE_APP_PUBLIC_BASE_URL` | 백엔드 오리진 |
 
+> 의존성은 두 갈래입니다 — `requirements.txt`(운영) / `requirements-dev.txt`(pytest·fakeredis).
+> 운영 이미지에는 앞의 것만 설치됩니다.
+
 ```bash
 # jwt_secret / hash_key 생성
 python -c "import secrets; print(secrets.token_urlsafe(48))"
@@ -112,7 +115,7 @@ OAuth 키를 비워두면 소셜 로그인만 동작하지 않고 서버는 정�
 # Backend
 cd backend
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r requirements.txt -r requirements-dev.txt
 sh migrate.sh "init"        # 테이블 생성
 sh run.sh                   # http://localhost:8000  (문서: /docs)
 
@@ -757,6 +760,41 @@ const adminMenu: AdminMenuItem[] = [
 ```
 
 라우트는 `App.tsx`의 `AdminLayout` 하위에 추가합니다.
+
+---
+
+## 8.4 CI · 배포 이미지
+
+`.github/workflows/ci.yml` 이 push·PR마다 아래를 돌립니다. `CLAUDE.md` 의 "검증 명령"을
+사람 기억이 아니라 파이프라인에 고정한 것입니다.
+
+| job | 하는 일 |
+|-----|---------|
+| `backend` | MySQL·Redis 서비스 컨테이너를 띄우고 `pytest` (Python 3.12 고정) |
+| `frontend` | `check:types` · `lint` · `build` |
+| `docker` | `backend/Dockerfile` 빌드 — 배포 직전에야 깨진 걸 아는 상황을 막습니다 |
+
+서비스 컨테이너는 `docker-compose.yml` 과 **같은 이미지·같은 healthcheck** 를 씁니다.
+
+### 배포용 이미지
+
+```bash
+docker build -t base-backend ./backend
+docker run --rm -p 8000:8000 --env-file backend/.env base-backend
+```
+
+- `python:3.12-slim` 고정 — 서버의 시스템 파이썬 버전과 무관해집니다
+- 멀티스테이지(휠 빌드 → 설치) 라 컴파일러가 최종 이미지에 남지 않습니다
+- 비루트(`uid 10001`) 실행, `APP_ENV=prod` 가 이미지에 박혀 있습니다
+  (이걸 빠뜨려 `local` 로 떨어지는 것이 이 템플릿의 단골 사고입니다)
+- `.env` 는 `.dockerignore` 로 제외됩니다 — 운영 값은 `--env-file` / `-e` 로 주입하세요
+  (`.env` 가 없으면 pydantic-settings 가 실제 환경변수에서 읽습니다)
+- 마이그레이션은 컨테이너에서: `docker run --rm --env-file … base-backend alembic upgrade head`
+
+> **개발에는 이 이미지를 쓰지 마세요.** 핫리로드를 하려면 소스를 바인드 마운트해야 하는데,
+> Windows 에서 `C:\...` 를 마운트하면 파일 I/O 가 느리고 `inotify` 이벤트가 넘어오지 않아
+> `--reload` 와 Vite HMR 이 제대로 동작하지 않습니다. 개발은 로컬 venv 로 하고,
+> Docker 는 **인프라(compose)와 배포(이미지)** 에만 씁니다.
 
 ---
 

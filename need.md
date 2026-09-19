@@ -23,9 +23,9 @@
 | [A5](#a5-로그인-레이트리밋이-없다) | ~~로그인 레이트리밋 없음~~ | 보안 | ✅ 완료 |
 | [A6](#a6-토큰-무효화가-불가능하고-active가-검사되지-않는다) | ~~토큰 무효화 불가 + `active` 미검사~~ | 보안/버그 | ✅ 완료 |
 | [B7](#b7-docker-compose) | ~~docker-compose (MySQL + Redis)~~ | 인프라 | ✅ 완료 |
-| [B8](#b8-ci) | CI (pytest + tsc + build) | 인프라 | 1시간 |
+| [B8](#b8-ci) | ~~CI (pytest + tsc + build)~~ | 인프라 | ✅ 완료 |
 | [B9](#b9-ruff) | ruff (백엔드 린터·포매터) | 품질 | 1시간 |
-| [B10](#b10-requirements-분리) | requirements dev/prod 분리 | 품질 | 30분 |
+| [B10](#b10-requirements-분리) | ~~requirements dev/prod 분리~~ | 품질 | ✅ 완료 |
 | [B11](#b11-프론트-테스트) | 프론트 테스트 (vitest) | 품질 | 반나절 |
 | [B12](#b12-페이지네이션-계약) | 페이지네이션 응답 규약 | 기능 | 반나절 |
 | [B13](#b13-파일-업로드) | 파일 업로드 엔드포인트 | 기능 | 반나절 |
@@ -33,11 +33,14 @@
 | [B15](#b15-에러코드-상수화) | 에러코드 상수화 (백엔드 + 프론트 타입) | 품질 | 1시간 |
 | [B16](#b16-prod-실행-스크립트) | prod 실행 스크립트 | 인프라 | 30분 |
 
-**남은 순서**: B8(CI) → 나머지 B
+**남은 순서**: B9(ruff + pyproject) → B11(프론트 테스트) → B12~B16
 
-**A·C 전부 완료.** 요청·응답 양쪽에 타입이 붙었고, 로그인은 IP·계정 두 층으로 막혀 있고,
-세션은 끊을 수 있고(로그아웃·전체 종료·로테이션·재사용 탐지), 쿠키는 `SameSite=Lax`다.
-죽은 코드도 정리됐다. **남은 건 B(인프라·품질)뿐이다.**
+**A·C 완료, B는 7·8·10 완료.** 요청·응답 양쪽에 타입이 붙었고, 로그인은 IP·계정 두 층으로
+막혀 있고, 세션은 끊을 수 있고, 쿠키는 `SameSite=Lax`다. 인프라는 compose(개발) +
+Dockerfile(배포) + CI(검증) 세 축이 섰다.
+
+남은 B: **B9**(ruff — 이때 `pyproject.toml` 도입), **B11**(vitest), B12 페이지네이션,
+B13 파일 업로드, B14 TimestampMixin, B15 에러코드 상수, B16 prod 실행 스크립트.
 
 ---
 
@@ -471,16 +474,33 @@ MySQL 8 + Redis 7 만 띄운다. **앱은 컨테이너에 넣지 않았다** —
 
 ## B8. CI
 
-- [ ] 처리
+- [x] **완료** — `.github/workflows/ci.yml` (job 3개) + `backend/Dockerfile`
 
-`.github/workflows/ci.yml` — `CLAUDE.md` 의 "검증 명령" 이 지금은 사람 기억에 의존 중이다.
+| job | 하는 일 |
+| --- | ------- |
+| `backend` | MySQL·Redis 서비스 컨테이너 + `pytest` (Python 3.12 고정) |
+| `frontend` | `check:types` · `lint` · `build` |
+| `docker` | `backend/Dockerfile` 빌드 — 배포 직전에야 깨진 걸 아는 상황 방지 |
 
-```
-backend:  pytest (MySQL + Redis 서비스 컨테이너)
-frontend: npm run check:types && npm run build
-```
+서비스 컨테이너는 B7 의 compose 와 **같은 이미지·같은 healthcheck** 를 쓴다
+(`mysqladmin ping -h 127.0.0.1` 로 TCP 확인해야 초기화 완료를 제대로 기다린다).
 
-B7 을 먼저 하면 서비스 컨테이너 설정을 그대로 재사용할 수 있다.
+**배포용 Dockerfile 도 같이 만들었다.** "파이썬 버전을 고정하고 싶다" 는 요구는
+개발 컨테이너가 아니라 여기서 푸는 게 맞다 — `python:3.12-slim` 고정, 멀티스테이지,
+비루트 실행, `APP_ENV=prod` 를 이미지에 박아 단골 사고를 막는다.
+`.env` 는 `.dockerignore` 로 제외하고 운영 값은 주입받는다.
+
+> 개발에는 이 이미지를 쓰지 않는다. 핫리로드에 필요한 바인드 마운트가 Windows 의
+> `C:\...` 에서는 느리고 `inotify` 가 안 넘어온다. Docker 는 **인프라 + 배포**에만.
+
+**lint 를 CI 에 넣으려고 테이블 컴포넌트의 `any` 6개를 제네릭으로 고쳤다** —
+`Table`/`TableBody` 가 `Row` 제네릭을 받고, 헤더는 `render` 를 뺀 `HeaderColumn` 을 받는다
+(변성 문제 회피). 템플릿의 `any` 는 복사해 쓰는 프로젝트마다 그대로 번진다.
+
+**검증 상태** — YAML 파싱·job 구조 확인, `pytest`/`lint`/`build` 로컬 통과,
+`.env` 뒤 키가 이기는지 확인(CI 의 시크릿 주입이 여기 의존).
+**GitHub Actions 실제 실행과 Docker 이미지 빌드는 확인하지 못했다** (Docker 엔진 꺼져 있음).
+첫 푸시 후 Actions 탭에서 확인할 것.
 
 ## B9. ruff
 
@@ -491,10 +511,15 @@ ruff 하나가 lint + format + isort 를 전부 대체한다. `isort` 는 제거
 
 ## B10. requirements 분리
 
-- [ ] 처리
+- [x] **완료** — `requirements-dev.txt` 신규 (pytest · pytest-asyncio · fakeredis)
 
-지금은 `pip freeze` 덩어리라 `pytest`·`pytest-asyncio`·`fakeredis` 가 운영 서버에 설치된다.
-`requirements-dev.txt` 로 분리하거나 `pyproject.toml` 로 전환.
+운영 이미지에는 `requirements.txt` 만 설치된다. B8 의 Dockerfile 을 제대로 만들려면
+어차피 필요해서 같이 처리했다.
+
+**`pyproject.toml` 로 안 간 이유** — pyproject 는 lock 파일이 아니다. 지금의 freeze 가
+오히려 재현성이 높다. pyproject 의 진짜 이득은 흩어진 도구 설정을 모으는 것인데,
+지금 모을 게 `pytest.ini` 하나뿐이다. **B9(ruff) 때 같이 도입하는 게 자연스럽다**
+(ruff 설정 + pytest 설정을 `pyproject.toml` 하나로). 의존성은 그때도 `requirements.txt` 유지.
 
 ## B11. 프론트 테스트
 

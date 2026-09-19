@@ -1,0 +1,8 @@
+# 개발·테스트 전용. 운영 이미지에는 설치하지 않는다.
+#
+#   pip install -r requirements.txt -r requirements-dev.txt
+#
+# 전이 의존성(sortedcontainers, pluggy 등)은 pip 가 알아서 받는다.
+fakeredis==2.34.1
+pytest-asyncio==1.4.0
+pytest==9.0.2

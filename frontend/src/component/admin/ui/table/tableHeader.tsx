@@ -1,4 +1,4 @@
-import type { Column } from "./table";
+import type { HeaderColumn } from "./table";
 
 /**
  * TableHeader 컴포넌트 Props
@@ -7,7 +7,9 @@ import type { Column } from "./table";
  * @property rowSizeClass   행 높이 및 텍스트 크기 클래스 (Table에서 전달)
  */
 interface TableHeaderProps {
-  columns: Column[];
+  // 헤더는 행 데이터를 보지 않으므로 render 를 뺀 형태로 받는다.
+  // (Column<Row> 를 그대로 받으면 render 의 인자 타입 때문에 변성 문제가 생긴다)
+  columns: HeaderColumn[];
   rowSizeClass: string;
 }
 

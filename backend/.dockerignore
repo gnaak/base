@@ -1,0 +1,28 @@
+# 빌드 컨텍스트에서 제외할 것. 이미지 크기뿐 아니라 **시크릿 유출**도 막는다.
+
+# ⚠️ .env 는 절대 이미지에 넣지 않는다. 운영 값은 --env-file 이나 -e 로 주입한다.
+#    (pydantic-settings 는 .env 가 없으면 실제 환경변수에서 읽는다)
+.env
+.env.*
+
+# 로컬 가상환경 — 호스트 OS 용 바이너리라 컨테이너에서 쓸 수 없다
+.venv/
+venv/
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# 테스트는 운영 이미지에 넣지 않는다 (CI 가 컨테이너 밖에서 돌린다)
+tests/
+requirements-dev.txt
+
+# 런타임에 생성되는 것
+logs/*
+!logs/.keep
+media/*
+!media/.keep
+
+# 문서·스크립트
+*.md
+*.sh

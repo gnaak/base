@@ -353,7 +353,12 @@ class ExampleRepository:
 
 ## 테스트 — 라우터 하나 끝나면 바로
 
+의존성은 두 갈래다 — `requirements.txt`(운영) / `requirements-dev.txt`(pytest·fakeredis).
+운영 이미지에는 앞의 것만 설치된다.
+
 ```bash
+pip install -r requirements.txt -r requirements-dev.txt   # 개발 환경 준비
+
 cd backend && .venv/Scripts/python.exe -m pytest        # 전체
 .venv/Scripts/python.exe -m pytest tests/test_user_router.py -v   # 한 파일
 ```

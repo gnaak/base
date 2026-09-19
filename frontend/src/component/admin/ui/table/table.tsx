@@ -12,23 +12,34 @@ export type Size = "sm" | "md" | "lg";
 export type Align = "left" | "center" | "right";
 
 /**
+ * 테이블이 다루는 행. 값의 타입은 자유이고, 표시 방법은 `Column.render`로 정한다.
+ *
+ * 보통은 이걸 직접 쓰지 않고 도메인 타입을 그대로 넘긴다 —
+ * `<Table<UserRow> columns={...} data={users} />` 처럼 쓰면 `render`의 인자에도
+ * `UserRow`가 붙는다.
+ */
+export type TableRow = Record<string, unknown>;
+
+/**
  * Table 열(Column) 정의
  *
  * @property key     행 데이터에서 읽을 key
  * @property header  테이블 헤더에 표시될 텍스트
  * @property width   개별 컬럼 가로 너비 (예: "150px" 또는 "20%")
  * @property align   정렬(left/center/right)
- * @property render  셀 커스텀 렌더 함수(row → ReactNode)
- * @property rowCount 행 개수
+ * @property render  셀 커스텀 렌더 함수(row → ReactNode). 객체·배열 값은 여기서 직접 그린다
  */
-export interface Column {
+export interface Column<Row extends TableRow = TableRow> {
   key: string;
   header: string;
   width?: string;
   align?: Align;
-  render?: (row: any) => React.ReactNode;
+  render?: (row: Row) => React.ReactNode;
   icon?: React.ReactNode;
 }
+
+/** 헤더는 행 데이터를 보지 않으므로 `render`를 뺀 형태만 받는다. */
+export type HeaderColumn = Omit<Column, "render">;
 
 /**
  * Table 컴포넌트 Props
@@ -41,13 +52,13 @@ export interface Column {
  * @property onRowClick 행 클릭 시 호출되는 콜백(row 전달)
  * @property rowCount 행 개수
  */
-interface TableProps {
-  columns: Column[];
-  data: any[];
+interface TableProps<Row extends TableRow> {
+  columns: Column<Row>[];
+  data: Row[];
   size?: Size;
   striped?: boolean;
   className?: string;
-  onRowClick?: (row: any) => void;
+  onRowClick?: (row: Row) => void;
   rowCount?: number;
   icon?: React.ReactNode;
 }
@@ -79,18 +90,19 @@ const sizeStyles: Record<Size, string> = {
  * <Table columns={columns} data={rows} />
  * ```
  *
- * @example 커스텀 렌더링
+ * @example 커스텀 렌더링 + 타입 지정
  * ```tsx
- * const columns = [
- *   {
- *     key: "status",
- *     header: "상태",
- *     render: (row) => <StatusTag type={row.status} />,
- *   },
+ * interface UserRow { id: number; name: string; status: "on" | "off" }
+ *
+ * const columns: Column<UserRow>[] = [
+ *   { key: "name", header: "이름" },
+ *   { key: "status", header: "상태", render: (row) => <StatusTag type={row.status} /> },
  * ];
+ *
+ * <Table columns={columns} data={users} />   // data로 Row가 추론된다
  * ```
  */
-const Table = ({
+const Table = <Row extends TableRow>({
   columns,
   data,
   size = "md",
@@ -98,7 +110,7 @@ const Table = ({
   className = "",
   onRowClick,
   rowCount,
-}: TableProps) => {
+}: TableProps<Row>) => {
   const rowSizeClass = sizeStyles[size];
   const isEmpty = data.length === 0;
   return (

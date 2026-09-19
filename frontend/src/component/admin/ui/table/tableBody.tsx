@@ -1,4 +1,13 @@
-import type { Column } from "./table";
+import type { Column, TableRow } from "./table";
+
+/**
+ * `render`가 없을 때의 기본 셀 표시.
+ *
+ * 객체·배열은 `[object Object]`처럼 보이게 둔다 — 조용히 빈칸으로 만들면
+ * 데이터가 없는 건지 표시를 안 한 건지 구분이 안 된다. 그런 값은 `render`로 직접 그릴 것.
+ */
+const defaultCell = (value: unknown): React.ReactNode =>
+  value === null || value === undefined ? "" : String(value);
 
 /**
  * TableBody 컴포넌트 Props
@@ -10,13 +19,13 @@ import type { Column } from "./table";
  * @property rowCount      행 개수
  * @property onRowClick    각 행 클릭 시 호출되는 콜백
  */
-interface TableBodyProps {
-  columns: Column[];
-  data: any[];
+interface TableBodyProps<Row extends TableRow> {
+  columns: Column<Row>[];
+  data: Row[];
   rowSizeClass: string;
   striped: boolean;
   rowCount?: number;
-  onRowClick?: (row: any) => void;
+  onRowClick?: (row: Row) => void;
 }
 
 /**
@@ -38,14 +47,14 @@ interface TableBodyProps {
  * />
  * ```
  */
-const TableBody = ({
+const TableBody = <Row extends TableRow>({
   columns,
   data,
   rowSizeClass,
   striped,
   rowCount,
   onRowClick,
-}: TableBodyProps) => {
+}: TableBodyProps<Row>) => {
   const target = rowCount && rowCount > 0 ? rowCount : data.length;
   const emptyCount = Math.max(0, target - data.length);
   return (
@@ -74,7 +83,7 @@ const TableBody = ({
                   key={col.key}
                   className={`px-3 py-2.5 align-middle ${alignClass} ${index < data.length - 1 ? "border-b border-gray-200" : ""}`}
                 >
-                  {col.render ? col.render(row) : ((row as any)[col.key] ?? "")}
+                  {col.render ? col.render(row) : defaultCell(row[col.key])}
                 </td>
               );
             })}
