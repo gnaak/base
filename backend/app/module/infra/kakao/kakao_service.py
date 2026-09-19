@@ -13,15 +13,10 @@ class KakaoService:
     def __init__(self, user_repo: UserRepository):
         self.user_repo = user_repo
 
-    async def kakao_login(self, request):
+    async def kakao_login(self, code: str):
+        """`code` 의 존재 여부는 OAuthCodeIn 스키마가 이미 보장한다."""
         KAKAO_TOKEN_URI = "https://kauth.kakao.com/oauth/token"
         KAKAO_USER_INFO_URI = "https://kapi.kakao.com/v2/user/me"
-
-        body = await request.json()
-        code = body.get("code")
-
-        if not code:
-            raise fail("Authorization code not provided", "AUTH_CODE_NOT_PROVIDED", 400)
 
         token_data = {
             "code": code,

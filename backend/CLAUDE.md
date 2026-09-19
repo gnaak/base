@@ -14,7 +14,7 @@ app/
 │   ├── logging/                    # 로깅 설정·컨텍스트 (request_id 연동)
 │   ├── middleware/ (cors.py, register.py, request_id.py, security.py)
 │   ├── provider/
-│   │   ├── http/ (endpoint.py, login.py, service.py)
+│   │   ├── http/ (service.py: ServiceProvider·Auth · deps.py: Provider 3종)
 │   │   └── web_socket/ (동일 구성)
 │   └── utils/                      # response.py: success()/fail() · http_client.py: 공용 아웃바운드 HTTP
 └── module/
@@ -23,11 +23,12 @@ app/
     └── infra/ (google/ kakao/ redis/ gpt/)
 ```
 
-## 도메인 모듈 — 4파일 세트
+## 도메인 모듈 — 5파일 세트
 
 ```
 module/[domain]/
 ├── [domain].py             # SQLAlchemy 모델
+├── [domain]_schema.py      # 요청 스키마 (Pydantic) — 입력이 있는 도메인만
 ├── [domain]_repository.py  # DB 쿼리만 (비즈니스 로직 없음)
 ├── [domain]_service.py     # 비즈니스 로직
 └── [domain]_router.py      # HTTP 엔드포인트
@@ -59,36 +60,56 @@ module/[domain]/
 
 ## 라우터 패턴
 
-**데코레이터 순서가 중요하다.** `@with_provider`가 항상 `@with_login()` 위에 와야 한다 —
-`with_login`은 첫 인자로 `ServiceProvider`를 받는데, 그걸 주입하는 게 `with_provider`이기 때문.
+**데코레이터는 없다.** DI와 인증은 파라미터 타입 하나로 끝난다.
 
 ```python
-from app.core.provider.http.endpoint import with_provider
-from app.core.provider.http.login import with_login
+from app.core.provider.http.deps import Provider, UserProvider, AdminProvider
 from app.core.utils.response import success, fail
+from app.module.example.example_schema import ExampleIn
 
 @router.post("/example")
-@with_provider                          # 로그인 불필요
-async def example(p: ServiceProvider):
-    result = await p.example_service.do_something(p.request)
-    return success(result)
+async def example(body: ExampleIn, p: Provider):        # 로그인 불필요
+    return success(await p.example_service.do_something(body))
 
 @router.get("/me")
-@with_provider                          # ← 필수. 빼면 p가 주입되지 않는다
-@with_login()                           # 로그인 필요. 괄호 필수!
-async def get_me(p: ServiceProvider):   # 관리자 전용은 @with_login("admin")
-    user = await p.user_service.get_user_by_id(p.request.user_id)
-    return success(user)
+async def get_me(p: UserProvider):                      # user 로그인 필요
+    return success(await p.user_service.get_me(p.auth.user_id))
+
+@router.delete("/group/{group_id}/member/{member_id}")
+async def remove(group_id: int, member_id: int, p: AdminProvider):   # 관리자 전용
+    await p.group_service.remove_member(group_id, member_id)
+    return success(message="removed")
 ```
 
-**`with_login`이 채워주는 값** — `p.user`가 아니라 `p.request`에 붙는다:
+| 타입             | 의미                                     |
+| ---------------- | ---------------------------------------- |
+| `Provider`       | 비로그인. `p.auth`는 `None`              |
+| `UserProvider`   | user 토큰 필수                           |
+| `AdminProvider`  | admin 토큰 필수                          |
 
-| 값                    | 내용                         |
-| --------------------- | ---------------------------- |
-| `p.request.user_id`   | `int` — access_token의 `sub` |
-| `p.request.auth_type` | `"user"` \| `"admin"`        |
+**로그인 정보는 `p.auth`에서 읽는다** (`p.request.user_id` 아님 — 그건 예전 방식):
 
-`@without_login`을 쓰면 비로그인 상태로 `user_id="guest_user"`, `auth_type="guest"`가 세팅된다.
+| 값               | 내용                         |
+| ---------------- | ---------------------------- |
+| `p.auth.user_id` | `int` — access_token의 `sub` |
+| `p.auth.auth_type` | `"user"` \| `"admin"`      |
+
+**path/query/body는 그냥 파라미터로 선언한다.** FastAPI가 파싱·검증·문서화를 전부 한다 —
+`p.request.path_params[...]`나 `await p.request.json()`을 쓰지 말 것. 쓰면 검증이 사라지고
+잘못된 입력이 422가 아니라 500으로 나간다.
+
+```python
+# ❌ 예전 방식 — 검증 없음, /docs에 안 나옴, int() 실패 시 500
+async def get_item(p: UserProvider):
+    item_id = int(p.request.path_params["item_id"])
+    body = await p.request.json()
+
+# ✅
+async def get_item(item_id: int, body: ItemIn, p: UserProvider):
+```
+
+> ⚠️ `Provider` 계열은 기본값이 없으므로 **기본값 있는 파라미터보다 앞**에 온다.
+> `async def list_items(p: UserProvider, page: int = 1)` — 순서를 어기면 `SyntaxError`로 바로 터진다.
 
 **응답 헬퍼**
 
@@ -100,9 +121,18 @@ async def get_me(p: ServiceProvider):   # 관리자 전용은 @with_login("admin
 `message`는 사람이 읽는 문장, `errorCode`는 프론트가 비교하는 상수로 나눈다.
 - 쿠키를 심어야 하면 `success()`가 돌려준 응답 객체에 `set_cookie` — `auth_router.login` 참고
 
-WebSocket은 `with_provider_web_socket` / `with_login_web_socket` 사용.
+- 요청 스키마 검증 실패는 전역 핸들러가 `422` + `errorCode: "VALIDATION_ERROR"`로 변환한다.
+  메시지는 `"email: Field required"` 형태
 
-> `login.py`의 두 데코레이터는 `AuthToken`을 **함수 안에서** import한다.
+WebSocket은 `web_socket/deps.py`의 `WSProvider` / `UserWSProvider` / `AdminWSProvider` 사용:
+
+```python
+@router.websocket("/")
+async def stt_ws(websocket: WebSocket, p: WSProvider):
+    await p.web_socket_service.init_state(websocket)
+```
+
+> `deps.py`의 `provider()`는 `AuthToken`을 **함수 안에서** import한다.
 > `app/module/__init__.py`가 라우터를 통해 이 모듈을 끌어오기 때문에, 최상단에 두면
 > 이 모듈을 `app.module`보다 먼저 import했을 때 순환 import로 깨진다. 그대로 둘 것.
 
@@ -170,7 +200,8 @@ prod_domain=gnaak.com
 
 ## ServiceProvider — lazy-load 프로퍼티
 
-`core/provider/http/service.py`에서 **두 군데**를 고쳐야 한다:
+새 서비스를 붙일 때 `core/provider/http/service.py`에서 **두 군데**를 고쳐야 한다
+(`deps.py`는 건드릴 필요 없다):
 
 ```python
 class ServiceProvider:

@@ -1,12 +1,38 @@
-from fastapi import Depends, Request
+from dataclasses import dataclass
+from typing import Optional
 
-from app.core.database.base import get_session
+from fastapi import Request
+
+
+@dataclass(frozen=True)
+class Auth:
+    """로그인한 주체. `provider("user"|"admin")`가 토큰을 검증해서 채운다.
+
+    비로그인 라우트에서는 `p.auth`가 None이다 (예전의 "guest_user" 같은 가짜 값 없음).
+    """
+
+    user_id: int
+    auth_type: str
 
 
 class ServiceProvider:
+    """라우터가 받는 단 하나의 손잡이.
+
+    서비스/리포지토리를 lazy property로 들고 있어서, 라우터는 `p.user_service` 처럼
+    쓰기만 하면 된다. 실제 주입은 `deps.py`의 `provider()`가 한다.
+
+    새 서비스를 추가할 때는 **두 군데**를 고친다:
+      1. __init__ 에 캐시 슬롯 추가 (`self._my_service = None`)
+      2. 아래에 property 추가
+
+    import은 반드시 property **안에서** 한다. `app.module`이 라우터를 통해 이 모듈을
+    끌어오기 때문에, 최상단에 두면 로딩 순서에 따라 순환 import로 깨진다.
+    """
+
     def __init__(self, request: Request, db):
         self.request = request
         self.db = db
+        self.auth: Optional[Auth] = None
         self._redis_service = None
         self._user_repo = None
         self._admin_repo = None
@@ -66,7 +92,7 @@ class ServiceProvider:
             from app.module.infra.gpt.gpt_service import GPTService
             self._gpt_service = GPTService(self.redis_service)
         return self._gpt_service
-    
+
     @property
     def google_service(self):
         if not self._google_service:
@@ -80,10 +106,3 @@ class ServiceProvider:
             from app.module.infra.kakao.kakao_service import KakaoService
             self._kakao_service = KakaoService(self.user_repo)
         return self._kakao_service
-
-
-async def get_provider(
-    request: Request,
-    db=Depends(get_session),
-):
-    return ServiceProvider(request, db)

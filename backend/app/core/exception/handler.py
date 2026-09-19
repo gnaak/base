@@ -2,6 +2,7 @@
 import logging
 
 from fastapi import FastAPI, Request, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from app.core.config.settings import settings
 from app.core.logging import get_logger
@@ -42,6 +43,35 @@ def setup_exceptions(app: FastAPI) -> None:
             status_code=exc.status_code,
             content=body.model_dump(),
         )
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_handler(request: Request, exc: RequestValidationError):
+        """요청 스키마 검증 실패 → BaseResponse 형태로 변환.
+
+        이 핸들러가 없으면 FastAPI 기본 핸들러가 `{"detail": [...]}` 를 내보내서
+        프론트의 BaseResponse 계약이 깨진다 (`json.success` 가 undefined가 되고
+        useAPI는 "Something went wrong" 만 띄운다).
+        """
+        errors = exc.errors()
+        first = errors[0] if errors else {}
+        # loc 는 ("body", "email") 같은 형태 — 앞의 위치 구분자를 떼고 필드명만 남긴다
+        field = ".".join(str(x) for x in first.get("loc", [])[1:])
+        message = first.get("msg", "입력값이 올바르지 않습니다")
+
+        logger.info(
+            "%s %s -> 422: %s [%s]",
+            request.method, request.url.path, f"{field}: {message}" if field else message,
+            "VALIDATION_ERROR",
+        )
+
+        body = BaseResponse(
+            success=False,
+            message=f"{field}: {message}" if field else message,
+            data=None,
+            errorCode="VALIDATION_ERROR",
+        )
+
+        return JSONResponse(status_code=422, content=body.model_dump())
 
     @app.exception_handler(Exception)
     async def unhandled_handler(request: Request, exc: Exception):

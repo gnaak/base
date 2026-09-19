@@ -10,7 +10,8 @@ allowed-tools: Read, Grep, Glob, Write, Edit
 
 1. `backend/tests/conftest.py` — 쓸 수 있는 픽스처와 헬퍼
 2. `backend/tests/test_user_router.py` — 형태의 본보기. 구성과 네이밍을 그대로 따를 것
-3. 대상 도메인의 `*_router.py` / `*_service.py` / `*_repository.py` / 모델
+3. `backend/tests/test_auth_router.py` — 요청 스키마 검증(422) 테스트의 본보기
+4. 대상 도메인의 `*_router.py` / `*_schema.py` / `*_service.py` / `*_repository.py` / 모델
 
 ## 쓸 수 있는 것
 
@@ -30,17 +31,20 @@ allowed-tools: Read, Grep, Glob, Write, Edit
 
 정상 경로 하나만 쓰고 끝내지 마세요. 아래를 해당되는 만큼 전부 넣습니다.
 
-**인증** (`@with_login`이 붙은 엔드포인트라면 전부)
+**인증** (`p: UserProvider` / `p: AdminProvider` 를 받는 엔드포인트라면 전부)
 - 쿠키 없음 → 401 `ACCESS_TOKEN_MISSING`
 - 만료 토큰 → 401 `ACCESS_TOKEN_EXPIRED`
 - 다른 서명 → 401 `ACCESS_TOKEN_INVALID`
 - refresh 토큰으로 접근 → 401 `INVALID_TOKEN_TYPE`
 - 반대편 세션 토큰(user↔admin) → 401
 
-**입력**
-- 필수 필드 누락, 타입 불일치 → 422
+**입력** (요청 스키마가 있는 엔드포인트. 실패는 전부 422 + `VALIDATION_ERROR`)
+- 필수 필드 누락, 타입 불일치
 - 빈 문자열, 공백만, 길이 초과(모델의 `String(n)` 경계)
 - 음수·0·범위 밖 숫자
+- `Literal`/`Enum` 필드에 모르는 값
+- 바디가 JSON이 아님 / 배열·문자열 / 빈 바디
+- path 파라미터에 엉뚱한 타입 (`/item/abc` → 422)
 
 **상태**
 - 대상이 없음 → 404

@@ -1,12 +1,17 @@
-from fastapi import Depends, WebSocket
+from typing import Optional
 
-from app.core.database.base import get_session
+from fastapi import WebSocket
+
+from app.core.provider.http.service import Auth
 
 
 class WebSocketProvider:
+    """WebSocket 핸들러가 받는 손잡이. HTTP의 ServiceProvider와 같은 역할."""
+
     def __init__(self, websocket: WebSocket, db):
         self.websocket = websocket
         self.db = db
+        self.auth: Optional[Auth] = None
         self._redis_service = None
         self._gpt_service = None
         self._web_socket_service = None
@@ -31,10 +36,3 @@ class WebSocketProvider:
             from app.module.web_socket.web_socket_service import web_socket_service
             self._web_socket_service = web_socket_service
         return self._web_socket_service
-
-
-async def get_provider_web_socket(
-    websocket: WebSocket,
-    db=Depends(get_session),
-):
-    return WebSocketProvider(websocket, db)

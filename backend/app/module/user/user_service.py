@@ -10,7 +10,7 @@ class UserService:
     async def get_user_by_id(self, user_id: int):
         return await self.user_repo.get_user_by_id(user_id)
 
-    async def get_me(self, request):
+    async def get_me(self, user_id: int):
         """
         내 정보. 응답에 내보낼 필드를 **명시적으로** 골라서 dict로 만든다.
 
@@ -18,7 +18,7 @@ class UserService:
         FastAPI는 SQLAlchemy 모델도 직렬화해주기 때문에(내부의 `_sa_*` 키만 걸러낸다)
         에러 없이 200이 나가지만, `password` 해시까지 통째로 응답에 실린다.
         """
-        user = await self.user_repo.get_user_by_id(request.user_id)
+        user = await self.user_repo.get_user_by_id(user_id)
         if not user:
             fail("user not found", "USER_NOT_FOUND", 404)
 

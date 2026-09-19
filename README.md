@@ -22,7 +22,7 @@
 |---|---|---|
 | **인증** | 로그인/로그아웃/refresh, Google·Kakao OAuth, 이중 세션 | 회원가입 화면·라우트, 비밀번호 재설정, 이메일 인증 |
 | **백엔드** | 계층 구조, DI, 공통 응답, 예외 핸들러, 로깅, Alembic | 도메인 로직 (직접 채울 것) |
-| **테스트** | pytest 기반 라우터 통합 테스트 + 픽스처, 샘플 14개 | 프론트 테스트 |
+| **테스트** | pytest 기반 라우터 통합 테스트 + 픽스처, 샘플 29개 | 프론트 테스트 |
 | **프론트** | 관리자 레이아웃·사이드바, UI 킷(폼/테이블/모달/토스트), 라우트 가드 | 디자인 시스템, 실제 화면 |
 | **인프라** | 헬스체크, 요청 ID, CORS·보안 헤더 | Docker, CI, 배포 스크립트 |
 
@@ -34,7 +34,13 @@ Spring은 프레임워크가 계층을 강제하지만 FastAPI는 아무것도 �
 - **`presentation → application → domain` 을 `router → service → repository` 로 옮김** — 라우터는 요청/응답만, 서비스는 로직만, 리포지토리는 쿼리만
 - **의존성 주입을 `ServiceProvider` 하나로** — Spring의 DI 컨테이너 대신 lazy property를 모아둔 객체 하나를 라우터에 주입. 서비스가 서비스를 직접 import 하지 않게 됨
 - **순환 import를 구조로 회피** — `ServiceProvider`의 모든 import가 함수 안에 있는 이유. 최상단에 두면 `app.module` 로딩 순서에 따라 깨진다
-- **계층 횡단 관심사는 데코레이터로** — 인증(`with_login`), DI(`with_provider`)를 라우터 본문 밖으로
+- **계층 횡단 관심사는 타입으로** — DI와 인증을 `p: UserProvider` 같은 파라미터 타입 하나에 실어 라우터 본문 밖으로 뺍니다.
+  처음에는 이걸 데코레이터(`@with_provider` / `@with_login`)로 했는데, 데코레이터가 엔드포인트 함수를
+  `(p)` 하나짜리 래퍼로 감싸는 바람에 FastAPI가 path·query·body를 볼 수 없었습니다 —
+  `/docs`가 비고 입력 검증이 통째로 사라지는 대가였습니다. `Annotated` 의존성으로 바꿔서
+  **시그니처를 지키면서** 같은 목적을 달성합니다
+- **입력 검증은 경계에서 한 번만** — 라우터가 Pydantic 스키마로 받고, 서비스는 검증된 값만 받습니다.
+  서비스가 `Request`를 모르므로 HTTP 밖에서도 부를 수 있고 테스트도 쉽습니다
 
 ---
 
@@ -203,12 +209,11 @@ backend/
     │   ├── database/
     │   │   ├── base.py                    # async engine, get_session
     │   │   └── redis.py                   # lazy 싱글톤 Redis 클라이언트
-    │   ├── provider/                      # 의존성 주입
+    │   ├── provider/                      # 의존성 주입 + 인증
     │   │   ├── http/
-    │   │   │   ├── service.py             # ServiceProvider — lazy property 모음
-    │   │   │   ├── endpoint.py            # @with_provider
-    │   │   │   └── login.py               # @with_login("user"|"admin") / @without_login
-    │   │   └── web_socket/                # WS용 동일 3종
+    │   │   │   ├── service.py             # ServiceProvider(lazy property 모음) + Auth
+    │   │   │   └── deps.py                # Provider / UserProvider / AdminProvider
+    │   │   └── web_socket/                # WS용 동일 2종
     │   ├── middleware/
     │   │   ├── register.py                # 미들웨어 등록 순서
     │   │   ├── cors.py                    # settings.cors_origins 기반
@@ -224,6 +229,7 @@ backend/
         ├── __init__.py                    # setup_routers() — 라우터 등록 한 곳
         ├── auth/
         │   ├── auth_router.py             # /api/auth/**
+        │   ├── auth_schema.py             # LoginIn · SignupIn · OAuthCodeIn
         │   ├── auth_service.py            # 로그인·로그아웃·refresh
         │   └── auth_token.py              # JWT 생성·검증, 쿠키 4종 심기
         ├── user/                          # user.py(모델) + repository + service + router
@@ -292,7 +298,7 @@ frontend/
 
 ```
 router      요청/응답만. 비즈니스 로직 금지
-  ↓         (@with_provider 로 p: ServiceProvider 주입, @with_login 으로 인증)
+  ↓         (파라미터 타입 하나로 DI + 인증: p: Provider / UserProvider / AdminProvider)
 service     로직. 다른 서비스가 필요하면 생성자로 받는다
   ↓
 repository  쿼리만. SQLAlchemy 세션을 들고 있음
@@ -300,15 +306,31 @@ repository  쿼리만. SQLAlchemy 세션을 들고 있음
 model       SQLAlchemy 선언
 ```
 
-라우터 예시 — 세 줄이 한 세트입니다.
+라우터 예시 — 데코레이터가 없습니다.
 
 ```python
 @router.get("/me")
-@with_provider
-@with_login("user")
-async def get_me(p: ServiceProvider):
-    return success(await p.user_service.get_me(p.request.user_id))
+async def get_me(p: UserProvider):
+    return success(await p.user_service.get_me(p.auth.user_id))
+
+@router.delete("/group/{group_id}/member/{member_id}")
+async def remove(group_id: int, member_id: int, p: AdminProvider):
+    await p.group_service.remove_member(group_id, member_id)
+    return success(message="removed")
 ```
+
+| 타입            | 의미                        |
+| --------------- | --------------------------- |
+| `Provider`      | 비로그인. `p.auth` 는 `None` |
+| `UserProvider`  | user 토큰 필수              |
+| `AdminProvider` | admin 토큰 필수             |
+
+path·query·body 는 그냥 파라미터로 선언하면 FastAPI 가 파싱·검증·문서화를 전부 합니다.
+`p.request.path_params[...]` 나 `await p.request.json()` 은 쓰지 마세요 — 검증이 사라지고
+잘못된 입력이 422 가 아니라 500 으로 나갑니다.
+
+> `Provider` 계열은 기본값이 없으므로 **기본값 있는 파라미터보다 앞**에 와야 합니다.
+> `async def list_items(p: UserProvider, page: int = 1)` — 어기면 `SyntaxError` 로 즉시 터집니다.
 
 ### 6.2 ServiceProvider — 의존성 주입
 
@@ -338,6 +360,8 @@ def user_service(self):
 
 - 성공: `return success(data)` — `app/core/utils/response.py`
 - 실패: `fail("메시지", "ERROR_CODE", 403)` — 어디서든 호출 가능. `HTTPException`을 던지고 전역 핸들러가 변환
+- 요청 스키마 검증 실패: 전역 핸들러가 `422` + `errorCode: "VALIDATION_ERROR"` 로 변환합니다.
+  메시지는 `"email: Field required"` 형태라 프론트에서 그대로 띄울 수 있습니다
 
 ### 6.4 로깅
 
@@ -508,7 +532,8 @@ APP_ENV=prod sh migrate_server.sh   # upgrade head 만
 **라우트가 없는 것** — `AuthService.signup()`은 구현돼 있지만 엔드포인트로 노출돼 있지 않습니다.
 `/api/admin`도 라우터만 등록돼 있고 비어 있습니다. 둘 다 프로젝트에 맞춰 채울 자리입니다.
 
-전체 스펙은 서버 기동 후 `http://localhost:8000/docs`.
+전체 스펙은 서버 기동 후 `http://localhost:8000/docs`. 요청 바디·path·query 파라미터가
+스키마와 함께 그대로 뜨므로, 프론트 타입을 `openapi-typescript` 같은 도구로 생성할 수도 있습니다.
 
 ---
 
@@ -521,9 +546,14 @@ APP_ENV=prod sh migrate_server.sh   # upgrade head 만
 mysql -u root -p -e "CREATE DATABASE db_base_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
 
 cd backend
-.venv/Scripts/python.exe -m pytest                              # 전체
+.venv/Scripts/python.exe -m pytest                              # 전체 (29개)
 .venv/Scripts/python.exe -m pytest tests/test_user_router.py -v # 한 파일
 ```
+
+| 파일 | 본보기로 삼을 것 |
+|------|------------------|
+| `tests/test_user_router.py` | 인증 엣지 케이스, 응답 규약, 민감 필드 노출 방지 |
+| `tests/test_auth_router.py` | 요청 스키마 검증(422), 쿠키 발급·만료 |
 
 **설계**
 

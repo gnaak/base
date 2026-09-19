@@ -1,6 +1,8 @@
 from __future__ import annotations
 import json
+from typing import Optional
 from fastapi import WebSocket, WebSocketDisconnect
+from app.core.provider.http.service import Auth
 from app.module.web_socket.manager import web_socket_manager
 from app.core.logging.logger import get_logger
 
@@ -11,13 +13,14 @@ class WebSocketService:
     def __init__(self):
         self.manager = web_socket_manager
 
-    async def init_state(self, websocket: WebSocket):
+    async def init_state(self, websocket: WebSocket, auth: Optional[Auth] = None):
         # 1. 프론트엔드(Test.tsx)에서 보낸 room_id 추출
         room_id = websocket.query_params.get("room_id", "lobby")
 
-        # 2. with_login_ws 데코레이터에서 주입된 유저 정보 가져오기
-        user_id = getattr(websocket, "user_id", "guest")
-        auth_type = getattr(websocket, "auth_type", "client")
+        # 2. 유저 정보. 라우터가 p.auth를 그대로 넘겨준다.
+        #    비로그인 라우트(WSProvider)에서는 None이므로 게스트로 취급한다.
+        user_id = auth.user_id if auth else "guest"
+        auth_type = auth.auth_type if auth else "guest"
 
         # 3. 매니저를 통해 연결 수락 및 방 등록
         user_info = {"user_id": user_id, "role": auth_type}

@@ -59,6 +59,9 @@ mutation.mutate(payload, { onSuccess: () => {}, onError: () => {} });
 - 모든 요청은 `credentials: "include"`
 - 응답: `BaseResponse<T> = { success, message, data, errorCode }` — 훅은 `data`만 꺼내 반환
 - `success: false`면 throw
+- 요청 바디가 백엔드 스키마와 안 맞으면 **422 + `errorCode: "VALIDATION_ERROR"`** 가 온다.
+  `message`가 `"email: Field required"` 형태라 그대로 띄워도 된다.
+  필드명·타입은 `http://localhost:8000/docs` 에서 확인할 것
 
 **401 처리** — 훅이 자동으로 처리한다. 호출부에서 신경 쓸 게 없다.
 

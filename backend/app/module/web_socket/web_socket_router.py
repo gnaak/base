@@ -1,13 +1,11 @@
 from fastapi import APIRouter, WebSocket
 
-from app.core.provider.web_socket.endpoint import with_provider_web_socket
-from app.core.provider.web_socket.login import without_login_web_socket
-from app.core.provider.web_socket.service import WebSocketProvider
+from app.core.provider.web_socket.deps import WSProvider
 
 router = APIRouter()
 
+
 @router.websocket("/")
-@with_provider_web_socket
-@without_login_web_socket
-async def stt_ws(p: WebSocketProvider, websocket: WebSocket):
-    await p.web_socket_service.init_state(websocket)
+async def stt_ws(websocket: WebSocket, p: WSProvider):
+    # 로그인을 강제하려면 타입만 UserWSProvider / AdminWSProvider 로 바꾸면 된다
+    await p.web_socket_service.init_state(websocket, p.auth)

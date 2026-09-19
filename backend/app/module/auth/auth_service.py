@@ -4,6 +4,7 @@ from passlib.context import CryptContext
 
 from app.core.utils.response import fail
 from app.module.admin.admin_repository import AdminRepository
+from app.module.auth.auth_schema import LoginIn, SignupIn
 from app.module.auth.auth_token import AuthToken
 from app.module.user.user_repository import UserRepository
 
@@ -22,43 +23,28 @@ class AuthService:
         self.token_util = AuthToken()
 
     # -- 회원가입
-    async def signup(self, request):
-        body = await request.json()
-        email = body.get("email")
-        password = body.get("password")
-        nickname = body.get("nickname")
-        
-        original = await self.user_repo.get_user_by_email(email)
+    async def signup(self, body: SignupIn):
+        original = await self.user_repo.get_user_by_email(body.email)
         if original:
             fail("user already exists", "USER_ALREADY_EXISTS", 409)
-        else:
-            hashed_password = hash_password(password)
-            await self.user_repo.create_user(email, nickname, hashed_password)
+
+        hashed_password = hash_password(body.password)
+        await self.user_repo.create_user(body.email, body.nickname, hashed_password)
 
     # -- 일반 로그인
-    async def login(self, request):
-        body = await request.json()
-        email = body.get("email")
-        password = body.get("password")
-        auth_type = body.get("type")
-
-        if auth_type == "user":
-            user_obj = await self.user_repo.get_user_by_email(email)
-        elif auth_type == "admin":
-            user_obj = await self.admin_repo.get_admin_by_email(email)
+    async def login(self, body: LoginIn):
+        """`body.type` 이 user/admin 중 하나인 것은 스키마가 이미 보장한다."""
+        if body.type == "user":
+            user_obj = await self.user_repo.get_user_by_email(body.email)
         else:
-            raise fail("invalid type", "INVALID_TYPE", 400)
+            user_obj = await self.admin_repo.get_admin_by_email(body.email)
 
-        if not user_obj or not verify_password(password, user_obj.password):
-            raise fail("user does not exists", "USER_DOES_NOT_EXISTS", 404)
+        if not user_obj or not verify_password(body.password, user_obj.password):
+            fail("user does not exists", "USER_DOES_NOT_EXISTS", 404)
 
         # 로그인 시각 기록. tb_admins에는 last_login_at 컬럼이 없어서 user만 갱신한다.
         # (OAuth 로그인은 user_repo.get_or_create_user가 알아서 갱신한다)
-        if auth_type == "user":
+        if body.type == "user":
             user_obj = await self.user_repo.update_last_login(user_obj)
 
-        return user_obj, auth_type
-
-
-
-    
+        return user_obj, body.type

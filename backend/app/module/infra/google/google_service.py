@@ -13,15 +13,10 @@ class GoogleService:
     def __init__(self, user_repo: UserRepository):
         self.user_repo = user_repo
 
-    async def google_login(self, request):
+    async def google_login(self, code: str):
+        """`code` 의 존재 여부는 OAuthCodeIn 스키마가 이미 보장한다."""
         GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
         GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
-
-        body = await request.json()
-        code = body.get("code")
-
-        if not code:
-            raise fail("Authorization code not provided", "AUTH_CODE_NOT_PROVIDED", 400)
 
         token = await request_json(
             "POST",
