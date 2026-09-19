@@ -102,6 +102,49 @@ async def test_type을_생략하면_user로_동작한다(client, make_user):
 
 
 # ──────────────────────────────────────────────────────────────
+#  회원가입
+# ──────────────────────────────────────────────────────────────
+SIGNUP = "/api/auth/signup"
+
+
+def _signup_body(email="new@example.com", nickname="새사람"):
+    return {"email": email, "password": "pw1234", "nickname": nickname}
+
+
+async def test_가입하면_201이_나간다(client):
+    res = await client.post(SIGNUP, json=_signup_body())
+
+    assert res.status_code == 201
+    assert res.json()["success"] is True
+
+
+async def test_가입한_계정으로_로그인할_수_있다(client):
+    """비밀번호가 argon2로 저장되고 로그인 검증을 통과하는지 확인한다."""
+    await client.post(SIGNUP, json=_signup_body(email="new@example.com"))
+
+    res = await client.post(LOGIN, json={"email": "new@example.com", "password": "pw1234"})
+
+    assert res.status_code == 200
+    assert res.json()["data"]["user_nickname"] == "새사람"
+
+
+async def test_이미_있는_이메일이면_409(client, make_user):
+    await make_user(email="taken@example.com")
+
+    res = await client.post(SIGNUP, json=_signup_body(email="taken@example.com"))
+
+    assert res.status_code == 409
+    assert res.json()["errorCode"] == "USER_ALREADY_EXISTS"
+
+
+async def test_가입_바디도_검증된다(client):
+    res = await client.post(SIGNUP, json={"email": "a@b.c"})  # password·nickname 누락
+
+    assert res.status_code == 422
+    assert res.json()["errorCode"] == "VALIDATION_ERROR"
+
+
+# ──────────────────────────────────────────────────────────────
 #  요청 스키마 검증 — 전부 422 + VALIDATION_ERROR
 # ──────────────────────────────────────────────────────────────
 @pytest.mark.parametrize(

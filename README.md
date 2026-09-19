@@ -20,9 +20,9 @@
 
 | | 포함 | 미포함 |
 |---|---|---|
-| **인증** | 로그인/로그아웃/refresh, refresh 로테이션 + 재사용 탐지, 세션 무효화, 계정 비활성화, Google·Kakao OAuth, 이중 세션 | 회원가입 화면·라우트, 비밀번호 재설정, 이메일 인증 |
+| **인증** | 로그인/로그아웃/refresh, refresh 로테이션 + 재사용 탐지, 세션 무효화, 계정 비활성화, 회원가입, Google·Kakao OAuth, 이중 세션 | 회원가입 **화면**, 비밀번호 재설정, 이메일 인증 |
 | **백엔드** | 계층 구조, DI, 공통 응답, 예외 핸들러, 로깅, Alembic | 도메인 로직 (직접 채울 것) |
-| **테스트** | pytest 기반 라우터 통합 테스트 + 픽스처, 샘플 72개 | 프론트 테스트 |
+| **테스트** | pytest 기반 라우터 통합 테스트 + 픽스처, 샘플 76개 | 프론트 테스트 |
 | **프론트** | 관리자 레이아웃·사이드바, UI 킷(폼/테이블/모달/토스트), 라우트 가드 | 디자인 시스템, 실제 화면 |
 | **인프라** | 헬스체크, 요청 ID, CORS·보안 헤더, 레이트리밋 | Docker, CI, 배포 스크립트 |
 
@@ -536,6 +536,7 @@ APP_ENV=prod sh migrate_server.sh   # upgrade head 만
 | 메서드 | 경로 | 인증 | 설명 |
 |--------|------|------|------|
 | `GET` | `/api/health` | — | liveness (LB·컨테이너용) |
+| `POST` | `/api/auth/signup` | — | 회원가입 → 201. 세션은 만들지 않는다(이어서 `/login`). 5회/분 |
 | `POST` | `/api/auth/login` | — | 이메일/비밀번호 로그인 → 쿠키 4종 발급 + `data: SessionOut`. 본문 `type`으로 `user`/`admin` 구분. **10회/분(IP) · 5회 실패/10분(계정)** |
 | `POST` | `/api/auth/logout` / `/logout_admin` | user / admin | 쿠키 만료 |
 | `POST` | `/api/auth/refresh_token` / `_admin` | refresh 쿠키 | 세션 갱신 → `data: SessionOut` |
@@ -553,8 +554,9 @@ APP_ENV=prod sh migrate_server.sh   # upgrade head 만
 (`create_jwt_token()`이 하나를 만들어 쿠키에 싣고 그대로 반환합니다). 프론트는 쿠키를 파싱하지 않고도
 로그인 직후 세션 정보를 바로 쓸 수 있습니다.
 
-**라우트가 없는 것** — `AuthService.signup()`은 구현돼 있지만 엔드포인트로 노출돼 있지 않습니다.
-`/api/admin`도 라우터만 등록돼 있고 비어 있습니다. 둘 다 프로젝트에 맞춰 채울 자리입니다.
+**비어 있는 것** — `/api/admin`은 라우터만 등록돼 있고 비어 있습니다. 프로젝트에 맞춰 채울 자리입니다.
+회원가입은 가입만 하고 세션을 만들지 않습니다 — 자동 로그인이 필요하면 `auth_router.signup`의
+주석을 참고해 `create_jwt_token()`을 부르면 됩니다.
 
 전체 스펙은 서버 기동 후 `http://localhost:8000/docs`. 요청 바디·path·query 파라미터가
 스키마와 함께 그대로 뜨므로, 프론트 타입을 `openapi-typescript` 같은 도구로 생성할 수도 있습니다.
@@ -570,7 +572,7 @@ APP_ENV=prod sh migrate_server.sh   # upgrade head 만
 mysql -u root -p -e "CREATE DATABASE db_base_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
 
 cd backend
-.venv/Scripts/python.exe -m pytest                              # 전체 (72개)
+.venv/Scripts/python.exe -m pytest                              # 전체 (76개)
 .venv/Scripts/python.exe -m pytest tests/test_user_router.py -v # 한 파일
 ```
 

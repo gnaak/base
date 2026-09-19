@@ -1,7 +1,5 @@
-import { refreshExp } from "@/hooks/common/getCookie";
-import { useAuth } from "@/hooks/common/useAuth";
-import { useEffect, useRef, useState } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Outlet } from "react-router-dom";
 import AdminSidebar from "@/component/admin/layout/sideBar/sideBar";
 import { AdminMenuItem } from "@/types/admin/sidebar";
 import { LucideIcon } from "lucide-react";
@@ -48,38 +46,15 @@ const getHeaderInfoByPath = (pathname: string) => {
   );
 };
 
+/**
+ * 관리자 레이아웃. **인증은 여기서 다루지 않는다.**
+ *
+ * 로그인 가드는 `App.tsx`에서 이 컴포넌트를 감싸는 `<PrivateRoute authType="admin">`이
+ * 전담한다. 예전에는 같은 로직(refresh 1회 시도 → 실패 시 로그인 이동)이 여기에도
+ * 인라인으로 있어서 두 곳을 같이 고쳐야 했다.
+ */
 const AdminLayout = () => {
-  const { admin, isLoading, refreshAuth } = useAuth();
-  const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  // refresh는 1회만 시도한다 (실패 후 effect가 다시 돌아 무한 호출되는 것 방지)
-  const refreshTried = useRef(false);
-
-  const isAdmin = admin?.auth_type === "admin";
-
-  useEffect(() => {
-    if (isLoading || isAdmin) return;
-
-    // access 쿠키만 만료된 상태라면 refresh 후 Context를 갱신한다 (페이지 새로고침 없음)
-    if (!refreshTried.current && refreshExp("admin")) {
-      refreshTried.current = true;
-      refreshAuth("admin").then((next) => {
-        if (next?.auth_type === "admin") {
-          // 갱신 성공 — 나중에 세션이 또 끊기면 다시 시도할 수 있게 가드를 푼다
-          refreshTried.current = false;
-          return;
-        }
-        navigate("/admin/login", { replace: true });
-      });
-      return;
-    }
-
-    navigate("/admin/login", { replace: true });
-  }, [isLoading, isAdmin, navigate, refreshAuth]);
-
-  if (isLoading || !isAdmin) {
-    return null;
-  }
 
   const handleToggleSidebar = () => {
     setSidebarCollapsed((prev) => !prev);

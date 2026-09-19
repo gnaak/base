@@ -138,7 +138,9 @@ loginMutation.mutate(body, {
 `authType`을 안 주면 `"user"`. 세션이 없으면 `authType`에 따라 `/` 또는 `/admin/login`으로 보내고,
 원래 가려던 경로를 `location.state.from`에 담아준다.
 
-> `/admin` 하위는 지금 `AdminLayout`이 같은 로직을 인라인으로 갖고 있다. 둘 중 하나만 쓰면 된다.
+`/admin` 하위도 `App.tsx`에서 `<PrivateRoute authType="admin">`으로 감싼다.
+**`AdminLayout`은 레이아웃만 담당하고 인증을 알지 못한다** — 예전엔 같은 가드 로직이
+양쪽에 있어서 고칠 때 두 군데를 같이 봐야 했다.
 
 ## 에러 처리
 

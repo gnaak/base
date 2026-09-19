@@ -33,11 +33,11 @@
 | [B15](#b15-에러코드-상수화) | 에러코드 상수화 (백엔드 + 프론트 타입) | 품질 | 1시간 |
 | [B16](#b16-prod-실행-스크립트) | prod 실행 스크립트 | 인프라 | 30분 |
 
-**남은 순서**: B7(docker-compose) → B8(CI) → 나머지
+**남은 순서**: B7(docker-compose) → B8(CI) → 나머지 B
 
-**A 전부 완료.** 요청·응답 양쪽에 타입이 붙었고, 로그인은 IP·계정 두 층으로 막혀 있고,
+**A·C 전부 완료.** 요청·응답 양쪽에 타입이 붙었고, 로그인은 IP·계정 두 층으로 막혀 있고,
 세션은 끊을 수 있고(로그아웃·전체 종료·로테이션·재사용 탐지), 쿠키는 `SameSite=Lax`다.
-남은 건 B(인프라·품질)와 C(정리)뿐이다.
+죽은 코드도 정리됐다. **남은 건 B(인프라·품질)뿐이다.**
 
 ---
 
@@ -567,18 +567,23 @@ APP_ENV=prod uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 ---
 
-# C. 정리할 것
+# C. 정리할 것 — ✅ 완료
 
-- [ ] `frontend/package.json` — **`dompurify` / `highlight.js` / `lowlight`** 제거.
-      `frontend/src/` 전체에서 사용처 0
-- [ ] `backend/app/core/database/base.py` — **`parse_date()`, `register_base()`** 제거. 참조 0
-- [ ] `backend/app/module/auth/auth_service.py` — `signup()` 을 라우트로 노출하거나 제거.
-      현재 상태로 호출되면 `hash_password(None)` 으로 500 이 난다
-- [ ] `backend/app/module/admin/admin_router.py` — import 3줄만 있고 비어 있음. 채우거나 정리
-- [ ] **라우트 가드 중복** — `frontend/src/hooks/auth/privateRoute.tsx` 와
-      `frontend/src/container/admin/layout.tsx` 가 같은 로직을 각자 갖고 있다.
-      `frontend/CLAUDE.md` 도 "둘 중 하나만 쓰면 된다" 고 적어뒀으므로 하나로 합칠 것
-- [ ] `backend/requirements.txt` — `isort` 제거 (B9 에서 ruff 로 대체)
+- [x] `frontend/package.json` — `dompurify` / `highlight.js` / `lowlight` 제거 (사용처 0).
+      `npm uninstall` 로 lock 파일까지 정리
+- [x] `backend/app/core/database/base.py` — `parse_date()`, `register_base()` 제거 (참조 0).
+      `register_base()` 가 하던 설명은 `Base` 위 주석으로 옮김
+- [x] `backend/app/module/auth/auth_service.py` — `signup()` 을 **라우트로 노출**했다.
+      `POST /api/auth/signup` (201, `SIGNUP_LIMIT` 5회/분). 지우는 대신 살린 이유는
+      `SignupIn` 스키마와 `SIGNUP_LIMIT` 이 이미 있는데 아무도 쓰지 않고 있었기 때문.
+      세션은 만들지 않는다 — 자동 로그인은 프로젝트마다 다른 선택이라 주석으로만 안내
+- [x] `backend/app/module/admin/admin_router.py` — A1 때 정리됨 (채우는 법을 주석으로)
+- [x] **라우트 가드 중복** — `App.tsx` 에서 `<PrivateRoute authType="admin">` 으로 감싸고
+      `AdminLayout` 의 인라인 가드(useAuth·refreshTried·navigate)를 걷어냈다.
+      **AdminLayout 은 이제 인증을 모른다.** 약 25줄 감소
+- [x] `backend/requirements.txt` — `isort` 제거 (설정도 사용처도 없었다)
+
+테스트 72 → **76개** (signup 4개 추가).
 
 ---
 

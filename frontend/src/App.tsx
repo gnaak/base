@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { AuthProvider } from "./context/AuthProvider";
+import { PrivateRoute } from "./hooks/auth/privateRoute";
 import ErrorBoundary from "./component/common/errorBoundary";
 import NotFoundPage from "./container/notfound";
 import AdminLogin from "./container/admin/login";
@@ -36,7 +37,15 @@ function App() {
               </Route>
 
               <Route path="/admin/login" element={<AdminLogin />} />
-              <Route element={<AdminLayout />}>
+              {/* 관리자 가드는 PrivateRoute 한 곳에만 둔다.
+                  AdminLayout은 레이아웃만 담당하고 인증은 알지 못한다. */}
+              <Route
+                element={
+                  <PrivateRoute authType="admin">
+                    <AdminLayout />
+                  </PrivateRoute>
+                }
+              >
                 <Route path="/admin" element={<AdminMain />} />
               </Route>
               <Route path="*" element={<NotFoundPage />} />
