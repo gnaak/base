@@ -3,7 +3,6 @@ import logging
 import os
 import queue
 from logging.handlers import QueueHandler, QueueListener, TimedRotatingFileHandler
-from typing import Optional
 
 from app.core.config.settings import settings
 from app.core.logging.context import get_request_id
@@ -37,7 +36,7 @@ class RequestIdFilter(logging.Filter):
         return True
 
 
-def _access_status(record: logging.LogRecord) -> Optional[int]:
+def _access_status(record: logging.LogRecord) -> int | None:
     """액세스 로그 레코드의 응답 status. 액세스 로그가 아니면 None.
 
     RequestIdMiddleware가 `extra={"status_code": ...}`로 실어 보낸다.
@@ -108,7 +107,7 @@ def setup_logging() -> None:
     #      app.log     전부
     #      access.log  2xx/3xx 요청만        → 트래픽 확인용
     #      error.log   4xx/5xx + ERROR 이상  → 서버에서 이것만 tail 하면 된다
-    file_error: Optional[str] = None
+    file_error: str | None = None
     try:
         os.makedirs(LOG_DIR, exist_ok=True)
         sinks.append(_file_sink("app.log"))

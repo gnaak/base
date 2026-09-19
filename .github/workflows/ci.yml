@@ -76,12 +76,17 @@ jobs:
             echo "hash_key=ci-$(openssl rand -hex 32)"
           } >> .env
 
+      # 린트를 테스트보다 먼저 — 빨리 실패하는 쪽을 앞에 둔다
+      - name: ruff
+        working-directory: backend
+        run: ruff check .
+
       - name: pytest
         working-directory: backend
         run: python -m pytest -q
 
   frontend:
-    name: frontend (types · lint · build)
+    name: frontend (types · lint · test · build)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -106,6 +111,9 @@ jobs:
         working-directory: frontend
 
       - run: npm run lint
+        working-directory: frontend
+
+      - run: npm test
         working-directory: frontend
 
       - run: npm run build

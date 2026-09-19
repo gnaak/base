@@ -16,7 +16,8 @@ app/
 │   ├── provider/
 │   │   ├── http/ (service.py: ServiceProvider·Auth · deps.py: Provider 3종)
 │   │   └── web_socket/ (동일 구성)
-│   └── utils/                      # response.py: success()/fail() · http_client.py: 공용 아웃바운드 HTTP
+│   └── utils/                      # response(success/fail) · error_code · rate_limit
+│                                   #   pagination · upload · http_client
 └── module/
     ├── __init__.py                  # 모델 import + setup_routers()
     ├── auth/ user/ admin/ web_socket/
@@ -353,8 +354,20 @@ class ExampleRepository:
 
 ## 테스트 — 라우터 하나 끝나면 바로
 
-의존성은 두 갈래다 — `requirements.txt`(운영) / `requirements-dev.txt`(pytest·fakeredis).
+의존성은 두 갈래다 — `requirements.txt`(운영) / `requirements-dev.txt`(pytest·fakeredis·ruff).
 운영 이미지에는 앞의 것만 설치된다.
+
+린터는 **ruff** 하나다. 설정은 `pyproject.toml`에 pytest 설정과 함께 들어 있다.
+
+```bash
+ruff check .          # 검사 (CI가 이걸 돌린다)
+ruff check . --fix    # 자동 수정
+ruff format .         # 포매팅 — 선택. CI는 강제하지 않는다
+```
+
+`B008`(FastAPI의 `Depends` 기본값)은 **끄는 게 맞다.** 프레임워크 관용구라
+켜면 라우터 전체가 경고로 뜬다. `app/module/__init__.py`의 미사용 import도
+per-file-ignore 대상이다 — 그 import가 Base.metadata 등록이라는 목적을 갖고 있다.
 
 ```bash
 pip install -r requirements.txt -r requirements-dev.txt   # 개발 환경 준비
@@ -379,8 +392,51 @@ cd backend && .venv/Scripts/python.exe -m pytest        # 전체
   인증·입력·상태·응답규약 엣지 케이스를 붙인다 (`.claude/agents/be-test-writer.md`에 목록)
 - 테스트가 앱 버그를 잡으면 **테스트를 느슨하게 고치지 말고 앱을 고친다**
 
+## 목록 응답 — `core/utils/pagination.py`
+
+목록은 전부 `Page[T]` 로 감싼다. 프론트 `component/admin/ui/pagination.tsx` 와 1:1이다.
+
+```python
+@router.get("/users", response_model=BaseResponse[Page[UserOut]])
+async def list_users(p: AdminProvider, page: int = 1, size: int = 20):
+    return success(await p.user_service.list_users(page, size))
+
+# service
+rows, total = await paginate(self.user_repo.db, stmt, page, size)
+return Page.of([UserOut.model_validate(r) for r in rows], total, page, size)
+```
+
+- `size` 는 `MAX_PAGE_SIZE`(100)로 잘린다 — `size=100000` 으로 DB를 긁는 것을 막는다
+- 개수 쿼리는 정렬을 떼고 센다 (`stmt.order_by(None)`) — 안 그러면 MySQL이 헛정렬을 한다
+- 0건일 때 `total_pages` 는 0이 아니라 **1**이다 (빈 1페이지가 화면과 맞는다)
+
+## 파일 업로드 — `core/utils/upload.py`
+
+```python
+url = await save_upload(file, "image", allowed=IMAGE_EXTENSIONS)   # → "/media/image/<uuid>.png"
+```
+
+세 가지를 반드시 지킨다.
+
+1. **확장자 화이트리스트** — 블랙리스트는 빠뜨린 게 곧 구멍이다
+2. **용량은 스트리밍으로 센다** — `await file.read()` 로 통째로 읽으면 큰 파일이 메모리를 먹는다.
+   한도를 넘은 **그 시점에** 끊고 반쯤 쓰인 파일을 지운다
+3. **파일명을 UUID로 새로 만든다** — 클라이언트 이름을 쓰면 `../../` 경로 조작과 충돌이 생긴다.
+   `subdir` 도 **호출부가 상수로** 넘긴다 (클라이언트가 정하게 하면 같은 문제)
+
+> ⚠️ `max_bytes` 기본값을 `= MAX_UPLOAD_BYTES` 로 쓰지 않는다. 기본 인자는 import 시점에
+> 한 번 평가돼서 상수를 나중에 바꿔도 반영되지 않는다 — `None` 으로 받고 호출 시점에 읽는다.
+
+## 에러코드 — `core/utils/error_code.py`
+
+`fail()` 의 두 번째 인자는 `ErrorCode` 상수를 쓴다. 문자열 리터럴을 흩뿌리면 오타가 조용히 통과한다.
+**프론트 `src/types/errorCode.ts` 와 1:1** 이므로 한쪽에 추가하면 반대쪽도 고칠 것.
+
 ## 기타
 
+- 새 모델은 `class Order(Base, TimestampMixin)` — `created_at`/`updated_at`/`deleted_at` 이 붙는다.
+  `deleted_at` 은 **자동으로 걸러주지 않는다**. 조회에서 `.where(Model.deleted_at.is_(None))` 을 넣을 것
+  (전역 필터를 두면 통계·복구처럼 지운 것까지 봐야 하는 쿼리가 막힌다)
 - 시간은 `core/database/base.py`의 `now_kst()` 사용 (tz-aware, Asia/Seoul).
   시간 컬럼은 `DateTime(timezone=True)`로 통일한다 (MySQL은 오프셋을 저장하지 않으므로 실제로는 KST 벽시계 값)
 - 비밀번호 해싱은 `auth_service.py`의 `hash_password()` / `verify_password()` (argon2)

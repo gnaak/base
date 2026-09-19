@@ -1,10 +1,10 @@
 from __future__ import annotations
-import json
-from typing import Optional
+
 from fastapi import WebSocket, WebSocketDisconnect
+
+from app.core.logging.logger import get_logger
 from app.core.provider.http.service import Auth
 from app.module.web_socket.manager import web_socket_manager
-from app.core.logging.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -13,7 +13,7 @@ class WebSocketService:
     def __init__(self):
         self.manager = web_socket_manager
 
-    async def init_state(self, websocket: WebSocket, auth: Optional[Auth] = None):
+    async def init_state(self, websocket: WebSocket, auth: Auth | None = None):
         # 1. 프론트엔드(Test.tsx)에서 보낸 room_id 추출
         room_id = websocket.query_params.get("room_id", "lobby")
 

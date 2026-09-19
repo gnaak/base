@@ -3,12 +3,14 @@ from fastapi import FastAPI
 
 # --- 라우터 등록 함수 ---
 from app.module.admin import admin_router
-from app.module.auth import auth_router
-from app.module.user import user_router
-from app.module.web_socket import web_socket_router
+
 # --- 모델 등록 (SQLAlchemy 관계 인식용) ---
 from app.module.admin.admin import Admin
+from app.module.auth import auth_router
+from app.module.upload import upload_router
+from app.module.user import user_router
 from app.module.user.user import User
+from app.module.web_socket import web_socket_router
 
 
 def setup_routers(app: FastAPI):
@@ -16,4 +18,5 @@ def setup_routers(app: FastAPI):
     app.include_router(auth_router.router, prefix="/api/auth")
     app.include_router(admin_router.router, prefix="/api/admin")
     app.include_router(user_router.router, prefix="/api/user")
+    app.include_router(upload_router.router, prefix="/api/upload")
     app.include_router(web_socket_router.router, prefix="/api/ws")

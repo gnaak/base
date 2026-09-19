@@ -1,4 +1,4 @@
-from typing import Any, Generic, Optional, TypeVar
+from typing import Any, Generic, TypeVar
 
 from fastapi import HTTPException
 from pydantic import BaseModel
@@ -16,8 +16,8 @@ class BaseResponse(BaseModel, Generic[T]):
 
     success: bool = True
     message: str = "ok"
-    data: Optional[T] = None
-    errorCode: Optional[str] = None
+    data: T | None = None
+    errorCode: str | None = None
 
 
 def success(data: Any = None, message: str = "ok") -> BaseResponse:
@@ -38,9 +38,9 @@ def success(data: Any = None, message: str = "ok") -> BaseResponse:
 
 def fail(
     message: str,
-    error_code: Optional[str] = None,
+    error_code: str | None = None,
     status_code: int = 400,
-    headers: Optional[dict] = None,
+    headers: dict | None = None,
 ):
     """
     어디서든(서비스/라우터) 호출 가능한 공통 실패 헬퍼.
@@ -53,5 +53,5 @@ def fail(
         detail=message,
         headers=headers,
     )
-    setattr(exc, "error_code", error_code)
+    exc.error_code = error_code
     raise exc

@@ -1,7 +1,7 @@
 # app/core/utils/http_client.py
 import time
 from http.cookiejar import CookieJar
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 
@@ -46,7 +46,7 @@ async def _log_response(response: httpx.Response) -> None:
 # 앱 전체가 공유하는 단일 아웃바운드 클라이언트 (redis.py와 같은 lazy 싱글톤).
 # 커넥션 풀 재사용 + 타임아웃 기본값 + 모든 외부 호출 로깅. lifespan이 기동 시 한 번
 # 호출해 앱 이벤트 루프에 바인딩하고, 종료 시 close_http_client()로 닫는다.
-_client: Optional[httpx.AsyncClient] = None
+_client: httpx.AsyncClient | None = None
 
 
 def get_http_client() -> httpx.AsyncClient:

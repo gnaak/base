@@ -4,5 +4,6 @@
 #
 # 전이 의존성(sortedcontainers, pluggy 등)은 pip 가 알아서 받는다.
 fakeredis==2.34.1
+ruff==0.16.8
 pytest-asyncio==1.4.0
 pytest==9.0.2

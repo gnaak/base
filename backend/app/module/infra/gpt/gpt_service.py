@@ -1,6 +1,5 @@
 # app/module/infra/gpt/gpt_service.py
 
-from typing import Optional
 
 from openai import AsyncOpenAI
 
@@ -11,7 +10,7 @@ from app.module.infra.redis.redis_service import RedisService
 logger = get_logger(__name__)
 
 # 앱 전체가 공유하는 단일 OpenAI 클라이언트 (redis.py와 같은 lazy 싱글톤 — lifespan이 닫는다)
-_client: Optional[AsyncOpenAI] = None
+_client: AsyncOpenAI | None = None
 
 
 def get_openai_client() -> AsyncOpenAI:

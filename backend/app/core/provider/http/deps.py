@@ -23,7 +23,7 @@
     async def list_items(p: UserProvider, page: int = 1):   # ✅
     async def list_items(page: int = 1, p: UserProvider):   # ❌ SyntaxError
 """
-from typing import Annotated, Optional
+from typing import Annotated
 
 from fastapi import Depends, Request
 
@@ -31,7 +31,7 @@ from app.core.database.base import get_session
 from app.core.provider.http.service import Auth, ServiceProvider
 
 
-def provider(auth: Optional[str] = None):
+def provider(auth: str | None = None):
     """ServiceProvider를 만들어 주는 의존성을 생성한다.
 
     - `provider()`            → 인증 안 함. `p.auth`는 None

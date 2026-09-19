@@ -3,7 +3,6 @@
 Redis는 fakeredis로 대체되고 테스트마다 새로 만들어지므로, 카운터가
 테스트 간에 새지 않는다 (conftest의 `fake_redis` 픽스처).
 """
-import pytest
 
 from app.core.utils import rate_limit as rl
 from app.module.auth.auth_service import hash_password

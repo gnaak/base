@@ -80,7 +80,7 @@ class AuthToken:
     async def get_token_info_ws(self, websocket, auth_type: str):
         """유저 아이디 토큰에서 파싱 (WebSocket)"""
         return self._get_user_from_cookies(websocket.cookies, auth_type)
-    
+
     # --- 토큰 생성 ---
     async def create_jwt_token(self, user, response, type):
         """쿠키 4종을 심고, 세션 정보를 `SessionOut`으로 반환한다.

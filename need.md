@@ -24,23 +24,29 @@
 | [A6](#a6-토큰-무효화가-불가능하고-active가-검사되지-않는다) | ~~토큰 무효화 불가 + `active` 미검사~~ | 보안/버그 | ✅ 완료 |
 | [B7](#b7-docker-compose) | ~~docker-compose (MySQL + Redis)~~ | 인프라 | ✅ 완료 |
 | [B8](#b8-ci) | ~~CI (pytest + tsc + build)~~ | 인프라 | ✅ 완료 |
-| [B9](#b9-ruff) | ruff (백엔드 린터·포매터) | 품질 | 1시간 |
+| [B9](#b9-ruff) | ~~ruff (백엔드 린터·포매터)~~ | 품질 | ✅ 완료 |
 | [B10](#b10-requirements-분리) | ~~requirements dev/prod 분리~~ | 품질 | ✅ 완료 |
-| [B11](#b11-프론트-테스트) | 프론트 테스트 (vitest) | 품질 | 반나절 |
-| [B12](#b12-페이지네이션-계약) | 페이지네이션 응답 규약 | 기능 | 반나절 |
-| [B13](#b13-파일-업로드) | 파일 업로드 엔드포인트 | 기능 | 반나절 |
-| [B14](#b14-timestampmixin) | `TimestampMixin` (updated_at, soft delete) | 기능 | 1시간 |
-| [B15](#b15-에러코드-상수화) | 에러코드 상수화 (백엔드 + 프론트 타입) | 품질 | 1시간 |
-| [B16](#b16-prod-실행-스크립트) | prod 실행 스크립트 | 인프라 | 30분 |
+| [B11](#b11-프론트-테스트) | ~~프론트 테스트 (vitest)~~ | 품질 | ✅ 완료 |
+| [B12](#b12-페이지네이션-계약) | ~~페이지네이션 응답 규약~~ | 기능 | ✅ 완료 |
+| [B13](#b13-파일-업로드) | ~~파일 업로드 엔드포인트~~ | 기능 | ✅ 완료 |
+| [B14](#b14-timestampmixin) | ~~`TimestampMixin` (updated_at, soft delete)~~ | 기능 | ✅ 완료 |
+| [B15](#b15-에러코드-상수화) | ~~에러코드 상수화 (백엔드 + 프론트 타입)~~ | 품질 | ✅ 완료 |
+| [B16](#b16-prod-실행-스크립트) | ~~prod 실행 스크립트~~ | 인프라 | ✅ 완료 |
 
-**남은 순서**: B9(ruff + pyproject) → B11(프론트 테스트) → B12~B16
+## ✅ A · B · C 전부 완료
 
-**A·C 완료, B는 7·8·10 완료.** 요청·응답 양쪽에 타입이 붙었고, 로그인은 IP·계정 두 층으로
-막혀 있고, 세션은 끊을 수 있고, 쿠키는 `SameSite=Lax`다. 인프라는 compose(개발) +
-Dockerfile(배포) + CI(검증) 세 축이 섰다.
+| 영역 | 상태 |
+| --- | --- |
+| 구조 | 요청·응답 양쪽에 타입. `/docs` 가 실제 계약과 일치 |
+| 보안 | IP·계정 2층 레이트리밋 / 세션 무효화 + 로테이션 + 재사용 탐지 / `SameSite=Lax` |
+| 인프라 | compose(개발) · Dockerfile(배포) · CI(검증) |
+| 품질 | ruff · pytest 84 · vitest 8 · 에러코드 상수 |
+| 기능 기반 | 페이지네이션 · 파일 업로드 · TimestampMixin |
 
-남은 B: **B9**(ruff — 이때 `pyproject.toml` 도입), **B11**(vitest), B12 페이지네이션,
-B13 파일 업로드, B14 TimestampMixin, B15 에러코드 상수, B16 prod 실행 스크립트.
+**남은 선택 항목** (`need.md` 안에 표시):
+- A4 의 Origin 검증 미들웨어 — `cookie_samesite=none` 을 써야 하는 배포가 생기면
+- `ruff format` 적용 — 27개 파일이 재포맷된다. 별도 커밋으로 하는 게 리뷰하기 좋다
+- 앱 Dockerfile 의 프론트 버전(nginx 이미지), 배포 스크립트
 
 ---
 

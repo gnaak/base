@@ -27,7 +27,6 @@
 제한되는지 라우터만 봐도 보인다.
 """
 import ipaddress
-from typing import Optional
 
 from fastapi import Depends, Request
 
@@ -42,7 +41,7 @@ LOGIN_FAIL_LIMIT = 5
 LOGIN_FAIL_WINDOW = 600  # 10분
 
 
-def _valid_ip(raw: Optional[str]) -> Optional[str]:
+def _valid_ip(raw: str | None) -> str | None:
     """IP 형식만 통과시킨다.
 
     헤더는 클라이언트가 보내는 값이라, 검증 없이 Redis 키로 쓰면 아무 문자열이나

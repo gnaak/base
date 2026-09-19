@@ -1,5 +1,4 @@
 # app/core/database/redis.py
-from typing import Optional
 
 import redis.asyncio as redis
 
@@ -7,7 +6,7 @@ from app.core.config.settings import settings
 
 # 앱 전체가 공유하는 단일 Redis 클라이언트.
 # import 시점이 아니라 첫 사용 시점에 만든다 (테스트·alembic에서 불필요한 연결을 만들지 않기 위해).
-_client: Optional[redis.Redis] = None
+_client: redis.Redis | None = None
 
 
 def get_redis() -> redis.Redis:

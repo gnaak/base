@@ -1,7 +1,7 @@
 import asyncio
 import json
+
 from fastapi import WebSocket
-from typing import Dict, List, Set, Optional
 
 from app.core.logging.logger import get_logger
 
@@ -11,21 +11,21 @@ logger = get_logger(__name__)
 class ConnectionManager:
     def __init__(self):
         # 모든 활성 웹소켓 연결을 저장 (디버깅/전체 관리용)
-        self.active_connections: Set[WebSocket] = set()
+        self.active_connections: set[WebSocket] = set()
 
         # 방 단위 관리: { room_id: {websocket1, websocket2, ...} }
-        self.rooms: Dict[str, Set[WebSocket]] = {}
+        self.rooms: dict[str, set[WebSocket]] = {}
 
         # 유저 정보 매핑 (필요 시): { websocket: {"user_id": "abc", "type": "user"} }
-        self.user_registry: Dict[WebSocket, dict] = {}
+        self.user_registry: dict[WebSocket, dict] = {}
 
         logger.info("✅ ConnectionManager 인스턴스가 메모리에 생성되었습니다.")
 
     async def connect(
         self,
         websocket: WebSocket,
-        room_id: Optional[str] = None,
-        user_info: Optional[dict] = None,
+        room_id: str | None = None,
+        user_info: dict | None = None,
     ):
         """
         웹소켓 연결을 수락하고 관리 목록에 추가합니다.
@@ -43,11 +43,13 @@ class ConnectionManager:
         if user_info:
             self.user_registry[websocket] = user_info
 
+        room_size = len(self.rooms.get(room_id, [])) if room_id else 0
         logger.info(
-            f"🚀 New connection. Total: {len(self.active_connections)} | Room [{room_id}] member: {len(self.rooms.get(room_id, [])) if room_id else 0}"
+            "🚀 New connection. Total: %d | Room [%s] member: %d",
+            len(self.active_connections), room_id, room_size,
         )
 
-    def disconnect(self, websocket: WebSocket, room_id: Optional[str] = None):
+    def disconnect(self, websocket: WebSocket, room_id: str | None = None):
         """
         연결이 종료된 소켓을 관리 목록에서 제거합니다.
         """
@@ -76,10 +78,10 @@ class ConnectionManager:
 
     async def _send_many(
         self,
-        connections: List[WebSocket],
+        connections: list[WebSocket],
         message: dict,
-        exclude: Optional[WebSocket] = None,
-        room_id: Optional[str] = None,
+        exclude: WebSocket | None = None,
+        room_id: str | None = None,
     ):
         """여러 소켓에 병렬 전송하고, 실패한(죽은) 소켓은 일괄 정리합니다.
 
@@ -93,7 +95,8 @@ class ConnectionManager:
         results = await asyncio.gather(
             *(c.send_text(msg_str) for c in targets), return_exceptions=True
         )
-        dead = [c for c, r in zip(targets, results) if isinstance(r, BaseException)]
+        # strict=True — targets와 results 길이는 항상 같아야 한다. 어긋나면 버그이므로 터뜨린다.
+        dead = [c for c, r in zip(targets, results, strict=True) if isinstance(r, BaseException)]
         if dead:
             logger.warning(
                 f"🧹 전송 실패한 소켓 {len(dead)}개 정리" + (f" (room [{room_id}])" if room_id else "")
@@ -102,7 +105,7 @@ class ConnectionManager:
                 self.disconnect(connection, room_id)
 
     async def broadcast_to_room(
-        self, room_id: str, message: dict, exclude: Optional[WebSocket] = None
+        self, room_id: str, message: dict, exclude: WebSocket | None = None
     ):
         """
         특정 방에 있는 모든 사람에게 메시지 전송 (보낸 사람 제외 가능)

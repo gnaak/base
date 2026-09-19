@@ -3,7 +3,6 @@ import ipaddress
 import os
 import socket
 from pathlib import Path
-from typing import Optional
 from urllib.parse import quote_plus
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -50,28 +49,28 @@ class RawEnv(BaseSettings):
     refresh_token_hours: int = 168  # 7일 (2주는 336)
 
     # API keys
-    openai_api_key: Optional[str] = None
+    openai_api_key: str | None = None
 
     # KAKAO
-    kakao_client_id: Optional[str] = None
-    kakao_client_secret: Optional[str] = None
-    local_kakao_redirect_uri: Optional[str] = None
-    prod_kakao_redirect_uri: Optional[str] = None
+    kakao_client_id: str | None = None
+    kakao_client_secret: str | None = None
+    local_kakao_redirect_uri: str | None = None
+    prod_kakao_redirect_uri: str | None = None
 
     # GOOGLE
-    google_client_id: Optional[str] = None
-    google_client_secret: Optional[str] = None
-    local_google_redirect_uri: Optional[str] = None
-    prod_google_redirect_uri: Optional[str] = None
+    google_client_id: str | None = None
+    google_client_secret: str | None = None
+    local_google_redirect_uri: str | None = None
+    prod_google_redirect_uri: str | None = None
 
     # REDIS
     local_redis_host: str
     local_redis_port: int
-    local_redis_password: Optional[str] = None
+    local_redis_password: str | None = None
 
     prod_redis_host: str
     prod_redis_port: int
-    prod_redis_password: Optional[str] = None
+    prod_redis_password: str | None = None
 
     # 사이트 도메인 (쉼표 구분). CORS 허용 오리진과 쿠키 도메인을 여기서 함께 유도한다.
     #
@@ -97,7 +96,10 @@ class RawEnv(BaseSettings):
     #    그리고 켜는 순간 CSRF 토큰이나 Origin 검증을 따로 붙여야 한다.
     cookie_samesite: str = "lax"
 
-    model_config = SettingsConfigDict(env_file=os.path.join(os.path.dirname(__file__), "..", "..", "..", ".env"), env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(
+        env_file=os.path.join(os.path.dirname(__file__), "..", "..", "..", ".env"),
+        env_file_encoding="utf-8",
+    )
 
 class Settings:
     def __init__(self):
@@ -193,27 +195,27 @@ class Settings:
 
     # API Keys
     @property
-    def openai_api_key(self) -> Optional[str]:
+    def openai_api_key(self) -> str | None:
         return self.raw.openai_api_key
 
     @property
-    def kakao_client_id(self) -> Optional[str]:
+    def kakao_client_id(self) -> str | None:
         return self.raw.kakao_client_id
 
     @property
-    def kakao_client_secret(self) -> Optional[str]:
+    def kakao_client_secret(self) -> str | None:
         return self.raw.kakao_client_secret
 
     @property
-    def kakao_redirect_uri(self) -> Optional[str]:
+    def kakao_redirect_uri(self) -> str | None:
         return getattr(self.raw, f"{self.env}_kakao_redirect_uri")
 
     @property
-    def google_client_id(self) -> Optional[str]:
+    def google_client_id(self) -> str | None:
         return self.raw.google_client_id
 
     @property
-    def google_client_secret(self) -> Optional[str]:
+    def google_client_secret(self) -> str | None:
         return self.raw.google_client_secret
 
     @property
@@ -230,7 +232,7 @@ class Settings:
         return getattr(self.raw, f"{self.env}_redis_port")
 
     @property
-    def redis_password(self) -> Optional[str]:
+    def redis_password(self) -> str | None:
         return getattr(self.raw, f"{self.env}_redis_password")
 
     # 도메인 설정 — CORS 오리진과 쿠키 도메인을 {env}_domain 하나에서 유도한다
@@ -255,7 +257,7 @@ class Settings:
         return [f"{self.scheme}://{entry.lstrip('.')}" for entry in self.domains]
 
     @property
-    def cookie_domain(self) -> Optional[str]:
+    def cookie_domain(self) -> str | None:
         """
         쿠키의 domain 속성. **기본은 None(host-only)** 이다.
 
@@ -304,11 +306,13 @@ class Settings:
 
         if self.env == "prod" and self.env_source != "APP_ENV":
             warnings.append(
-                "APP_ENV가 설정되지 않아 호스트명으로 prod를 추측했습니다. 배포 스크립트에 APP_ENV=prod를 명시하세요."
+                "APP_ENV가 설정되지 않아 호스트명으로 prod를 추측했습니다. "
+                "배포 스크립트에 APP_ENV=prod를 명시하세요."
             )
         if self.env == "local" and self.env_source == "기본값(APP_ENV 미설정)":
             warnings.append(
-                "APP_ENV가 없어 local로 동작합니다. 배포 환경이라면 쿠키가 secure=False로 나가 세션이 잡히지 않습니다."
+                "APP_ENV가 없어 local로 동작합니다. "
+                "배포 환경이라면 쿠키가 secure=False로 나가 세션이 잡히지 않습니다."
             )
         if not self.domains:
             warnings.append(

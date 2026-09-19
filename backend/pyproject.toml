@@ -1,0 +1,63 @@
+# 백엔드 도구 설정을 한 곳에 모은다 (ruff + pytest).
+#
+# 의존성은 여기 적지 않고 requirements.txt / requirements-dev.txt 가 계속 맡는다.
+# pyproject 의 `[project.dependencies]` 는 **범위 선언**이지 lock 이 아니라서,
+# 배포 재현성은 지금의 freeze 쪽이 높다. 나중에 uv 로 갈 때 uv.lock 과 함께 옮기면 된다.
+#
+# `[project]` 섹션이 없는 것도 의도다 — 이 패키지는 설치 대상이 아니라 앱이다.
+
+# ── ruff ──────────────────────────────────────────────────────
+#   ruff check .          # 검사
+#   ruff check . --fix    # 자동 수정
+#   ruff format .         # 포매팅 (선택)
+[tool.ruff]
+# 88(기본)이면 한글 주석이 많은 이 코드베이스에서 E501 이 90개 넘게 뜬다.
+# 110 이면 5개까지 줄고, 그 5개는 실제로 줄일 만한 줄이었다.
+line-length = 110
+target-version = "py311"
+extend-exclude = [".venv", "alembic/versions"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle 에러
+    "W",   # pycodestyle 경고
+    "F",   # pyflakes (미사용 import·변수 등)
+    "I",   # import 정렬 (제거한 isort 를 대신한다)
+    "UP",  # pyupgrade (Optional[X] → X | None 등)
+    "B",   # flake8-bugbear (흔한 함정)
+    "C4",  # 불필요한 컴프리헨션
+    "SIM", # 단순화 가능한 구문
+]
+ignore = [
+    # FastAPI 는 `p: Provider = Depends(...)` 처럼 기본값에서 함수를 부르는 게 **관용구**다.
+    # 이 규칙을 켜면 프레임워크 사용법 전체가 경고로 뜬다.
+    "B008",
+    # `except` 안에서 `raise ... from e` 를 강제한다. 이 코드베이스의 해당 지점들은
+    # 업스트림 예외를 API 에러로 **번역**하는 자리이고 원본은 이미 로그에 남긴다.
+    # (파이썬이 __context__ 로 자동 연결하므로 트레이스백도 유지된다)
+    "B904",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# 모델을 import 해서 Base.metadata 에 등록하는 파일이다.
+# "쓰지 않는 import" 가 맞지만 **그게 목적**이라 지우면 Alembic 이 테이블을 놓친다.
+"app/module/__init__.py" = ["F401"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "tests"]
+
+# ── pytest ────────────────────────────────────────────────────
+# 예전 pytest.ini 를 그대로 옮겨왔다. 설정 파일이 하나 줄어든다.
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+# async 테스트에 데코레이터를 매번 붙이지 않는다.
+asyncio_mode = "auto"
+
+# 세션 스코프 엔진과 함수 스코프 세션이 같은 이벤트 루프를 써야 한다.
+# 루프가 갈리면 "attached to a different loop" 로 터진다.
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+
+addopts = "-q --strict-markers"

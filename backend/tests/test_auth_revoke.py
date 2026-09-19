@@ -197,7 +197,8 @@ async def test_로그아웃된_토큰은_재사용_탐지를_건드리지_않는
     assert res.json()["errorCode"] == "SESSION_REVOKED"  # REUSE_DETECTED 가 아니다
 
     # 다른 기기는 멀쩡하다
-    assert (await client.post(REFRESH, headers=cookie_header(user_refresh_token=other_device))).status_code == 200
+    res = await client.post(REFRESH, headers=cookie_header(user_refresh_token=other_device))
+    assert res.status_code == 200
 
 
 # ──────────────────────────────────────────────────────────────

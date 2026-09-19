@@ -1,4 +1,3 @@
-from typing import Optional
 
 from fastapi import WebSocket
 
@@ -11,7 +10,7 @@ class WebSocketProvider:
     def __init__(self, websocket: WebSocket, db):
         self.websocket = websocket
         self.db = db
-        self.auth: Optional[Auth] = None
+        self.auth: Auth | None = None
         self._redis_service = None
         self._gpt_service = None
         self._web_socket_service = None

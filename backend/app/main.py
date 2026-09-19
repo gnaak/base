@@ -1,5 +1,6 @@
 # app/main.py
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
@@ -7,13 +8,17 @@ from sqlalchemy import text
 from app.core.config.settings import settings
 from app.core.database.base import engine
 from app.core.database.redis import close_redis, get_redis
+from app.core.exception.handler import setup_exceptions
+from app.core.logging import get_logger, setup_logging
 from app.core.middleware.register import setup_middlewares
 from app.core.middleware.request_id import HEALTH_PATH
-from app.core.exception.handler import setup_exceptions
-from app.core.logging import setup_logging, get_logger
 from app.core.utils.http_client import close_http_client, get_http_client
 from app.core.utils.response import success
-from app.module import *
+
+# `app.module`을 import 하는 것만으로 모든 모델이 Base.metadata에 등록된다
+# (module/__init__.py가 최상단에서 모델을 import한다). 예전엔 `import *` 였는데,
+# 이름이 어디서 왔는지 안 보이고 린터도 못 따라가서 명시 import로 바꿨다.
+from app.module import setup_routers
 from app.module.infra.gpt.gpt_service import close_openai_client
 
 # 로깅 설정
@@ -60,13 +65,13 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     app = FastAPI(lifespan=lifespan)
-    
+
     # 1. 예외 핸들러 등록 (가장 먼저 혹은 미들웨어 직후에 등록 권장)
     setup_exceptions(app)
-    
+
     # 2. CORS 및 보안 헤더 미들웨어 등록
     setup_middlewares(app)
-    
+
     # 3. 라우터 등록
     setup_routers(app)
 

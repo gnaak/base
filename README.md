@@ -21,9 +21,9 @@
 | | 포함 | 미포함 |
 |---|---|---|
 | **인증** | 로그인/로그아웃/refresh, refresh 로테이션 + 재사용 탐지, 세션 무효화, 계정 비활성화, 회원가입, Google·Kakao OAuth, 이중 세션 | 회원가입 **화면**, 비밀번호 재설정, 이메일 인증 |
-| **백엔드** | 계층 구조, DI, 공통 응답, 예외 핸들러, 로깅, Alembic | 도메인 로직 (직접 채울 것) |
-| **테스트** | pytest 기반 라우터 통합 테스트 + 픽스처, 샘플 76개 | 프론트 테스트 |
-| **프론트** | 관리자 레이아웃·사이드바, UI 킷(폼/테이블/모달/토스트), 라우트 가드 | 디자인 시스템, 실제 화면 |
+| **백엔드** | 계층 구조, DI, 공통 응답·에러코드, 예외 핸들러, 로깅, Alembic, 페이지네이션, 파일 업로드, ruff | 도메인 로직 (직접 채울 것) |
+| **테스트** | pytest 84개 + vitest 8개, 픽스처 일습 | E2E |
+| **프론트** | 관리자 레이아웃·사이드바, UI 킷(폼/테이블/모달/토스트), 라우트 가드, vitest | 디자인 시스템, 실제 화면 |
 | **인프라** | 헬스체크, 요청 ID, CORS·보안 헤더, 레이트리밋, docker-compose(MySQL·Redis), 배포용 Dockerfile, GitHub Actions CI | 프론트 Dockerfile, nginx 설정, 배포 스크립트 |
 
 ### 이 템플릿에서 집중한 것
@@ -562,6 +562,7 @@ APP_ENV=prod sh migrate_server.sh   # upgrade head 만
 | `POST` | `/api/auth/refresh_token` / `_admin` | refresh 쿠키 | 세션 갱신 → `data: SessionOut` |
 | `POST` | `/api/auth/google` / `/kakao` | — | OAuth 콜백 코드 → 쿠키 발급 + `data: SessionOut`. 10회/분(IP) |
 | `GET` | `/api/user/me` | user | 내 정보 → `data: UserOut` |
+| `POST` | `/api/upload/image` | user | 이미지 업로드 → `data: {url}`. 10MB·확장자 제한, 20회/분 |
 | `WS` | `/api/ws/` | — | WebSocket 연결 |
 
 로그인 요청 본문:
@@ -593,7 +594,7 @@ APP_ENV=prod sh migrate_server.sh   # upgrade head 만
 mysql -u root -p -e "CREATE DATABASE db_base_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
 
 cd backend
-.venv/Scripts/python.exe -m pytest                              # 전체 (76개)
+.venv/Scripts/python.exe -m pytest                              # 전체 (84개)
 .venv/Scripts/python.exe -m pytest tests/test_user_router.py -v # 한 파일
 ```
 

@@ -3,8 +3,8 @@
 from fastapi import FastAPI
 
 from .cors import setup_cors
-from .security import setup_security
 from .request_id import setup_request_id
+from .security import setup_security
 
 
 # CORS와 보안 헤더 미들웨어를 FastAPI 앱에 등록

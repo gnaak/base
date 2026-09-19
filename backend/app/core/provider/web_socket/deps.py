@@ -4,7 +4,7 @@
     async def stt_ws(websocket: WebSocket, p: WSProvider):
         await p.web_socket_service.init_state(websocket)
 """
-from typing import Annotated, Optional
+from typing import Annotated
 
 from fastapi import Depends, WebSocket
 
@@ -13,7 +13,7 @@ from app.core.provider.http.service import Auth
 from app.core.provider.web_socket.service import WebSocketProvider
 
 
-def ws_provider(auth: Optional[str] = None):
+def ws_provider(auth: str | None = None):
     """WebSocketProvider를 만들어 주는 의존성을 생성한다.
 
     ⚠️ 인증 실패 시 `auth_token`이 HTTPException(401)을 던진다. HTTP와 동작을

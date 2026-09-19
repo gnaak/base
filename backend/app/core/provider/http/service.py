@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Optional
 
 from fastapi import Request
 
@@ -32,7 +31,7 @@ class ServiceProvider:
     def __init__(self, request: Request, db):
         self.request = request
         self.db = db
-        self.auth: Optional[Auth] = None
+        self.auth: Auth | None = None
         self._redis_service = None
         self._user_repo = None
         self._admin_repo = None

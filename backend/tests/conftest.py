@@ -22,7 +22,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config.settings import settings
-from app.core.database.base import Base, now_kst, get_session
+from app.core.database.base import Base, get_session, now_kst
 from app.module.admin.admin import Admin
 from app.module.user.user import User
 

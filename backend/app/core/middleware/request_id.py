@@ -1,9 +1,10 @@
 import logging
 import time
 import uuid
+
 from fastapi import FastAPI
 
-from app.core.logging.context import set_request_id, get_request_id
+from app.core.logging.context import get_request_id, set_request_id
 from app.core.logging.logger import get_logger
 
 logger = get_logger("http.access")

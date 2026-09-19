@@ -17,7 +17,8 @@ src/
 │   ├── auth/                # OAuth 로그인·콜백, publicRoute, privateRoute
 │   └── common/              # useAPI.ts useAuth.ts getCookie.ts
 ├── context/AuthProvider.tsx
-├── types/                   # auth.ts user.ts admin/
+├── types/                   # auth.ts user.ts errorCode.ts admin/
+├── test/setup.ts            # vitest 공통 설정 (jsdom, 쿠키 초기화)
 └── utils/format/            # date.ts number.ts time.ts
 ```
 
@@ -40,10 +41,25 @@ export const useMyHook = () => {};       // 훅: named export
 // ❌ function 키워드 금지 (App.tsx 제외)
 ```
 
+## 테스트 — vitest
+
+```bash
+npm test          # 1회 실행 (CI가 이걸 돌린다)
+npm run test:watch
+```
+
+- 파일은 `src/**/*.test.ts(x)` 어디에 둬도 잡힌다. 소스 옆에 두는 것을 기본으로
+- `jsdom` 환경이라 `document.cookie` 가 동작한다. `src/test/setup.ts` 가 테스트마다 쿠키를 비운다
+- 본보기는 `src/hooks/common/useAPI.test.ts` — **401 → refresh 경로**를 덮는다.
+  이 템플릿에서 반복적으로 터졌던 지점이라 여기부터 고정했다
+  (동시 refresh 1회 합치기, 실패 시 쿠키 삭제, **새로고침 금지**)
+
 **규칙**
 - `container/` = 페이지 (로직 + 훅) / `component/` = 순수 UI. 컴포넌트가 API를 직접 호출하게 되면 컨테이너로 로직을 올릴 것
 - 상태: TanStack Query(서버) + useState(로컬). 전역은 context
 - 타입은 `src/types/`에 정의
+- `errorCode` 로 분기할 땐 `@/types/errorCode` 의 `ERROR_CODE` 상수를 쓴다
+  (백엔드 `core/utils/error_code.py` 와 1:1. 문자열 리터럴을 쓰면 오타가 조용히 통과한다)
 
 ## API 호출 — `@/hooks/common/useAPI`
 

@@ -1,15 +1,16 @@
 # core/exception/handler.py
 import logging
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
 from app.core.config.settings import settings
 from app.core.logging import get_logger
 from app.core.logging.context import get_request_id
 from app.core.utils.response import BaseResponse
-from starlette.exceptions import HTTPException as StarletteHTTPException
 
 logger = get_logger(__name__)
 

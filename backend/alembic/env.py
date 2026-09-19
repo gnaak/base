@@ -4,10 +4,10 @@ from logging.config import fileConfig
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import create_async_engine
 
+import app.module  # noqa: F401 — module/__init__.py 실행으로 모든 모델이 Base.metadata에 등록됨
 from alembic import context
 from app.core.config.settings import DATABASE_URL
 from app.core.database.base import Base
-import app.module  # noqa: F401 — module/__init__.py 실행으로 모든 모델이 Base.metadata에 등록됨
 
 config = context.config
 if config.config_file_name is not None:
