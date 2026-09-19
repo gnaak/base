@@ -22,9 +22,9 @@
 |---|---|---|
 | **인증** | 로그인/로그아웃/refresh, Google·Kakao OAuth, 이중 세션 | 회원가입 화면·라우트, 비밀번호 재설정, 이메일 인증 |
 | **백엔드** | 계층 구조, DI, 공통 응답, 예외 핸들러, 로깅, Alembic | 도메인 로직 (직접 채울 것) |
-| **테스트** | pytest 기반 라우터 통합 테스트 + 픽스처, 샘플 34개 | 프론트 테스트 |
+| **테스트** | pytest 기반 라우터 통합 테스트 + 픽스처, 샘플 50개 | 프론트 테스트 |
 | **프론트** | 관리자 레이아웃·사이드바, UI 킷(폼/테이블/모달/토스트), 라우트 가드 | 디자인 시스템, 실제 화면 |
-| **인프라** | 헬스체크, 요청 ID, CORS·보안 헤더 | Docker, CI, 배포 스크립트 |
+| **인프라** | 헬스체크, 요청 ID, CORS·보안 헤더, 레이트리밋 | Docker, CI, 배포 스크립트 |
 
 ### 이 템플릿에서 집중한 것
 
@@ -223,6 +223,7 @@ backend/
     │   ├── logging/                       # QueueHandler 비동기 파이프라인
     │   └── utils/
     │       ├── response.py                # success() / fail() / BaseResponse
+    │       ├── rate_limit.py              # IP×엔드포인트 + 계정×실패 (Redis)
     │       └── http_client.py             # 공용 아웃바운드 httpx 클라이언트
     │
     └── module/
@@ -531,10 +532,10 @@ APP_ENV=prod sh migrate_server.sh   # upgrade head 만
 | 메서드 | 경로 | 인증 | 설명 |
 |--------|------|------|------|
 | `GET` | `/api/health` | — | liveness (LB·컨테이너용) |
-| `POST` | `/api/auth/login` | — | 이메일/비밀번호 로그인 → 쿠키 4종 발급 + `data: SessionOut`. 본문 `type`으로 `user`/`admin` 구분 |
+| `POST` | `/api/auth/login` | — | 이메일/비밀번호 로그인 → 쿠키 4종 발급 + `data: SessionOut`. 본문 `type`으로 `user`/`admin` 구분. **10회/분(IP) · 5회 실패/10분(계정)** |
 | `POST` | `/api/auth/logout` / `/logout_admin` | user / admin | 쿠키 만료 |
 | `POST` | `/api/auth/refresh_token` / `_admin` | refresh 쿠키 | 세션 갱신 → `data: SessionOut` |
-| `POST` | `/api/auth/google` / `/kakao` | — | OAuth 콜백 코드 → 쿠키 발급 + `data: SessionOut` |
+| `POST` | `/api/auth/google` / `/kakao` | — | OAuth 콜백 코드 → 쿠키 발급 + `data: SessionOut`. 10회/분(IP) |
 | `GET` | `/api/user/me` | user | 내 정보 → `data: UserOut` |
 | `WS` | `/api/ws/` | — | WebSocket 연결 |
 
@@ -565,7 +566,7 @@ APP_ENV=prod sh migrate_server.sh   # upgrade head 만
 mysql -u root -p -e "CREATE DATABASE db_base_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
 
 cd backend
-.venv/Scripts/python.exe -m pytest                              # 전체 (34개)
+.venv/Scripts/python.exe -m pytest                              # 전체 (50개)
 .venv/Scripts/python.exe -m pytest tests/test_user_router.py -v # 한 파일
 ```
 
@@ -573,6 +574,7 @@ cd backend
 |------|------------------|
 | `tests/test_user_router.py` | 인증 엣지 케이스, 응답 규약, 민감 필드 노출 방지 |
 | `tests/test_auth_router.py` | 요청 스키마 검증(422), 쿠키 발급·만료 |
+| `tests/test_rate_limit.py` | 빈도 제한(429), 프록시 헤더 신뢰 규칙, fail-open |
 
 **설계**
 

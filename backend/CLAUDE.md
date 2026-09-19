@@ -158,6 +158,44 @@ async def stt_ws(websocket: WebSocket, p: WSProvider):
 > `app/module/__init__.py`가 라우터를 통해 이 모듈을 끌어오기 때문에, 최상단에 두면
 > 이 모듈을 `app.module`보다 먼저 import했을 때 순환 import로 깨진다. 그대로 둘 것.
 
+## 요청 빈도 제한 — `core/utils/rate_limit.py`
+
+두 층이다. 둘 다 Redis에 카운터를 둔다(워커를 늘려도 한도가 곱해지지 않는다).
+
+```python
+from app.core.utils.rate_limit import LOGIN_LIMIT
+
+@router.post("/login", dependencies=[LOGIN_LIMIT], response_model=...)
+```
+
+| 층 | 키 | 기본값 | 막는 것 |
+| -- | -- | ------ | ------- |
+| IP × 엔드포인트 (`rate_limit()`) | IP + 묶음 이름 | 로그인 10/분 | 한 IP의 폭주 |
+| 계정 × 실패 (`check_login_attempts()`) | 이메일 | 5회/10분 | **IP를 바꿔가며 한 계정을 두드리는 공격** |
+
+두 번째가 핵심이다 — nginx·Cloudflare가 **구조적으로 못 하는 것**이라 앱에서만 막을 수 있다.
+`auth_service.login()`이 비밀번호를 검사하기 **전에** 확인한다 (잠긴 계정에 argon2 비용을 쓰지 않는다).
+
+**어디에 걸 것인가** — 전부 거는 게 아니다. 정상 사용 빈도가 엔드포인트마다 달라 한도를 하나로 못 잡는다.
+
+| 성격 | 걸까 |
+| ---- | ---- |
+| 로그인·OAuth·비번 재설정 | ✅ 필수 — 시도만으로 정답 여부를 알 수 있다 |
+| 회원가입·문의·신고 | ✅ 스팸 |
+| 외부 API/LLM 호출, 파일 업로드 | ✅ 돈·자원 |
+| 인증이 걸린 일반 읽기/쓰기 | ❌ 로그인이 이미 관문. 폭주는 앞단(nginx) 몫 |
+| 헬스체크 | ❌ LB가 계속 때린다 |
+
+- **미들웨어가 아니라 의존성이다.** 미들웨어로 하면 규칙에 경로 문자열을 적어야 하는데,
+  라우터 prefix를 바꾸면 제한이 **조용히** 풀린다
+- 429는 `fail()`로 나가므로 `errorCode: "TOO_MANY_REQUESTS"` + `Retry-After` 헤더가 붙고,
+  전역 핸들러를 타서 CORS 헤더도 정상적으로 실린다
+- preflight(`OPTIONS`)는 세지 않는다 — 안 그러면 cross-origin 클라이언트의 실질 한도가 절반이 된다
+- **Redis가 죽으면 통과시킨다(fail-open).** 제한이 잠시 풀리는 것보다 모든 로그인이 막히는 쪽이 나쁘다
+- ⚠️ `X-Forwarded-For`·`CF-Connecting-IP`는 **직접 연결된 상대가 공인 IP가 아닐 때만** 믿는다.
+  앱 포트가 외부에 그대로 열려 있으면 헤더를 위조해 한도를 우회할 수 있기 때문이다.
+  nginx를 같은 호스트에 두면(peer=127.0.0.1) 자연히 통과한다
+
 ## 인증 / 쿠키
 
 `module/auth/auth_token.py`가 전담. 접두사는 `user_` 또는 `admin_`이고, 두 세션은 완전히 독립적이다.

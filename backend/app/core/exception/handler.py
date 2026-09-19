@@ -43,6 +43,8 @@ def setup_exceptions(app: FastAPI) -> None:
         return JSONResponse(
             status_code=exc.status_code,
             content=jsonable_encoder(body),
+            # fail(headers=...)로 실어 보낸 값 (429의 Retry-After 등)
+            headers=getattr(exc, "headers", None),
         )
 
     @app.exception_handler(RequestValidationError)

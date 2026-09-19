@@ -31,6 +31,11 @@ be-researcher 결과를 보고 HTTP / WebSocket 중 어느 쪽인지 먼저 판�
      반환하면 response_model 강제가 풀려서 스키마와 실제 응답이 갈라진다
    - 상태코드는 `@router.post("/x", status_code=201)` 로. `success()` 에는 인자가 없다
    - 쿠키·헤더를 심어야 하면 `response: Response` 를 파라미터로 주입받는다
+   - **빈도 제한이 필요한 엔드포인트면** `dependencies=[LOGIN_LIMIT]` 처럼 건다
+     (`app.core.utils.rate_limit`). 거는 기준: 로그인·OAuth·비번재설정(필수),
+     회원가입·문의(스팸), 외부 API·업로드(돈·자원). 인증이 걸린 일반 읽기/쓰기와
+     헬스체크에는 **걸지 않는다** — 정상 사용 빈도가 높아 한도 설계가 불가능하다.
+     새 묶음이 필요하면 `rate_limit("이름", limit=N, window=60)` 으로 만든다
 5. module/__init__.py  ← 모델 import + setup_routers()에 라우터 등록
 6. core/provider/http/service.py ← ServiceProvider에 `__init__` 캐시 슬롯(`self._x = None`) + lazy-load 프로퍼티 둘 다 추가
 

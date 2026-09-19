@@ -62,6 +62,8 @@ mutation.mutate(payload, { onSuccess: () => {}, onError: () => {} });
 - 요청 바디가 백엔드 스키마와 안 맞으면 **422 + `errorCode: "VALIDATION_ERROR"`** 가 온다.
   `message`가 `"email: Field required"` 형태라 그대로 띄워도 된다.
   요청·응답 필드는 `http://localhost:8000/docs` 에서 확인할 것 (백엔드가 스키마로 강제한다)
+- 빈도 제한에 걸리면 **429 + `errorCode: "TOO_MANY_REQUESTS"`** 가 오고 `Retry-After` 헤더(초)가 붙는다.
+  로그인 화면에서는 `message`를 그대로 띄우면 된다 (재시도 안내 문구가 들어 있다)
 - **로그인·refresh 응답의 `data`는 `UserInfo`다** (백엔드 `SessionOut`). `{p}user_info` 쿠키에
   담기는 것과 같은 내용이라, 로그인 직후에는 쿠키를 파싱하지 않고 이 값을 바로 써도 된다.
   다만 **Context 갱신은 여전히 `syncAuth()`로 한다** — 쿠키가 단일 출처로 남아야

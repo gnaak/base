@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Response
 
 from app.core.provider.http.deps import AdminProvider, Provider, UserProvider
+from app.core.utils.rate_limit import LOGIN_LIMIT
 from app.core.utils.response import BaseResponse, fail, success
 from app.module.auth.auth_schema import LoginIn, OAuthCodeIn, SessionOut
 
@@ -14,7 +15,7 @@ router = APIRouter()
 # (= response_model 이 실제로 강제된다).
 
 
-@router.post("/login", response_model=BaseResponse[SessionOut])
+@router.post("/login", dependencies=[LOGIN_LIMIT], response_model=BaseResponse[SessionOut])
 async def login(body: LoginIn, response: Response, p: Provider):
     user, auth_type = await p.auth_service.login(body)
     session = await p.auth_service.token_util.create_jwt_token(user, response, auth_type)
@@ -55,14 +56,14 @@ async def refresh_token_admin(response: Response, p: Provider):
     return success(session, message="admin login successful")
 
 
-@router.post("/google", response_model=BaseResponse[SessionOut])
+@router.post("/google", dependencies=[LOGIN_LIMIT], response_model=BaseResponse[SessionOut])
 async def google_login(body: OAuthCodeIn, response: Response, p: Provider):
     user = await p.google_service.google_login(body.code)
     session = await p.auth_service.token_util.create_jwt_token(user, response, "user")
     return success(session, message="user login successful")
 
 
-@router.post("/kakao", response_model=BaseResponse[SessionOut])
+@router.post("/kakao", dependencies=[LOGIN_LIMIT], response_model=BaseResponse[SessionOut])
 async def kakao_login(body: OAuthCodeIn, response: Response, p: Provider):
     user = await p.kakao_service.kakao_login(body.code)
     session = await p.auth_service.token_util.create_jwt_token(user, response, "user")
