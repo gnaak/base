@@ -200,17 +200,21 @@ from app.core.utils.rate_limit import LOGIN_LIMIT
 
 `module/auth/auth_token.py`가 전담. 접두사는 `user_` 또는 `admin_`이고, 두 세션은 완전히 독립적이다.
 
-| 쿠키               | httponly | 수명 | 용도                                  |
-| ------------------ | -------- | ---- | ------------------------------------- |
-| `{p}access_token`  | ✅       | 1h   | API 인증                              |
-| `{p}refresh_token` | ✅       | 6h   | 세션 갱신                             |
-| `{p}user_info`     | ❌       | 1h   | 프론트가 읽는 세션 정보 (base64 JSON) |
-| `{p}refresh_exp`   | ❌       | 6h   | "refresh 세션이 살아있다"는 마커      |
+| 쿠키               | httponly | 수명      | 용도                                  |
+| ------------------ | -------- | --------- | ------------------------------------- |
+| `{p}access_token`  | ✅       | access    | API 인증                              |
+| `{p}refresh_token` | ✅       | refresh   | 세션 갱신                             |
+| `{p}user_info`     | ❌       | access    | 프론트가 읽는 세션 정보 (base64 JSON) |
+| `{p}refresh_exp`   | ❌       | refresh   | "refresh 세션이 살아있다"는 마커      |
+
+수명은 `.env`의 `access_token_minutes`(기본 30) / `refresh_token_hours`(기본 12)에서 온다.
+**`access_token_minutes`는 무효화가 적용되기까지의 최대 지연**이기도 하다 (아래 참고).
 
 - `create_jwt_token(user, response, type)` — 4종을 한 번에 심고 **`SessionOut`을 반환한다**.
   `{p}user_info` 쿠키에 담기는 것과 **같은 객체**라, 라우터가 이걸 응답 `data`에 그대로 실으면
   쿠키와 응답이 어긋날 수가 없다 (`test_응답_data와_user_info_쿠키가_같은_내용이다`가 고정)
 - `delete_token(response, type)` — 4종을 한 번에 지운다. **쿠키 하나만 지우면 프론트가 상태를 잘못 판단한다**
+- `revoke_current_session(request, type)` — 로그아웃. 쿠키 삭제만으로는 토큰이 만료까지 살아있다
 - `verify_refresh_by_type(request, type)` — refresh 검증. `(user_id, auth_type)` 반환
 - 인증 실패는 전부 `fail()`로 나가므로 `errorCode`에 `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`,
   `INVALID_TOKEN_TYPE`, `REFRESH_TOKEN_MISSING` 같은 상수가 실린다
@@ -219,6 +223,48 @@ from app.core.utils.rate_limit import LOGIN_LIMIT
 - JWT payload의 `user` 필드가 요청한 `auth_type`과 다르면 401 — user 토큰으로 admin API 접근 불가
 
 **`user_info`의 `session_info` 필드를 바꾸면 프론트 `types/user.ts`의 `UserInfo`도 같이 고칠 것.** 1:1로 맞춰져 있다.
+
+## 세션 무효화 — `module/auth/auth_revoke.py`
+
+JWT는 stateless라 발급하고 나면 만료 전까지 스스로 유효하다. "로그아웃했다",
+"비밀번호를 바꿨다", "계정을 정지시켰다"를 토큰만으로는 반영할 수 없어서 Redis에 상태를 둔다.
+
+| 수단                             | 범위                  | 언제                                          |
+| -------------------------------- | --------------------- | --------------------------------------------- |
+| 거부 목록 (`deny_token`, jti)    | 그 세션 하나          | 로그아웃 — 다른 기기는 살아있어야 한다        |
+| 버전 카운터 (`revoke_all_sessions`) | 그 계정의 **모든** 세션 | 비밀번호 변경, 계정 정지, "모든 기기에서 로그아웃" |
+
+```python
+from app.module.auth.auth_revoke import revoke_all_sessions
+
+await revoke_all_sessions(user.id, "user")   # 비밀번호 변경 후 등
+```
+
+- **확인 시점은 refresh 뿐이다.** 매 요청마다 확인하면 Redis 왕복이 요청마다 생긴다.
+  대신 access 토큰을 짧게 가져가 지연을 그 값으로 묶는다 — **무효화 지연 = `access_token_minutes`**
+- **Redis가 죽으면 거부한다(fail-closed).** 레이트리밋이 fail-open인 것과 반대다 —
+  거기는 가용성, 여기는 보안이 우선이다. 단 **토큰 발급 시의 버전 조회는 fail-open**이다
+  (그건 보안 검사가 아니라 도장 찍기라, 못 찍었다고 로그인을 막을 이유가 없다)
+- `active=False` 검사는 **`create_jwt_token()` 한 곳**에 있다. 세션을 발급하는 유일한 지점이라
+  로그인·OAuth·refresh가 전부 여기를 지난다. 새 로그인 경로를 추가해도 자동으로 걸린다
+
+### 로테이션 + 재사용 탐지
+
+refresh를 쓸 때마다 **옛 토큰이 죽는다**(`rotate_refresh()`). 그래서 훔친 토큰은
+정상 사용자가 한 번만 갱신해도 무력화된다. 덕분에 `refresh_token_hours`를 며칠 단위로
+잡아도 된다 (기본 168 = 7일).
+
+**죽은 토큰이 또 오면 유출로 보고 그 계정의 모든 세션을 끊는다** (`SESSION_REUSE_DETECTED`).
+공격자가 정상 사용자보다 먼저 갱신해 간 경우를 잡는 장치다.
+
+- ⚠️ **유예(`ROTATION_GRACE_SECONDS`, 10초)가 핵심이다.** 탭을 여러 개 열어두면 각자
+  refresh를 시도하는데(프론트 `pendingRefresh` 맵은 탭 *안에서만* 중복을 막는다),
+  유예가 없으면 이 정상 동작이 재사용으로 오판돼 사용자가 통째로 로그아웃된다.
+  대가는 유예 시간 동안 훔친 토큰도 한 번 더 통한다는 것
+- `rotate_token()`은 **유예 마커를 거부 목록보다 먼저 쓴다.** 순서가 반대면 두 마커
+  사이의 짧은 순간에 들어온 동시 요청이 재사용으로 오판된다
+- 거부 사유를 구분한다 — 로그아웃(`logout`)된 토큰이 다시 오는 건 흔한 일이라
+  전체 세션까지 끊지 않는다. 재사용 탐지는 로테이션(`rotated`)된 토큰에만 적용된다
 
 **환경별 쿠키 속성** — 전부 `settings`에서 온다. `auth_token.py`에 하드코딩된 값은 없다.
 

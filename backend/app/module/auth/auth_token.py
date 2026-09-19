@@ -19,6 +19,9 @@ class AuthToken:
         self.hash_key = settings.hash_key
         self.algorithm = "HS256"
         self.env = settings.env
+        # 수명은 .env에서 온다. access 수명 = 무효화가 적용되기까지의 최대 지연.
+        self.access_ttl = timedelta(minutes=settings.access_token_minutes)
+        self.refresh_ttl = timedelta(hours=settings.refresh_token_hours)
         # 쿠키 속성은 전부 settings에서 온다 (.env의 {local|prod}_domain에서 유도)
         self.samesite = settings.cookie_samesite
         self.domain = settings.cookie_domain
@@ -86,23 +89,39 @@ class AuthToken:
         응답 `data`에 그대로 실으면, 프론트는 쿠키를 파싱하지 않고도 세션 정보를
         받을 수 있고 둘이 어긋날 수가 없다.
         """
+        from app.module.auth.auth_revoke import current_version
         from app.module.auth.auth_schema import SessionOut
+
+        # 세션을 발급하는 **유일한 지점**이라, 계정 상태 검사를 여기 둔다.
+        # 로그인·OAuth·refresh가 전부 이 함수를 지나므로 한 번만 쓰면 된다.
+        # (tb_admins에는 active 컬럼이 없으므로 기본값 True)
+        if not getattr(user, "active", True):
+            fail("비활성화된 계정입니다", "ACCOUNT_DISABLED", 403)
 
         now_kr = now_kst()
         prefix = self._cookie_prefix(type)
+
+        # 이 계정의 현재 세션 버전. 비밀번호 변경·계정 정지 시 올라가고,
+        # 그러면 예전에 발급된 토큰의 ver가 뒤처져서 refresh가 거부된다.
+        # strict=False — Redis가 죽었다고 로그인까지 막지는 않는다 (auth_revoke 주석 참고)
+        version = await current_version(user.id, type, strict=False)
 
         access_payload = {
             "sub": str(user.id),
             "user": type,
             "type": "access",
-            "exp": now_kr + timedelta(hours=1),
+            "ver": version,
+            "exp": now_kr + self.access_ttl,
         }
 
         refresh_payload = {
             "sub": str(user.id),
             "user": type,
             "type": "refresh",
-            "exp": now_kr + timedelta(hours=6),
+            "ver": version,
+            # 로그아웃 시 이 세션 하나만 끊을 수 있게 식별자를 붙인다
+            "jti": str(uuid.uuid4()),
+            "exp": now_kr + self.refresh_ttl,
         }
 
         access_token = jwt.encode(access_payload, self.jwt_secret, algorithm=self.algorithm)
@@ -124,11 +143,17 @@ class AuthToken:
         # 프론트에서 읽어야 하므로 httponly=False
         cookie_common = self._cookie_common()
 
+        # 쿠키 수명은 토큰 수명을 그대로 따라간다 (.env의 access_token_minutes / refresh_token_hours).
+        # user_info를 access와 맞추는 이유: 프론트가 "로그인 상태"라고 믿는 기간이
+        # access 토큰이 유효한 기간과 같아야, 라우트 가드의 refresh 시도가 의도적으로 일어난다.
+        access_age = int(self.access_ttl.total_seconds())
+        refresh_age = int(self.refresh_ttl.total_seconds())
+
         response.set_cookie(
             key=f"{prefix}user_info",
             value=encoded_info,
             httponly=False,
-            max_age=3600,
+            max_age=access_age,
             **cookie_common,
         )
 
@@ -136,7 +161,7 @@ class AuthToken:
             key=f"{prefix}access_token",
             value=access_token,
             httponly=True,
-            max_age=3600,
+            max_age=access_age,
             **cookie_common,
         )
 
@@ -144,7 +169,7 @@ class AuthToken:
             key=f"{prefix}refresh_token",
             value=refresh_token,
             httponly=True,
-            max_age=21600,
+            max_age=refresh_age,
             **cookie_common,
         )
 
@@ -152,7 +177,7 @@ class AuthToken:
             key=f"{prefix}refresh_exp",
             value=jwt.encode({"uuid": str(uuid.uuid4())}, settings.jwt_secret, algorithm="HS256"),
             **cookie_common,
-            max_age=21600,
+            max_age=refresh_age,
         )
 
         return session
@@ -190,7 +215,62 @@ class AuthToken:
         if not user_id or token_type != auth_type:
             raise fail("invalid refresh payload", "INVALID_REFRESH_PAYLOAD", 401)
 
+        # 서명·만료를 통과했어도 끊긴 세션일 수 있다 (로그아웃·비번변경·계정정지).
+        # 무효화 확인은 여기 한 곳뿐이므로, 반영까지 최대 access 토큰 수명만큼 걸린다.
+        from app.module.auth.auth_revoke import ensure_not_revoked
+
+        await ensure_not_revoked(payload)
+
         return int(user_id), auth_type
+
+    def _current_refresh(self, request, auth_type: str):
+        """쿠키에 들어있는 refresh 토큰의 `(jti, 남은 수명 초)`. 없거나 망가졌으면 None.
+
+        만료 검증은 끈다 — 만료된 토큰은 어차피 못 쓰지만, 남은 수명을 계산하려면
+        payload 자체는 읽어야 한다.
+        """
+        prefix = self._cookie_prefix(auth_type)
+        raw = request.cookies.get(f"{prefix}refresh_token")
+        if not raw:
+            return None
+
+        try:
+            payload = jwt.decode(
+                raw, self.jwt_secret, algorithms=[self.algorithm],
+                options={"verify_exp": False},
+            )
+        except jwt.InvalidTokenError:
+            return None
+
+        exp = payload.get("exp")
+        jti = payload.get("jti")
+        if not exp or not jti:
+            return None
+
+        return jti, int(exp - now_kst().timestamp())
+
+    async def revoke_current_session(self, request, auth_type: str) -> None:
+        """로그아웃 — **이 세션 하나만** 끊는다 (다른 기기는 유지).
+
+        쿠키 삭제는 라우터가 따로 한다. 여기서는 토큰 자체를 거부 목록에 올린다.
+        """
+        from app.module.auth.auth_revoke import deny_token
+
+        current = self._current_refresh(request, auth_type)
+        if current:
+            await deny_token(*current)
+
+    async def rotate_refresh(self, request, auth_type: str) -> None:
+        """로테이션 — 방금 사용한 refresh 토큰을 무효화한다.
+
+        **새 토큰을 발급한 뒤에** 부른다. 이후 같은 토큰이 또 오면
+        (유예 시간 밖이라면) 유출로 보고 전체 세션을 끊는다.
+        """
+        from app.module.auth.auth_revoke import rotate_token
+
+        current = self._current_refresh(request, auth_type)
+        if current:
+            await rotate_token(*current)
 
     async def delete_token(self, response, auth_type: str):
         """토큰 삭제 및 로그아웃 처리"""

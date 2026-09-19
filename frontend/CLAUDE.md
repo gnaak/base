@@ -62,6 +62,9 @@ mutation.mutate(payload, { onSuccess: () => {}, onError: () => {} });
 - 요청 바디가 백엔드 스키마와 안 맞으면 **422 + `errorCode: "VALIDATION_ERROR"`** 가 온다.
   `message`가 `"email: Field required"` 형태라 그대로 띄워도 된다.
   요청·응답 필드는 `http://localhost:8000/docs` 에서 확인할 것 (백엔드가 스키마로 강제한다)
+- refresh가 401로 실패하면 세션이 끊긴 것이다. `errorCode`로 이유가 구분된다:
+  `SESSION_REVOKED`(로그아웃·비번변경·계정정지) / `SESSION_REUSE_DETECTED`(토큰 유출 감지로 전체 종료)
+  / `ACCOUNT_DISABLED`(403). 어느 쪽이든 `useAPI`가 쿠키를 지우고 라우트 가드가 로그인 화면으로 보낸다
 - 빈도 제한에 걸리면 **429 + `errorCode: "TOO_MANY_REQUESTS"`** 가 오고 `Retry-After` 헤더(초)가 붙는다.
   로그인 화면에서는 `message`를 그대로 띄우면 된다 (재시도 안내 문구가 들어 있다)
 - **로그인·refresh 응답의 `data`는 `UserInfo`다** (백엔드 `SessionOut`). `{p}user_info` 쿠키에

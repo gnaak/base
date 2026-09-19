@@ -24,12 +24,16 @@ async def login(body: LoginIn, response: Response, p: Provider):
 
 @router.post("/logout", response_model=BaseResponse[None])
 async def logout(response: Response, p: UserProvider):
+    # 쿠키만 지우면 토큰 자체는 만료까지 살아있다 — 이 세션을 거부 목록에 올린다.
+    # 다른 기기의 세션은 유지된다 (전체 종료는 revoke_all_sessions).
+    await p.auth_service.token_util.revoke_current_session(p.request, p.auth.auth_type)
     await p.auth_service.token_util.delete_token(response, p.auth.auth_type)
     return success(message="user logout successful")
 
 
 @router.post("/logout_admin", response_model=BaseResponse[None])
 async def logout_admin(response: Response, p: AdminProvider):
+    await p.auth_service.token_util.revoke_current_session(p.request, p.auth.auth_type)
     await p.auth_service.token_util.delete_token(response, p.auth.auth_type)
     return success(message="admin logout successful")
 
@@ -42,6 +46,8 @@ async def refresh_token(response: Response, p: Provider):
         fail("user not found", "USER_NOT_FOUND", 404)
 
     session = await p.auth_service.token_util.create_jwt_token(user, response, "user")
+    # 로테이션 — 방금 쓴 refresh 토큰을 무효화한다. 새 토큰을 발급한 **뒤에** 부른다.
+    await p.auth_service.token_util.rotate_refresh(p.request, "user")
     return success(session, message="user login successful")
 
 
@@ -53,6 +59,7 @@ async def refresh_token_admin(response: Response, p: Provider):
         fail("admin not found", "ADMIN_NOT_FOUND", 404)
 
     session = await p.auth_service.token_util.create_jwt_token(admin, response, "admin")
+    await p.auth_service.token_util.rotate_refresh(p.request, "admin")
     return success(session, message="admin login successful")
 
 

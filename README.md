@@ -11,7 +11,7 @@
 
 ### 무엇을 해결하는가
 
-- **매번 다시 만드는 인증을 한 번만 만든다** — 쿠키 기반 JWT, refresh 회전, 일반/관리자 이중 세션, Google·Kakao OAuth가 이미 붙어 있음
+- **매번 다시 만드는 인증을 한 번만 만든다** — 쿠키 기반 JWT, refresh 로테이션·재사용 탐지, 세션 무효화, 일반/관리자 이중 세션, Google·Kakao OAuth가 이미 붙어 있음
 - **계층을 강제해서 구조가 무너지지 않게 한다** — `router → service → repository` 를 폴더가 아니라 의존성 주입(`ServiceProvider`)으로 고정
 - **환경별 설정 실수를 기동 시점에 잡는다** — DB·Redis 연결을 fail-fast로 검증하고, 쿠키 설정이 조용히 깨지는 조합을 경고로 남김
 - **프론트·백엔드 인증 계약을 문서가 아니라 타입으로 맞춘다** — 백엔드 `session_info` ↔ 프론트 `UserInfo`가 1:1
@@ -20,9 +20,9 @@
 
 | | 포함 | 미포함 |
 |---|---|---|
-| **인증** | 로그인/로그아웃/refresh, Google·Kakao OAuth, 이중 세션 | 회원가입 화면·라우트, 비밀번호 재설정, 이메일 인증 |
+| **인증** | 로그인/로그아웃/refresh, refresh 로테이션 + 재사용 탐지, 세션 무효화, 계정 비활성화, Google·Kakao OAuth, 이중 세션 | 회원가입 화면·라우트, 비밀번호 재설정, 이메일 인증 |
 | **백엔드** | 계층 구조, DI, 공통 응답, 예외 핸들러, 로깅, Alembic | 도메인 로직 (직접 채울 것) |
-| **테스트** | pytest 기반 라우터 통합 테스트 + 픽스처, 샘플 50개 | 프론트 테스트 |
+| **테스트** | pytest 기반 라우터 통합 테스트 + 픽스처, 샘플 63개 | 프론트 테스트 |
 | **프론트** | 관리자 레이아웃·사이드바, UI 킷(폼/테이블/모달/토스트), 라우트 가드 | 디자인 시스템, 실제 화면 |
 | **인프라** | 헬스체크, 요청 ID, CORS·보안 헤더, 레이트리밋 | Docker, CI, 배포 스크립트 |
 
@@ -137,6 +137,8 @@ npm run dev                 # http://localhost:3000
 | `local_redis_password` | | 없으면 비워둘 것 |
 | `prod_redis_host` / `_port` / `_password` | ✅ | 운영 Redis 접속 |
 | `jwt_secret` | ✅ | JWT 서명 키 (HS256) |
+| `access_token_minutes` | | access 토큰 수명(분). 기본 30. **무효화 지연 = 이 값** |
+| `refresh_token_hours` | | refresh 토큰 수명(시간). 기본 168(7일). 로테이션이 걸려 있어 길게 잡아도 됨 |
 | `hash_key` | ✅ | 내부 해시용 키 |
 | `openai_api_key` | | 없으면 GPT 기능만 비활성 |
 | `kakao_client_id` / `_secret` | | Kakao OAuth |
@@ -232,6 +234,7 @@ backend/
         │   ├── auth_router.py             # /api/auth/**
         │   ├── auth_schema.py             # LoginIn · SignupIn · OAuthCodeIn · SessionOut
         │   ├── auth_service.py            # 로그인·로그아웃·refresh
+        │   ├── auth_revoke.py             # 세션 무효화 (거부 목록 + 버전 카운터)
         │   └── auth_token.py              # JWT 생성·검증, 쿠키 4종 심기 → SessionOut 반환
         ├── user/                          # user.py(모델) + schema + repository + service + router
         ├── admin/                         # 관리자 계정 (라우터는 비어 있음 — 채울 자리)
@@ -566,7 +569,7 @@ APP_ENV=prod sh migrate_server.sh   # upgrade head 만
 mysql -u root -p -e "CREATE DATABASE db_base_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
 
 cd backend
-.venv/Scripts/python.exe -m pytest                              # 전체 (50개)
+.venv/Scripts/python.exe -m pytest                              # 전체 (63개)
 .venv/Scripts/python.exe -m pytest tests/test_user_router.py -v # 한 파일
 ```
 
@@ -575,6 +578,7 @@ cd backend
 | `tests/test_user_router.py` | 인증 엣지 케이스, 응답 규약, 민감 필드 노출 방지 |
 | `tests/test_auth_router.py` | 요청 스키마 검증(422), 쿠키 발급·만료 |
 | `tests/test_rate_limit.py` | 빈도 제한(429), 프록시 헤더 신뢰 규칙, fail-open |
+| `tests/test_auth_revoke.py` | 로테이션·재사용 탐지, 세션 무효화, 계정 비활성화 |
 
 **설계**
 
@@ -629,10 +633,17 @@ async def test_내_정보를_반환한다(client, make_user):
 
 | 쿠키 | httponly | 수명 | 용도 |
 |------|----------|------|------|
-| `{p}access_token` | ✅ | 1h | API 인증 |
-| `{p}refresh_token` | ✅ | 6h | 세션 갱신 |
-| `{p}user_info` | ❌ | 1h | 프론트가 읽는 세션 정보 (base64 JSON) |
-| `{p}refresh_exp` | ❌ | 6h | "refresh 세션이 살아있다"는 마커 |
+| `{p}access_token` | ✅ | access | API 인증 |
+| `{p}refresh_token` | ✅ | refresh | 세션 갱신 |
+| `{p}user_info` | ❌ | access | 프론트가 읽는 세션 정보 (base64 JSON) |
+| `{p}refresh_exp` | ❌ | refresh | "refresh 세션이 살아있다"는 마커 |
+
+수명은 `.env` 의 `access_token_minutes`(기본 30) / `refresh_token_hours`(기본 168 = 7일)에서 옵니다.
+**`access_token_minutes` 는 무효화(로그아웃·비번변경·계정정지)가 적용되기까지의 최대 지연**이기도 합니다.
+
+refresh 토큰은 쓸 때마다 **로테이션**됩니다 — 갱신하면 옛 토큰이 죽고, 죽은 토큰이 다시 오면
+유출로 보고 그 계정의 **모든 세션을 끊습니다**(`SESSION_REUSE_DETECTED`). 그래서 수명을
+며칠 단위로 잡아도 됩니다. 자세한 내용은 `backend/CLAUDE.md` 의 "세션 무효화".
 
 - **`user_`와 `admin_`은 완전히 독립된 세션입니다.** 동시에 둘 다 살아있을 수 있습니다
 - `user_info`의 필드는 백엔드 `auth_token.create_jwt_token()`의 `session_info`와

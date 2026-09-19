@@ -32,6 +32,23 @@ class RawEnv(BaseSettings):
     jwt_secret: str
     hash_key: str
 
+    # 토큰 수명. 프로젝트 성격에 맞게 .env에서 조정한다.
+    #
+    #   access_token_minutes = 무효화(로그아웃·비번변경·정지)가 적용되기까지의 **지연**이다.
+    #     refresh 시점에만 무효화를 확인하므로, 이 값이 곧 최대 지연이 된다.
+    #   refresh_token_hours = 재로그인 없이 세션이 유지되는 기간.
+    #
+    #   | 성격                | access | refresh    |
+    #   | 관리자 도구·내부     | 15~30분 | 8~12시간   |
+    #   | 일반 웹 서비스       | 15~30분 | 3~14일     |
+    #   | 금융·의료           | 5~15분  | 30분~2시간 |
+    #
+    # refresh는 로테이션 + 재사용 탐지가 걸려 있어서(module/auth/auth_revoke.py)
+    # 며칠 단위로 잡아도 된다. 갱신할 때마다 옛 토큰이 죽고, 죽은 토큰이 다시
+    # 오면 유출로 보고 그 계정의 모든 세션을 끊는다.
+    access_token_minutes: int = 30
+    refresh_token_hours: int = 168  # 7일 (2주는 336)
+
     # API keys
     openai_api_key: Optional[str] = None
 
@@ -152,6 +169,14 @@ class Settings:
     @property
     def hash_key(self) -> str:
         return self.raw.hash_key
+
+    @property
+    def access_token_minutes(self) -> int:
+        return self.raw.access_token_minutes
+
+    @property
+    def refresh_token_hours(self) -> int:
+        return self.raw.refresh_token_hours
 
     # API Keys
     @property
