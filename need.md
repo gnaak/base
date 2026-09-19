@@ -19,7 +19,7 @@
 | [A1](#a1-pydantic-스키마가-없다) | ~~Pydantic 스키마 부재 (`with_provider`가 원인)~~ | 구조 | ✅ 완료 |
 | [A2](#a2-requestvalidationerror-핸들러가-없다) | ~~`RequestValidationError` 핸들러 없음~~ | 구조 | ✅ 완료 |
 | [A3](#a3-success-가-datetimedecimal을-직렬화하지-못한다) | ~~`success()`가 datetime·Decimal 직렬화 못 함~~ | 버그 | ✅ 완료 |
-| [A4](#a4-prod에서-csrf가-실제로-뚫린다) | prod CSRF 무방비 | 보안 | 반나절 |
+| [A4](#a4-prod에서-csrf가-실제로-뚫린다) | ~~prod CSRF 무방비~~ | 보안 | ✅ 완료 (Origin 검증은 선택) |
 | [A5](#a5-로그인-레이트리밋이-없다) | ~~로그인 레이트리밋 없음~~ | 보안 | ✅ 완료 |
 | [A6](#a6-토큰-무효화가-불가능하고-active가-검사되지-않는다) | ~~토큰 무효화 불가 + `active` 미검사~~ | 보안/버그 | ✅ 완료 |
 | [B7](#b7-docker-compose) | docker-compose (MySQL + Redis) | 인프라 | 반나절 |
@@ -33,10 +33,11 @@
 | [B15](#b15-에러코드-상수화) | 에러코드 상수화 (백엔드 + 프론트 타입) | 품질 | 1시간 |
 | [B16](#b16-prod-실행-스크립트) | prod 실행 스크립트 | 인프라 | 30분 |
 
-**남은 순서**: A4 → B7·B8 → 나머지
+**남은 순서**: B7(docker-compose) → B8(CI) → 나머지
 
-A1·A2·A3·A5·A6 완료. 요청·응답 양쪽에 타입이 붙었고, 로그인은 IP·계정 두 층으로 막혀 있고,
-세션은 끊을 수 있다(로그아웃·전체 종료·로테이션·재사용 탐지). **남은 A는 A4(prod CSRF) 하나다.**
+**A 전부 완료.** 요청·응답 양쪽에 타입이 붙었고, 로그인은 IP·계정 두 층으로 막혀 있고,
+세션은 끊을 수 있고(로그아웃·전체 종료·로테이션·재사용 탐지), 쿠키는 `SameSite=Lax`다.
+남은 건 B(인프라·품질)와 C(정리)뿐이다.
 
 ---
 
@@ -257,7 +258,30 @@ return JSONResponse(status_code=status_code, content=jsonable_encoder(body))
 
 ## A4. prod 에서 CSRF 가 실제로 뚫린다
 
-- [ ] 처리
+- [x] **완료** — `SameSite`를 `.env`로 빼고 기본을 `lax`로 바꿨다
+- [ ] (선택) 상태 변경 메서드에 Origin 검증 미들웨어 — `none`을 써야만 하는 배포용
+
+**핵심은 "방어를 만드는 것"이 아니라 "스스로 끈 방어를 다시 켜는 것"이었다.**
+브라우저에는 이미 `SameSite=Lax`라는 기본 방어가 있는데, prod에서 무조건 `None`으로
+덮어쓰고 있었다. 그게 CSRF를 가능하게 만든 유일한 원인이다.
+
+게다가 이 템플릿은 프론트 JS가 `user_info` 쿠키를 읽어야 해서 **원래 same-site를 전제**한다
+(`backend/CLAUDE.md`에 그렇게 적혀 있다). `None`은 자기 아키텍처와 모순이었다.
+
+- 모르는 값을 적으면 **조용히 뚫리지 않도록** `Lax`로 떨어지고 기동 로그에 경고
+- `none`을 켜면 "CSRF 기본 방어가 꺼진다" 경고, `secure=False`와 조합되면 "브라우저가
+  쿠키를 거부한다" 경고까지 (그 조합은 로그인이 아예 안 잡힌다)
+
+**`none`이 진짜 필요한 경우** — Vercel + 별도 API 도메인, 서드파티 iframe 임베드.
+그때는 위 체크박스의 Origin 검증이나 CSRF 토큰을 같이 붙여야 한다.
+`Starlette`의 `request.json()`은 Content-Type을 확인하지 않아서 `text/plain`으로 보내면
+preflight 없이 통과하므로, **CORS만으로는 못 막는다.**
+
+> 임베드 위젯에 로그인이 필요해지면 `SameSite=none`으로 전면 전환하지 말 것.
+> iframe URL·`postMessage`로 별도 토큰을 넘기거나 CHIPS(`Partitioned` 쿠키)를 쓰는 게 맞다 —
+> 최상위 사이트별로 쿠키 저장소가 분리돼서 CSRF에 쓰이지 않는다.
+
+테스트 63 → **72개**.
 
 ### 증상
 

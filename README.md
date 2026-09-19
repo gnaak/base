@@ -22,7 +22,7 @@
 |---|---|---|
 | **인증** | 로그인/로그아웃/refresh, refresh 로테이션 + 재사용 탐지, 세션 무효화, 계정 비활성화, Google·Kakao OAuth, 이중 세션 | 회원가입 화면·라우트, 비밀번호 재설정, 이메일 인증 |
 | **백엔드** | 계층 구조, DI, 공통 응답, 예외 핸들러, 로깅, Alembic | 도메인 로직 (직접 채울 것) |
-| **테스트** | pytest 기반 라우터 통합 테스트 + 픽스처, 샘플 63개 | 프론트 테스트 |
+| **테스트** | pytest 기반 라우터 통합 테스트 + 픽스처, 샘플 72개 | 프론트 테스트 |
 | **프론트** | 관리자 레이아웃·사이드바, UI 킷(폼/테이블/모달/토스트), 라우트 가드 | 디자인 시스템, 실제 화면 |
 | **인프라** | 헬스체크, 요청 ID, CORS·보안 헤더, 레이트리밋 | Docker, CI, 배포 스크립트 |
 
@@ -146,6 +146,7 @@ npm run dev                 # http://localhost:3000
 | `google_client_id` / `_secret` | | Google OAuth |
 | `local_google_redirect_uri` / `prod_google_redirect_uri` | | Google 콘솔 등록값과 일치해야 함 |
 | `local_domain` / `prod_domain` | ✅ | CORS 오리진 + 쿠키 도메인을 여기서 함께 유도 |
+| `cookie_samesite` | | `lax`(기본) / `strict` / `none`. **lax 가 곧 CSRF 방어** |
 
 **`{env}_domain` 작성 규칙**
 
@@ -178,8 +179,8 @@ APP_ENV=prod uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 | APP_ENV | 인식 | 쿠키 |
 |---------|------|------|
-| `prod` / `production` | prod | `secure=True`, `SameSite=None` |
-| `local` / `development` | local | `secure=False`, `SameSite=Lax` |
+| `prod` / `production` | prod | `secure=True` |
+| `local` / `development` | local | `secure=False` |
 | (미설정) | 호스트명이 `ip-`/`ec2-`로 시작하면 prod, 아니면 **local** | 추측 결과에 따름 |
 
 > 이 추측은 EC2 기본 호스트명에서만 맞습니다. Docker·Cloud Run에 올리면 조용히 `local`로 떨어져
@@ -569,7 +570,7 @@ APP_ENV=prod sh migrate_server.sh   # upgrade head 만
 mysql -u root -p -e "CREATE DATABASE db_base_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
 
 cd backend
-.venv/Scripts/python.exe -m pytest                              # 전체 (63개)
+.venv/Scripts/python.exe -m pytest                              # 전체 (72개)
 .venv/Scripts/python.exe -m pytest tests/test_user_router.py -v # 한 파일
 ```
 
@@ -579,6 +580,7 @@ cd backend
 | `tests/test_auth_router.py` | 요청 스키마 검증(422), 쿠키 발급·만료 |
 | `tests/test_rate_limit.py` | 빈도 제한(429), 프록시 헤더 신뢰 규칙, fail-open |
 | `tests/test_auth_revoke.py` | 로테이션·재사용 탐지, 세션 무효화, 계정 비활성화 |
+| `tests/test_settings_cookie.py` | SameSite 해석·기동 경고 (CSRF 방어 스위치) |
 
 **설계**
 

@@ -84,6 +84,19 @@ class RawEnv(BaseSettings):
     local_domain: str = "localhost:3000,127.0.0.1:3000"
     prod_domain: str = ""
 
+    # 쿠키의 SameSite 속성. lax | strict | none
+    #
+    # **기본 lax 가 곧 CSRF 방어다.** 브라우저가 cross-site 요청에 쿠키를 붙이지 않으므로,
+    # 악성 사이트가 사용자의 브라우저를 시켜 우리 API를 호출해도 인증이 안 된다.
+    #
+    # `none` 은 그 방어를 끄는 값이다. 프론트와 백엔드가 **다른 사이트**일 때만 쓴다
+    # (Vercel + 별도 API 도메인, 서드파티 iframe 임베드 등). 이 템플릿의 인증은 프론트 JS가
+    # `user_info` 쿠키를 직접 읽는 구조라 원래 same-site를 전제하므로, 대부분 lax 로 충분하다.
+    #
+    # ⚠️ `none` 은 `Secure` 가 함께 있어야 브라우저가 받아준다(= HTTPS 필수).
+    #    그리고 켜는 순간 CSRF 토큰이나 Origin 검증을 따로 붙여야 한다.
+    cookie_samesite: str = "lax"
+
     model_config = SettingsConfigDict(env_file=os.path.join(os.path.dirname(__file__), "..", "..", "..", ".env"), env_file_encoding="utf-8")
 
 class Settings:
@@ -274,7 +287,16 @@ class Settings:
 
     @property
     def cookie_samesite(self) -> str:
-        return "None" if self.env == "prod" else "Lax"
+        """`.env`의 `cookie_samesite`. 모르는 값이면 가장 안전한 `Lax`로 떨어진다.
+
+        예전에는 prod에서 무조건 `None`이었다. 그건 브라우저의 CSRF 기본 방어를
+        스스로 끄는 값인데, 이 템플릿은 프론트 JS가 쿠키를 읽어야 해서 원래
+        same-site를 전제한다 — 켜둘 이유가 없었다.
+        """
+        value = (self.raw.cookie_samesite or "").strip().lower()
+        if value not in ("lax", "strict", "none"):
+            return "Lax"
+        return {"lax": "Lax", "strict": "Strict", "none": "None"}[value]
 
     def config_warnings(self) -> list[str]:
         """기동 시 로그로 남길 설정 경고. 세션이 조용히 깨지는 조합들을 잡는다."""
@@ -293,6 +315,24 @@ class Settings:
                 f"{self.env}_domain 이 비어 있습니다. 프론트가 백엔드와 다른 오리진(포트만 달라도 해당)에 "
                 "있으면 CORS로 전부 차단됩니다. 완전한 same-origin 배포라면 무시해도 됩니다."
             )
+
+        raw_samesite = (self.raw.cookie_samesite or "").strip().lower()
+        if raw_samesite and raw_samesite not in ("lax", "strict", "none"):
+            warnings.append(
+                f"cookie_samesite 값 '{self.raw.cookie_samesite}' 을 알 수 없어 Lax로 동작합니다. "
+                "lax / strict / none 중 하나여야 합니다."
+            )
+        if self.cookie_samesite == "None":
+            warnings.append(
+                "cookie_samesite=none 입니다. 브라우저의 CSRF 기본 방어가 꺼집니다 — "
+                "악성 사이트가 사용자의 브라우저를 시켜 이 API를 호출하면 쿠키가 그대로 실립니다. "
+                "프론트·백엔드가 정말 다른 사이트인지 확인하고, 맞다면 CSRF 토큰이나 Origin 검증을 붙이세요."
+            )
+            if not self.cookie_secure:
+                warnings.append(
+                    "cookie_samesite=none 인데 secure=False 입니다. 브라우저가 이 조합의 쿠키를 "
+                    "**거부**하므로 로그인이 아예 안 잡힙니다 (SameSite=None 은 HTTPS 필수)."
+                )
 
         return warnings
 

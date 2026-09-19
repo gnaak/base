@@ -271,8 +271,20 @@ refresh를 쓸 때마다 **옛 토큰이 죽는다**(`rotate_refresh()`). 그래
 |            | local                            | prod   |
 | ---------- | -------------------------------- | ------ |
 | `secure`   | `False`                          | `True` |
-| `samesite` | `Lax`                            | `None` |
+| `samesite` | `.env`의 `cookie_samesite` (기본 `lax`) | 〃 |
 | `domain`   | `.env`의 `{env}_domain`에서 유도 | 〃     |
+
+**`SameSite=Lax`가 곧 CSRF 방어다.** 브라우저가 cross-site 요청에 쿠키를 붙이지 않으므로,
+악성 사이트가 사용자의 브라우저를 시켜 이 API를 호출해도 인증이 안 된다.
+
+`none`은 그 방어를 **끄는** 값이다. 프론트·백엔드가 다른 사이트일 때만 쓴다
+(Vercel + 별도 API 도메인, 서드파티 iframe 임베드 등). 이 템플릿은 프론트 JS가
+`user_info` 쿠키를 읽어야 해서 원래 same-site를 전제하므로 대부분 `lax`로 충분하다.
+모르는 값을 적으면 조용히 뚫리지 않도록 `Lax`로 떨어지고 기동 로그에 경고가 뜬다.
+
+> ⚠️ `none`으로 여는 순간 CSRF 토큰이나 Origin 검증을 따로 붙여야 한다.
+> `Starlette`의 `request.json()`은 Content-Type을 확인하지 않으므로,
+> `text/plain`으로 보내면 preflight 없이 통과한다 — CORS만으로는 못 막는다.
 
 > ⚠️ 실제 서비스 도메인과 맞지 않는 `domain` 값이 나가면 브라우저가 쿠키를 **전부 거부한다.**
 > 로그인은 200이 뜨는데 세션이 안 잡혀서 로그인 화면이 무한 반복되는 증상이 난다.
