@@ -1,0 +1,36 @@
+# frontend/public/ 의 파일은 빌드 시 dist/ 로 그대로 복사된다.
+# ⚠️ 아래 example.com 을 실제 도메인으로 바꿀 것. (`/setup` 이 도와준다)
+
+User-agent: *
+Allow: /
+
+# 인증이 걸린 경로. 크롤링돼도 401만 나오지만 크롤 예산을 태운다.
+Disallow: /admin
+Disallow: /api/
+
+Sitemap: https://example.com/sitemap.xml
+
+# ══════════════════════════════════════════════════════════════
+#  AI 크롤러에 대하여
+# ══════════════════════════════════════════════════════════════
+#
+# GPTBot(OpenAI) · ClaudeBot(Anthropic) · PerplexityBot · OAI-SearchBot 등은
+# 위 `User-agent: *` 블록을 따른다. 즉 **지금은 전부 허용**이고, 그게 의도다 —
+# 생성 AI가 이 사이트를 인용하려면 읽을 수 있어야 한다.
+#
+# ⚠️ 막고 싶다면 아래처럼 전용 블록을 추가한다. 다만 **전용 블록은 `*` 블록을
+#    상속하지 않고 덮어쓴다.** 그래서 Disallow 를 다시 적어야 한다:
+#
+#      User-agent: GPTBot
+#      Disallow: /
+#
+#    반대로 "AI는 허용하되 관리자만 막고 싶다"면 전용 블록에 관리자 경로를
+#    다시 적어야 한다. 안 적으면 그 봇에게는 /admin 이 열린다:
+#
+#      User-agent: GPTBot
+#      Allow: /
+#      Disallow: /admin
+#      Disallow: /api/
+#
+# 이 상속되지 않는 성질이 robots.txt 에서 가장 흔한 사고다.
+# 블록을 추가했다면 `/seo_check` 으로 확인할 것.

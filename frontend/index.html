@@ -2,20 +2,49 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/image.png" />
-    <script
-      type="text/javascript"
-      src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js"
-    ></script>
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0 viewport-fit=cover"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
-    <meta
-      name="google-site-verification"
-      content="SSOrBFGM1wDHl7KnX65LrsxSM-2acoSjtc_4mhsY-uM"
-    />
+    <link rel="icon" type="image/png" href="/image.png" />
+
+    <!-- ══════════════════════════════════════════════════════════
+         아래는 전부 프로젝트마다 바꾸는 값이다. `/setup` 이 채워준다.
+         CSR 이라 크롤러는 이 파일만 본다 — 라우트별 메타가 필요하면
+         프리렌더/SSR 부터 정해야 한다 (deploy/nginx.conf 하단 참고).
+         ══════════════════════════════════════════════════════════ -->
+
     <title>BASE</title>
+    <meta name="description" content="프로젝트 한 줄 소개 (150~160자 권장)." />
+    <link rel="canonical" href="https://example.com/" />
+
+    <!-- 공유 미리보기 (카카오톡·슬랙·X 등) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="BASE" />
+    <meta property="og:title" content="BASE" />
+    <meta property="og:description" content="프로젝트 한 줄 소개." />
+    <meta property="og:url" content="https://example.com/" />
+    <meta property="og:image" content="https://example.com/image.png" />
+    <meta property="og:locale" content="ko_KR" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- 구조화 데이터. 답변엔진(AI Overviews·Copilot)이 내용을 구조로 이해하는 통로다.
+         ⚠️ 여기 적는 내용은 화면에 실제로 있는 것이어야 한다 — 가시 텍스트와 다르면
+            인용 신뢰를 잃는다. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "BASE",
+        "url": "https://example.com/"
+      }
+    </script>
+
+    <!-- 서치 콘솔 소유 확인 토큰은 프로젝트마다 다르다. 본인 것을 발급받아 넣을 것.
+         (템플릿에 남의 토큰이 박혀 있으면 내 사이트를 내가 확인하지 못한다)
+    <meta name="google-site-verification" content="..." />
+    <meta name="naver-site-verification" content="..." />
+    -->
   </head>
   <body>
     <div id="root"></div>

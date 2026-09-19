@@ -24,7 +24,7 @@
 | **백엔드** | 계층 구조, DI, 공통 응답·에러코드, 예외 핸들러, 로깅, Alembic, 페이지네이션, 파일 업로드, ruff | 도메인 로직 (직접 채울 것) |
 | **테스트** | pytest 84개 + vitest 8개, 픽스처 일습 | E2E |
 | **프론트** | 관리자 레이아웃·사이드바, UI 킷(폼/테이블/모달/토스트), 라우트 가드, vitest | 디자인 시스템, 실제 화면 |
-| **인프라** | 헬스체크, 요청 ID, CORS·보안 헤더, 레이트리밋, docker-compose(MySQL·Redis), 배포용 Dockerfile, GitHub Actions CI | 프론트 Dockerfile, nginx 설정, 배포 스크립트 |
+| **인프라** | 헬스체크, 요청 ID, CORS·보안 헤더, 레이트리밋, docker-compose(MySQL·Redis), 배포용 Dockerfile, nginx 설정, GitHub Actions CI | 프론트 Dockerfile, 배포 자동화, SSR/프리렌더(레시피만 문서화) |
 
 ### 이 템플릿에서 집중한 것
 
@@ -807,6 +807,9 @@ cd my-project
 rm -rf .git && git init
 ```
 
+**Claude Code 를 쓴다면 `/setup` 한 번이면 됩니다** — 아래 항목을 훑어서 무엇이 아직
+템플릿 기본값인지 표로 보여주고 항목별로 승인받아 고칩니다.
+
 체크리스트:
 
 - [ ] `backend/.env.example` → `backend/.env` 복사 후 값 채우기
@@ -828,6 +831,8 @@ Claude Code로 개발한다면 `CLAUDE.md`, `frontend/CLAUDE.md`, `backend/CLAUD
 |---|---|
 | `commands/` | `/feature` `/design` `/fullstack` `/fix` `/test` — 에이전트 호출 순서를 묶은 슬래시 커맨드 |
 | `agents/` | 백엔드·프론트 탐색/작성 전담 서브에이전트 7종 |
+| `commands/setup.md` | `/setup` — 템플릿을 새 프로젝트로 가져왔을 때 바꿀 것들 (clone 직후 1회) |
+| `commands/seo_check.md` | `/seo_check` — 검색·AI 인용이 조용히 0이 되는 사고를 정적 점검 (푸시 전) |
 | `skills/seo/` | SEO·AEO·GEO·LLMO·NEO(네이버) 진단·구현 스킬 |
 
 > `skills/seo` 는 [fire-your-seo-agency](https://github.com/leopard627/fire-your-seo-agency)(MIT)를

@@ -81,7 +81,7 @@ CI에서 다시 볼 일이 없다.
 
 | | |
 | --- | --- |
-| `.claude/commands/` | `/feature` `/design` `/fullstack` `/fix` `/test` |
+| `.claude/commands/` | `/feature` `/design` `/fullstack` `/fix` `/test` · `/setup`(clone 직후 1회) · `/seo_check`(푸시 전) |
 | `.claude/agents/` | 탐색·작성 전담 서브에이전트 7종 |
 | `.claude/skills/seo/` | SEO·AEO·GEO·LLMO·NEO 진단·구현 ([원본](https://github.com/leopard627/fire-your-seo-agency), MIT) |
 
@@ -116,6 +116,18 @@ CI에서 다시 볼 일이 없다.
 - 수행 내용:
 - 이슈/메모:
 ```
+
+## 배포
+
+`deploy/nginx.conf` — 프론트 정적 + `/api`·`/media` 프록시 + WebSocket 업그레이드.
+`CHANGE` 표시 네 곳(도메인·경로)만 바꾸면 된다.
+
+- **`X-Forwarded-For` 세 줄이 레이트리밋의 전제다.** 없으면 모든 방문자가 `127.0.0.1` 하나로
+  뭉쳐서 서비스 전체가 10req/분으로 묶인다
+- `client_max_body_size` 는 `upload.py` 의 `MAX_UPLOAD_BYTES` 보다 넉넉해야 한다.
+  작으면 앱이 413을 주기 전에 nginx가 끊어서 프론트가 `BaseResponse` 가 아닌 HTML을 받는다
+- SPA fallback 때문에 **없는 경로도 200** 을 준다. 공개 검색 노출이 목표면 파일 하단의
+  프리렌더 주석을 볼 것
 
 ## 새 프로젝트로 가져갈 때 교체할 것
 

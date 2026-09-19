@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ⚠️ 이건 뼈대다. 실제 공개 라우트를 직접 채워야 한다 (`/setup` 이 도와준다).
+
+  규칙
+  - **공개 라우트만** 넣는다. /admin 처럼 로그인이 필요한 경로는 넣지 않는다
+  - /api/health 같은 인프라 경로도 넣지 않는다
+  - example.com 을 실제 도메인으로 바꿀 것
+  - lastmod 는 실제로 바뀐 날짜를 쓴다. 전부 오늘로 채우면 신뢰를 잃는다
+  - 500개를 넘어가면 손으로 관리하지 말고 빌드 스크립트로 생성할 것
+
+  ⚠️ 이 템플릿의 프론트는 CSR 이다. 사이트맵에 URL 을 적어도 크롤러가 받는 HTML 에는
+     본문이 없다. 검색 노출이 목표라면 렌더링 전략(프리렌더/SSR)부터 정해야 한다 —
+     deploy/nginx.conf 하단, 또는 `/seo` 스킬 참고.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://example.com/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>
