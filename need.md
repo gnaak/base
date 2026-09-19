@@ -18,7 +18,7 @@
 | --- | --- | --- | --- |
 | [A1](#a1-pydantic-스키마가-없다) | ~~Pydantic 스키마 부재 (`with_provider`가 원인)~~ | 구조 | ✅ 완료 |
 | [A2](#a2-requestvalidationerror-핸들러가-없다) | ~~`RequestValidationError` 핸들러 없음~~ | 구조 | ✅ 완료 |
-| [A3](#a3-success-가-datetimedecimal을-직렬화하지-못한다) | `success()`가 datetime·Decimal 직렬화 못 함 | 버그 | 5분 |
+| [A3](#a3-success-가-datetimedecimal을-직렬화하지-못한다) | ~~`success()`가 datetime·Decimal 직렬화 못 함~~ | 버그 | ✅ 완료 |
 | [A4](#a4-prod에서-csrf가-실제로-뚫린다) | prod CSRF 무방비 | 보안 | 반나절 |
 | [A5](#a5-로그인-레이트리밋이-없다) | 로그인 레이트리밋 없음 | 보안 | 반나절 |
 | [A6](#a6-토큰-무효화가-불가능하고-active가-검사되지-않는다) | 토큰 무효화 불가 + `active` 미검사 | 보안/버그 | 반나절 |
@@ -33,9 +33,10 @@
 | [B15](#b15-에러코드-상수화) | 에러코드 상수화 (백엔드 + 프론트 타입) | 품질 | 1시간 |
 | [B16](#b16-prod-실행-스크립트) | prod 실행 스크립트 | 인프라 | 30분 |
 
-**권장 순서**: A3 → A4 → A5·A6 → B7·B8 → A1·A2 → 나머지
+**남은 순서**: A4 → A5·A6 → B7·B8 → 나머지
 
-A1이 제일 크지만 **엔드포인트가 8개인 지금이 가장 싸다.** 도메인이 몇 개 더 붙으면 못 바꾼다.
+A1·A2·A3 완료. 요청과 응답 양쪽에 타입이 붙었고 `/docs` 가 실제 계약과 일치한다.
+다음은 보안 세 개(A4 CSRF · A5 레이트리밋 · A6 토큰 무효화)다.
 
 ---
 
@@ -200,7 +201,24 @@ async def validation_handler(request: Request, exc: RequestValidationError):
 
 ## A3. `success()` 가 datetime·Decimal 을 직렬화하지 못한다
 
-- [ ] 처리
+- [x] **완료** — 2층으로 처리했다
+
+**1층** — `success()` 가 `JSONResponse` 대신 **`BaseResponse` 모델**을 반환한다.
+예외 핸들러는 `jsonable_encoder` 를 쓴다. datetime·Decimal·date·UUID·Enum 500이 사라졌다.
+
+**2층** — `BaseResponse` 를 제네릭으로 바꾸고 라우터마다 `response_model=BaseResponse[XxxOut]`
+을 걸었다. **문서화뿐 아니라 강제가 목적이다** — 측정해보니 `JSONResponse` 를 반환하면
+`response_model` 은 `/docs` 에 뜨기만 하고 실제 응답을 검사하지 않아서,
+스키마에 없는 `password` 가 그대로 새어나갔다. 모델을 반환하면 잘린다.
+
+**쿠키** — `response: Response` 를 파라미터로 주입받아 해결. `create_jwt_token()` 은 고치지 않았고,
+대신 **`SessionOut` 을 반환**하게 해서 쿠키와 응답 `data` 가 같은 객체에서 나오도록 했다
+(`test_응답_data와_user_info_쿠키가_같은_내용이다` 가 이 계약을 고정).
+
+**곁다리로 고친 것** — 프론트 `types/admin/login.ts` 의 `LoginResponse` 가
+`{code, message}` 였는데 백엔드가 그런 걸 준 적이 없다. `UserInfo` 로 교체.
+
+테스트 29 → **34개**.
 
 ### 증상
 

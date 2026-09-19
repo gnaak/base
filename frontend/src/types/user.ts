@@ -9,8 +9,9 @@ export interface UserInfo {
   email?: string;
 }
 
-// GET api/user/me 응답
-// 백엔드 `user_service.get_me()`가 반환하는 dict와 1:1로 맞춰야 한다.
+// GET api/user/me 응답의 data
+// 백엔드 `user_schema.UserOut`과 1:1. 백엔드가 response_model로 강제하므로
+// 여기 없는 필드는 애초에 내려오지 않는다 (필드를 늘리려면 UserOut부터 고칠 것).
 export interface UserDetail {
   id: number;
   email: string;

@@ -2,6 +2,7 @@
 import logging
 
 from fastapi import FastAPI, Request, HTTPException
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from app.core.config.settings import settings
@@ -41,7 +42,7 @@ def setup_exceptions(app: FastAPI) -> None:
 
         return JSONResponse(
             status_code=exc.status_code,
-            content=body.model_dump(),
+            content=jsonable_encoder(body),
         )
 
     @app.exception_handler(RequestValidationError)
@@ -71,7 +72,7 @@ def setup_exceptions(app: FastAPI) -> None:
             errorCode="VALIDATION_ERROR",
         )
 
-        return JSONResponse(status_code=422, content=body.model_dump())
+        return JSONResponse(status_code=422, content=jsonable_encoder(body))
 
     @app.exception_handler(Exception)
     async def unhandled_handler(request: Request, exc: Exception):
@@ -97,6 +98,6 @@ def setup_exceptions(app: FastAPI) -> None:
 
         return JSONResponse(
             status_code=500,
-            content=body.model_dump(),
+            content=jsonable_encoder(body),
             headers=headers,
         )

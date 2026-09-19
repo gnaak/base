@@ -22,7 +22,7 @@
 |---|---|---|
 | **인증** | 로그인/로그아웃/refresh, Google·Kakao OAuth, 이중 세션 | 회원가입 화면·라우트, 비밀번호 재설정, 이메일 인증 |
 | **백엔드** | 계층 구조, DI, 공통 응답, 예외 핸들러, 로깅, Alembic | 도메인 로직 (직접 채울 것) |
-| **테스트** | pytest 기반 라우터 통합 테스트 + 픽스처, 샘플 29개 | 프론트 테스트 |
+| **테스트** | pytest 기반 라우터 통합 테스트 + 픽스처, 샘플 34개 | 프론트 테스트 |
 | **프론트** | 관리자 레이아웃·사이드바, UI 킷(폼/테이블/모달/토스트), 라우트 가드 | 디자인 시스템, 실제 화면 |
 | **인프라** | 헬스체크, 요청 ID, CORS·보안 헤더 | Docker, CI, 배포 스크립트 |
 
@@ -229,10 +229,10 @@ backend/
         ├── __init__.py                    # setup_routers() — 라우터 등록 한 곳
         ├── auth/
         │   ├── auth_router.py             # /api/auth/**
-        │   ├── auth_schema.py             # LoginIn · SignupIn · OAuthCodeIn
+        │   ├── auth_schema.py             # LoginIn · SignupIn · OAuthCodeIn · SessionOut
         │   ├── auth_service.py            # 로그인·로그아웃·refresh
-        │   └── auth_token.py              # JWT 생성·검증, 쿠키 4종 심기
-        ├── user/                          # user.py(모델) + repository + service + router
+        │   └── auth_token.py              # JWT 생성·검증, 쿠키 4종 심기 → SessionOut 반환
+        ├── user/                          # user.py(모델) + schema + repository + service + router
         ├── admin/                         # 관리자 계정 (라우터는 비어 있음 — 채울 자리)
         ├── web_socket/                    # WS 연결 관리 (manager.py) + 핸들러
         └── infra/                         # 외부 시스템 연동
@@ -358,10 +358,25 @@ def user_service(self):
 { "success": false, "message": "권한이 없습니다", "data": null, "errorCode": "FORBIDDEN" }
 ```
 
-- 성공: `return success(data)` — `app/core/utils/response.py`
+- 성공: `return success(data)` — `app/core/utils/response.py`. `BaseResponse` **모델**을 반환합니다
 - 실패: `fail("메시지", "ERROR_CODE", 403)` — 어디서든 호출 가능. `HTTPException`을 던지고 전역 핸들러가 변환
 - 요청 스키마 검증 실패: 전역 핸들러가 `422` + `errorCode: "VALIDATION_ERROR"` 로 변환합니다.
   메시지는 `"email: Field required"` 형태라 프론트에서 그대로 띄울 수 있습니다
+
+**응답도 스키마로 고정합니다.** 라우터에 `response_model=BaseResponse[XxxOut]` 을 걸면
+`/docs` 에 뜨는 것에 더해 **FastAPI가 실제 응답을 그 스키마로 강제**합니다 — 스키마에 없는
+필드는 잘려 나갑니다. `password` 유출을 사람이 아니라 타입이 막습니다.
+
+```python
+@router.get("/me", response_model=BaseResponse[UserOut])
+async def get_me(p: UserProvider):
+    return success(await p.user_service.get_me(p.auth.user_id))
+```
+
+- **`JSONResponse` 를 직접 반환하지 마세요.** 반환하면 FastAPI가 손대지 않고 그대로 내보내서,
+  선언한 스키마와 실제 응답이 달라도 아무도 잡지 못합니다
+- `datetime`·`Decimal`·`UUID`·`Enum` 은 알아서 직렬화됩니다. 손으로 `.isoformat()` 을 부르지 마세요
+- 쿠키·헤더는 `response: Response` 를 파라미터로 주입받아 심습니다 (`auth_router.login` 참고)
 
 ### 6.4 로깅
 
@@ -516,11 +531,11 @@ APP_ENV=prod sh migrate_server.sh   # upgrade head 만
 | 메서드 | 경로 | 인증 | 설명 |
 |--------|------|------|------|
 | `GET` | `/api/health` | — | liveness (LB·컨테이너용) |
-| `POST` | `/api/auth/login` | — | 이메일/비밀번호 로그인 → 쿠키 4종 발급. 본문 `type`으로 `user`/`admin` 구분 |
-| `POST` | `/api/auth/logout` / `/logout_admin` | — | 쿠키 만료 |
-| `POST` | `/api/auth/refresh_token` / `_admin` | refresh 쿠키 | 세션 갱신 |
-| `POST` | `/api/auth/google` / `/kakao` | — | OAuth 콜백 코드 → 쿠키 발급 |
-| `GET` | `/api/user/me` | user | 내 정보 |
+| `POST` | `/api/auth/login` | — | 이메일/비밀번호 로그인 → 쿠키 4종 발급 + `data: SessionOut`. 본문 `type`으로 `user`/`admin` 구분 |
+| `POST` | `/api/auth/logout` / `/logout_admin` | user / admin | 쿠키 만료 |
+| `POST` | `/api/auth/refresh_token` / `_admin` | refresh 쿠키 | 세션 갱신 → `data: SessionOut` |
+| `POST` | `/api/auth/google` / `/kakao` | — | OAuth 콜백 코드 → 쿠키 발급 + `data: SessionOut` |
+| `GET` | `/api/user/me` | user | 내 정보 → `data: UserOut` |
 | `WS` | `/api/ws/` | — | WebSocket 연결 |
 
 로그인 요청 본문:
@@ -528,6 +543,10 @@ APP_ENV=prod sh migrate_server.sh   # upgrade head 만
 ```jsonc
 { "email": "a@b.com", "password": "…", "type": "user" }   // type: "user" | "admin"
 ```
+
+로그인·refresh 응답의 `data`(`SessionOut`)는 `{p}user_info` 쿠키에 담기는 내용과 **같은 객체**입니다
+(`create_jwt_token()`이 하나를 만들어 쿠키에 싣고 그대로 반환합니다). 프론트는 쿠키를 파싱하지 않고도
+로그인 직후 세션 정보를 바로 쓸 수 있습니다.
 
 **라우트가 없는 것** — `AuthService.signup()`은 구현돼 있지만 엔드포인트로 노출돼 있지 않습니다.
 `/api/admin`도 라우터만 등록돼 있고 비어 있습니다. 둘 다 프로젝트에 맞춰 채울 자리입니다.
@@ -546,7 +565,7 @@ APP_ENV=prod sh migrate_server.sh   # upgrade head 만
 mysql -u root -p -e "CREATE DATABASE db_base_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
 
 cd backend
-.venv/Scripts/python.exe -m pytest                              # 전체 (29개)
+.venv/Scripts/python.exe -m pytest                              # 전체 (34개)
 .venv/Scripts/python.exe -m pytest tests/test_user_router.py -v # 한 파일
 ```
 

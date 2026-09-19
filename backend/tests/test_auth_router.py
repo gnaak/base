@@ -3,12 +3,24 @@
 이 파일의 절반은 "잘못된 입력이 500이 아니라 422로 나간다"를 고정하는 회귀 테스트다.
 라우터가 `p.request.json()` 으로 되돌아가면 전부 깨진다 — 그게 의도다.
 """
+import base64
+import json
+from urllib.parse import unquote
+
 import pytest
 
 from app.module.auth.auth_service import hash_password
 from tests.conftest import auth_header
 
 LOGIN = "/api/auth/login"
+
+
+def _cookie_value(res, name: str) -> str:
+    """Set-Cookie 헤더에서 값 하나를 꺼낸다 (따옴표·URL 인코딩 벗김)."""
+    for raw in res.headers.get_list("set-cookie"):
+        if raw.startswith(f"{name}="):
+            return unquote(raw.split("=", 1)[1].split(";")[0]).strip('"')
+    raise AssertionError(f"{name} 쿠키가 없다")
 
 
 # ──────────────────────────────────────────────────────────────
@@ -30,6 +42,43 @@ async def test_로그인하면_쿠키_4종이_내려온다(client, make_user):
         "user_user_info",
         "user_refresh_exp",
     }
+
+
+async def test_로그인_응답에_세션_정보가_실린다(client, make_user):
+    """응답 data 가 SessionOut 모양이어야 한다 (프론트 types/user.ts 의 UserInfo)."""
+    user = await make_user(email="me@example.com", name="나", password=hash_password("pw1234"))
+
+    res = await client.post(LOGIN, json={"email": "me@example.com", "password": "pw1234"})
+
+    data = res.json()["data"]
+    assert set(data) == {"auth_type", "id", "user_nickname", "created_at"}
+    assert data["auth_type"] == "user"
+    assert data["id"] == user.id
+    assert data["user_nickname"] == "나"
+
+
+async def test_응답_data와_user_info_쿠키가_같은_내용이다(client, make_user):
+    """둘 다 `create_jwt_token()` 이 만든 같은 SessionOut 에서 나온다.
+
+    프론트가 쿠키를 파싱하든 응답을 읽든 같은 값을 얻어야 한다는 계약.
+    한쪽만 고치면 여기서 깨진다.
+    """
+    await make_user(email="me@example.com", name="나", password=hash_password("pw1234"))
+
+    res = await client.post(LOGIN, json={"email": "me@example.com", "password": "pw1234"})
+
+    cookie_info = json.loads(base64.b64decode(_cookie_value(res, "user_user_info")))
+    assert cookie_info == res.json()["data"]
+
+
+async def test_응답에_비밀번호가_실리지_않는다(client, make_user):
+    """SessionOut 에 없는 필드는 나갈 수 없다."""
+    await make_user(email="me@example.com", password=hash_password("pw1234"))
+
+    res = await client.post(LOGIN, json={"email": "me@example.com", "password": "pw1234"})
+
+    assert "password" not in res.json()["data"]
+    assert "$argon2" not in res.text
 
 
 async def test_비밀번호가_틀리면_404(client, make_user):

@@ -28,7 +28,7 @@ app/
 ```
 module/[domain]/
 ├── [domain].py             # SQLAlchemy 모델
-├── [domain]_schema.py      # 요청 스키마 (Pydantic) — 입력이 있는 도메인만
+├── [domain]_schema.py      # 요청·응답 스키마 (Pydantic). `XxxIn` / `XxxOut`
 ├── [domain]_repository.py  # DB 쿼리만 (비즈니스 로직 없음)
 ├── [domain]_service.py     # 비즈니스 로직
 └── [domain]_router.py      # HTTP 엔드포인트
@@ -113,14 +113,36 @@ async def get_item(item_id: int, body: ItemIn, p: UserProvider):
 
 **응답 헬퍼**
 
-- `success(data)` → `JSONResponse`로 `{success:true, message, data, errorCode:null}` 반환
+- `success(data)` → `BaseResponse` **모델**을 반환 (JSONResponse 아님)
 - `fail("msg", "ERROR_CODE", 400)` → HTTPException을 **raise** (return 아님). 전역 핸들러가 `{success:false, message, errorCode}`로 변환
+
+**응답도 스키마로 고정한다.** 라우터에 `response_model=BaseResponse[XxxOut]`을 걸면
+`/docs`에 뜨는 것에 더해 **FastAPI가 실제 응답을 그 스키마로 강제한다** — 스키마에 없는 필드는
+잘려 나간다. `password` 유출을 사람이 아니라 타입이 막는 구조다.
+
+```python
+@router.get("/me", response_model=BaseResponse[UserOut])
+async def get_me(p: UserProvider):
+    return success(await p.user_service.get_me(p.auth.user_id))
+```
+
+```python
+class UserOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)   # 모델을 그대로 넘길 수 있게
+    id: int
+    created_at: datetime | None = None                # datetime을 그냥 담는다
+```
+
+- **`JSONResponse`를 직접 반환하지 말 것.** 반환하면 FastAPI가 손을 대지 않고 그대로 내보내서,
+  선언한 `response_model`과 실제 응답이 달라도 아무도 잡지 못한다
+- `datetime`·`Decimal`·`UUID`·`Enum`은 FastAPI가 알아서 직렬화한다. **손으로 `.isoformat()`을 부르지 말 것**
+- 상태코드는 `@router.post("/x", status_code=201)` — `success()`에는 인자가 없다
+- 쿠키·헤더를 심어야 하면 **`response: Response`를 파라미터로 주입받는다** (`auth_router.login` 참고).
+  거기 심은 것을 FastAPI가 최종 응답에 합쳐준다
 
 **에러를 낼 땐 반드시 `fail()`을 쓸 것.** 맨 `HTTPException`을 던지면 `errorCode`가
 `"HTTP_ERROR"`로 뭉개져서 프론트가 에러 종류로 분기할 수 없다.
 `message`는 사람이 읽는 문장, `errorCode`는 프론트가 비교하는 상수로 나눈다.
-- 쿠키를 심어야 하면 `success()`가 돌려준 응답 객체에 `set_cookie` — `auth_router.login` 참고
-
 - 요청 스키마 검증 실패는 전역 핸들러가 `422` + `errorCode: "VALIDATION_ERROR"`로 변환한다.
   메시지는 `"email: Field required"` 형태
 
@@ -147,7 +169,9 @@ async def stt_ws(websocket: WebSocket, p: WSProvider):
 | `{p}user_info`     | ❌       | 1h   | 프론트가 읽는 세션 정보 (base64 JSON) |
 | `{p}refresh_exp`   | ❌       | 6h   | "refresh 세션이 살아있다"는 마커      |
 
-- `create_jwt_token(user, response, type)` — 4종을 한 번에 심는다
+- `create_jwt_token(user, response, type)` — 4종을 한 번에 심고 **`SessionOut`을 반환한다**.
+  `{p}user_info` 쿠키에 담기는 것과 **같은 객체**라, 라우터가 이걸 응답 `data`에 그대로 실으면
+  쿠키와 응답이 어긋날 수가 없다 (`test_응답_data와_user_info_쿠키가_같은_내용이다`가 고정)
 - `delete_token(response, type)` — 4종을 한 번에 지운다. **쿠키 하나만 지우면 프론트가 상태를 잘못 판단한다**
 - `verify_refresh_by_type(request, type)` — refresh 검증. `(user_id, auth_type)` 반환
 - 인증 실패는 전부 `fail()`로 나가므로 `errorCode`에 `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`,

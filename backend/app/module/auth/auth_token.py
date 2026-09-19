@@ -6,6 +6,7 @@ import uuid
 from datetime import timedelta
 
 import jwt
+from fastapi.encoders import jsonable_encoder
 
 from app.core.config.settings import settings
 from app.core.database.base import now_kst
@@ -79,6 +80,14 @@ class AuthToken:
     
     # --- 토큰 생성 ---
     async def create_jwt_token(self, user, response, type):
+        """쿠키 4종을 심고, 세션 정보를 `SessionOut`으로 반환한다.
+
+        반환값은 `{p}user_info` 쿠키에 담기는 것과 **같은 객체**다. 라우터가 이걸
+        응답 `data`에 그대로 실으면, 프론트는 쿠키를 파싱하지 않고도 세션 정보를
+        받을 수 있고 둘이 어긋날 수가 없다.
+        """
+        from app.module.auth.auth_schema import SessionOut
+
         now_kr = now_kst()
         prefix = self._cookie_prefix(type)
 
@@ -99,16 +108,17 @@ class AuthToken:
         access_token = jwt.encode(access_payload, self.jwt_secret, algorithm=self.algorithm)
         refresh_token = jwt.encode(refresh_payload, self.jwt_secret, algorithm=self.algorithm)
 
-        session_info = {
-            "auth_type": type,
-            "id": user.id,
-            "user_nickname": "admin" if type == "admin" else user.name,
-            "created_at": user.created_at.isoformat() if user.created_at else None, 
-        }
+        session = SessionOut(
+            auth_type=type,
+            id=user.id,
+            user_nickname="admin" if type == "admin" else user.name,
+            created_at=user.created_at,
+        )
 
-        # 공통 쿠키 설정
+        # 공통 쿠키 설정.
+        # jsonable_encoder가 datetime을 ISO 문자열로 바꿔준다 — 손으로 isoformat()을 부르지 않는다.
         encoded_info = base64.b64encode(
-            json.dumps(session_info, ensure_ascii=False).encode("utf-8")
+            json.dumps(jsonable_encoder(session), ensure_ascii=False).encode("utf-8")
         ).decode("utf-8")
 
         # 프론트에서 읽어야 하므로 httponly=False
@@ -144,6 +154,8 @@ class AuthToken:
             **cookie_common,
             max_age=21600,
         )
+
+        return session
 
     async def verify_refresh_by_type(self, request, auth_type: str):
         """

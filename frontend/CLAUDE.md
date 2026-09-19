@@ -61,7 +61,11 @@ mutation.mutate(payload, { onSuccess: () => {}, onError: () => {} });
 - `success: false`면 throw
 - 요청 바디가 백엔드 스키마와 안 맞으면 **422 + `errorCode: "VALIDATION_ERROR"`** 가 온다.
   `message`가 `"email: Field required"` 형태라 그대로 띄워도 된다.
-  필드명·타입은 `http://localhost:8000/docs` 에서 확인할 것
+  요청·응답 필드는 `http://localhost:8000/docs` 에서 확인할 것 (백엔드가 스키마로 강제한다)
+- **로그인·refresh 응답의 `data`는 `UserInfo`다** (백엔드 `SessionOut`). `{p}user_info` 쿠키에
+  담기는 것과 같은 내용이라, 로그인 직후에는 쿠키를 파싱하지 않고 이 값을 바로 써도 된다.
+  다만 **Context 갱신은 여전히 `syncAuth()`로 한다** — 쿠키가 단일 출처로 남아야
+  새로고침·탭 전환에서도 같은 값이 나온다
 
 **401 처리** — 훅이 자동으로 처리한다. 호출부에서 신경 쓸 게 없다.
 

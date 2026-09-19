@@ -3,8 +3,9 @@
 새 도메인 라우터를 만들 때 이 파일을 형태의 본보기로 삼는다.
 정상 경로 하나에 엣지 케이스 여럿이 기본 구성이다.
 """
-from datetime import timedelta
+from datetime import datetime, timedelta
 
+from app.core.database.base import now_kst
 from tests.conftest import auth_header, cookie_header, make_token
 
 ME = "/api/user/me"
@@ -27,10 +28,10 @@ async def test_내_정보를_반환한다(client, make_user):
 
 
 async def test_응답에_비밀번호가_실리지_않는다(client, make_user):
-    """user_service.get_me가 필드를 골라 담는 이유를 고정하는 회귀 테스트.
+    """`UserOut` 에 password 가 없으므로 구조적으로 나갈 수 없다.
 
-    모델을 그대로 반환하도록 되돌리면 password 해시가 응답에 실리는데,
-    상태코드는 200이라 눈으로는 안 보인다.
+    서비스가 모델을 통째로 반환해도 response_model 이 잘라낸다.
+    `UserOut` 에 password 를 추가하는 순간 이 테스트가 깨진다 — 그게 의도다.
     """
     user = await make_user(password="super-secret-hash")
 
@@ -39,6 +40,38 @@ async def test_응답에_비밀번호가_실리지_않는다(client, make_user):
     assert res.status_code == 200
     assert "password" not in res.json()["data"]
     assert "super-secret-hash" not in res.text
+
+
+async def test_응답에_선언한_필드만_나간다(client, make_user):
+    """response_model 이 실제로 응답을 강제하는지 확인한다.
+
+    `UserOut` 에 없는 컬럼(active, last_login_at 등)은 잘려 나가야 한다.
+    JSONResponse 를 직접 반환하도록 되돌리면 강제가 풀려서 이 테스트가 깨진다.
+    """
+    user = await make_user()
+
+    res = await client.get(ME, headers=auth_header(user.id))
+
+    assert set(res.json()["data"]) == {
+        "id", "email", "name", "profile_image", "created_at",
+    }
+
+
+async def test_created_at이_ISO_문자열로_직렬화된다(client, make_user):
+    """datetime 을 응답에 담아도 500 이 나지 않는다.
+
+    예전에는 success() 가 json.dumps 를 그대로 타서 TypeError -> 500 이었고,
+    서비스가 손으로 .isoformat() 을 불러 피하고 있었다.
+    """
+    user = await make_user(created_at=now_kst())
+
+    res = await client.get(ME, headers=auth_header(user.id))
+
+    assert res.status_code == 200
+    created_at = res.json()["data"]["created_at"]
+    assert isinstance(created_at, str)
+    # 파싱이 되어야 진짜 ISO 형식이다
+    assert datetime.fromisoformat(created_at).year == now_kst().year
 
 
 # ──────────────────────────────────────────────────────────────

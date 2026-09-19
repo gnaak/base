@@ -53,7 +53,9 @@ allowed-tools: Read, Grep, Glob, Write, Edit
 
 **응답 규약**
 - 실패 응답도 `{success, message, data, errorCode}` 형태인지
-- 민감 필드(`password` 등)가 응답에 없는지 — 서비스가 필드를 골라 담는 코드라면 반드시 넣을 것
+- 민감 필드(`password` 등)가 응답에 없는지 — `XxxOut` 에 추가되면 깨지도록
+- `data` 의 키 집합이 `XxxOut` 의 필드와 정확히 일치하는지 (`response_model` 이 강제하는지)
+- `datetime` 필드가 ISO 문자열로 나가고 파싱되는지
 
 ## 규칙
 
