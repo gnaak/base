@@ -1,123 +1,163 @@
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    /* ── Brand ─────────────────────────────── */
-    --primary: 37 99 235; /* blue-600  */
-    --primary-light: 219 234 254; /* blue-100  */
-    --primary-dark: 30 64 175; /* blue-800  */
-
-    /* ── Background ────────────────────────── */
-    --bg: 248 250 252; /* slate-50  */
-    --bg-card: 255 255 255; /* white     */
-    --bg-sub: 241 245 249; /* slate-100 */
-    --bg-hover: 241 245 249; /* slate-100 */
-    --bg-active: 226 232 240; /* slate-200 */
-    --bg-disabled: 248 250 252; /* slate-50  */
-
-    /* ── Text ──────────────────────────────── */
-    --text-main: 15 23 42; /* slate-900 */
-    --text-sub: 100 116 139; /* slate-500 */
-    --text-disabled: 203 213 225; /* slate-300 */
-    --text-placeholder: 148 163 184; /* slate-400 */
-    --text-inverse: 255 255 255; /* white     */
-
-    /* ── Border ────────────────────────────── */
-    --border: 241 245 249; /* slate-100 */
-    --border-strong: 226 232 240; /* slate-200 */
-    --border-focus: 37 99 235; /* = primary */
-
-    /* ── Form / Input ──────────────────────── */
-    --input-bg: 255 255 255;
-    --input-border: 203 213 225; /* slate-300 */
-
-    /* ── Point (상태 표시용 solid) ─────────── */
-    --point-green: 16 185 129; /* emerald-500 */
-    --point-red: 239 68 68; /* red-500     */
-    --point-amber: 245 158 11; /* amber-500   */
-    --point-blue: 59 130 246; /* blue-500    */
-
-    /* ── Feedback (메시지 박스 배경) ───────── */
-    --success-bg: 236 253 245; /* emerald-50 */
-    --error-bg: 254 242 242; /* red-50     */
-    --warning-bg: 255 251 235; /* amber-50   */
-    --info-bg: 239 246 255; /* blue-50    */
-
-    /* ── Overlay / Surface ─────────────────── */
-    --overlay: 0 0 0; /* rgba(var(--overlay) / 0.5) */
-    --surface-raised: 255 255 255; /* 드롭다운, 모달 */
-
-    /* ── Skeleton ──────────────────────────── */
-    --skeleton-base: 226 232 240; /* slate-200 */
-    --skeleton-shine: 248 250 252; /* slate-50  */
-  }
-
-  .dark {
-    /* ── Brand ─────────────────────────────── */
-    --primary: 96 165 250; /* blue-400 */
-    --primary-light: 30 58 138; /* blue-900 */
-    --primary-dark: 147 197 253; /* blue-300 */
-
-    /* ── Background ────────────────────────── */
-    --bg: 10 14 23; /* #0A0E17 */
-    --bg-card: 23 28 41; /* #171C29 */
-    --bg-sub: 31 38 55; /* #1F2637 */
-    --bg-hover: 38 45 61; /* #262D3D */
-    --bg-active: 51 65 85; /* #334155 */
-    --bg-disabled: 23 28 41; /* = bg-card */
-
-    /* ── Text ──────────────────────────────── */
-    --text-main: 248 250 252; /* slate-50  */
-    --text-sub: 148 163 184; /* slate-400 */
-    --text-disabled: 71 85 105; /* slate-600 */
-    --text-placeholder: 100 116 139; /* slate-500 */
-    --text-inverse: 15 23 42; /* slate-900 */
-
-    /* ── Border ────────────────────────────── */
-    --border: 38 45 61; /* #262D3D  */
-    --border-strong: 51 65 85; /* #334155  */
-    --border-focus: 96 165 250; /* = primary */
-
-    /* ── Form / Input ──────────────────────── */
-    --input-bg: 23 28 41; /* = bg-card       */
-    --input-border: 51 65 85; /* = border-strong */
-
-    /* ── Point (상태 표시용 solid) ─────────── */
-    --point-green: 52 211 153; /* emerald-400 */
-    --point-red: 251 113 133; /* rose-400    */
-    --point-amber: 251 191 36; /* amber-400   */
-    --point-blue: 96 165 250; /* blue-400    */
-
-    /* ── Feedback (메시지 박스 배경) ───────── */
-    --success-bg: 6 32 24; /* dark emerald */
-    --error-bg: 32 6 10; /* dark rose    */
-    --warning-bg: 32 24 6; /* dark amber   */
-    --info-bg: 6 18 32; /* dark blue    */
-
-    /* ── Overlay / Surface ─────────────────── */
-    --overlay: 0 0 0;
-    --surface-raised: 31 38 55; /* = bg-sub */
-
-    /* ── Skeleton ──────────────────────────── */
-    --skeleton-base: 38 45 61;
-    --skeleton-shine: 51 65 85;
-  }
+@font-face {
+  font-family: "Geist";
+  src: url("/fonts/Geist-Variable.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
-  font-family: "Inter";
-  src: url("/fonts/Inter-VariableFont_opsz,wght.ttf") format("truetype");
+  font-family: "Geist Mono";
+  src: url("/fonts/GeistMono-Variable.woff2") format("woff2-variations");
   font-weight: 100 900;
   font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+    /* ── Brand (Vercel Black & accents) ─────── */
+    --primary: 23 23 23; /* Vercel Black #171717 */
+    --primary-light: 240 240 240; /* near-white surface */
+    --primary-dark: 0 0 0; /* true black */
+
+    /* ── Background ────────────────────────── */
+    --bg: 255 255 255; /* pure white */
+    --bg-card: 255 255 255; /* cards = same as page (depth via shadow) */
+    --bg-sub: 250 250 250; /* #fafafa subtle tint */
+    --bg-hover: 245 245 245; /* gray-50 hover */
+    --bg-active: 235 235 235; /* gray-100 active */
+    --bg-disabled: 250 250 250;
+
+    /* ── Text (achromatic scale) ───────────── */
+    --text-main: 23 23 23; /* #171717 — heading, body */
+    --text-sub: 77 77 77; /* #4d4d4d — secondary */
+    --text-disabled: 128 128 128; /* #808080 */
+    --text-placeholder: 128 128 128;
+    --text-inverse: 255 255 255;
+
+    /* ── Border (used as fallback; prefer shadow-border) ───────── */
+    --border: 235 235 235; /* #ebebeb */
+    --border-strong: 200 200 200;
+    --border-focus: 10 114 239; /* #0a72ef Develop Blue */
+    /* shadow-border 유틸의 실제 값 (라이트/다크 자동 전환) */
+    --shadow-border: rgba(0, 0, 0, 0.08) 0px 0px 0px 1px;
+
+    /* ── Form / Input ──────────────────────── */
+    --input-bg: 255 255 255;
+    --input-border: 235 235 235;
+
+    /* ── Point (status colors) ─────────────── */
+    --point-green: 34 197 94; /* green-500 */
+    --point-red: 220 38 38; /* red-600 #dc2626 — 흰 배경 대비 4.8:1 */
+    --point-amber: 245 158 11;
+    --point-blue: 0 112 243; /* Console Blue #0070f3 */
+
+    /* ── Feedback bg (very subtle tints) ───── */
+    --success-bg: 240 253 244;
+    --error-bg: 255 241 240;
+    --warning-bg: 255 251 235;
+    --info-bg: 235 245 255; /* #ebf5ff Vercel pill bg */
+
+    /* ── Overlay / Surface ─────────────────── */
+    /* 원래 Vercel을 따라 흰 backdrop(250 250 250)이었는데, --bg와 --bg-card가
+       둘 다 순백이라 흰 페이지 위에 흰 스크림 위에 흰 카드가 겹쳐 모달이
+       떠 보이지 않았다. 어드민 모달들이 bg-black/40을 직접 쓰고 있어
+       화면마다 스크림이 달라 보이던 원인이기도 하다. */
+    --overlay: 0 0 0;
+    --surface-raised: 255 255 255;
+
+    /* ── Skeleton ──────────────────────────── */
+    --skeleton-base: 235 235 235;
+    --skeleton-shine: 250 250 250;
+
+    /* ── Vercel workflow accents ───────────── */
+    --ship: 255 91 79; /* #ff5b4f */
+    --preview: 222 29 141; /* #de1d8d */
+    --develop: 10 114 239; /* #0a72ef */
+  }
+
+  .dark {
+    color-scheme: dark;
+    /* ── Brand ─────────────────────────────── */
+    --primary: 250 250 250; /* near-white */
+    --primary-light: 51 51 51;
+    --primary-dark: 255 255 255;
+
+    /* ── Background (charcoal — 너무 어둡지 않게) ─ */
+    --bg: 18 18 20; /* #121214 */
+    --bg-card: 28 28 32; /* #1c1c20 raised */
+    --bg-sub: 36 36 41; /* #242429 */
+    --bg-hover: 46 46 51; /* #2e2e33 */
+    --bg-active: 60 60 67; /* #3c3c43 */
+    --bg-disabled: 28 28 32;
+
+    /* ── Text ──────────────────────────────── */
+    --text-main: 237 237 240; /* #ededf0 */
+    --text-sub: 170 170 178; /* #aaaaB2 */
+    --text-disabled: 95 95 105;
+    --text-placeholder: 125 125 135;
+    --text-inverse: 18 18 20;
+
+    /* ── Border ────────────────────────────── */
+    --border: 50 50 56; /* #323238 */
+    --border-strong: 75 75 82;
+    --border-focus: 96 165 250;
+    --shadow-border: rgba(255, 255, 255, 0.1) 0px 0px 0px 1px;
+
+    /* ── Form / Input ──────────────────────── */
+    --input-bg: 28 28 32;
+    --input-border: 50 50 56;
+
+    /* ── Point ─────────────────────────────── */
+    --point-green: 74 222 128;
+    --point-red: 239 68 68; /* red-500 #ef4444 — 어두운 배경에서 가독성 유지 */
+    --point-amber: 251 191 36;
+    --point-blue: 51 153 255;
+
+    /* ── Feedback bg ───────────────────────── */
+    --success-bg: 8 25 16;
+    --error-bg: 32 8 8;
+    --warning-bg: 32 24 6;
+    --info-bg: 6 18 32;
+
+    /* ── Overlay / Surface ─────────────────── */
+    --overlay: 0 0 0;
+    --surface-raised: 17 17 17;
+
+    /* ── Skeleton ──────────────────────────── */
+    --skeleton-base: 38 38 38;
+    --skeleton-shine: 64 64 64;
+
+    /* ── Vercel workflow accents (same in dark) ─ */
+    --ship: 255 91 79;
+    --preview: 222 29 141;
+    --develop: 51 153 255;
+  }
 }
 
 * {
-  font-family: "Inter", sans-serif;
+  font-family: "Geist", "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-feature-settings: "liga" 1, "calt" 1;
   -webkit-user-drag: none;
   user-select: none;
   touch-action: manipulation;
+}
+
+code,
+pre,
+kbd,
+samp,
+.font-mono {
+  font-family: "Geist Mono", ui-monospace, SFMono-Regular, "Roboto Mono", Menlo, Monaco, "Liberation Mono", "DejaVu Sans Mono", "Courier New", monospace;
+  font-feature-settings: "liga" 1, "calt" 1;
 }
 
 *::-webkit-scrollbar {
@@ -126,6 +166,24 @@
 
 html {
   scrollbar-width: none;
+  background-color: rgb(var(--bg));
+  color: rgb(var(--text-main));
+  scroll-behavior: smooth;
+}
+
+/* 앵커 이동 시 sticky 헤더(h-14)에 가리지 않게 */
+section[id] {
+  scroll-margin-top: 4rem;
+}
+
+body {
+  margin: 0;
+  background-color: rgb(var(--bg));
+  color: rgb(var(--text-main));
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 .hide_scroll {
@@ -158,10 +216,17 @@ html {
   scrollbar-color: rgb(var(--border-strong)) rgb(var(--bg-sub));
 }
 
-body {
-  margin: 0;
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
+::selection {
+  background-color: rgb(var(--text-main) / 0.95);
+  color: rgb(var(--text-inverse));
+}
+
+/* ── 테마 전환 순간에만 붙는 클래스 ──────────────
+   앱 전역의 transition-colors / shadow 가 제각각 페이드되면서
+   깜빡이는 걸 막는다. ThemeProvider 가 2프레임 뒤 제거. */
+html.theme-switching,
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+  transition: none !important;
 }

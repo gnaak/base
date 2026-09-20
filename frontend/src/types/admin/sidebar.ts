@@ -1,4 +1,4 @@
-import { LucideIcon } from "lucide-react";
+import { type LucideIcon } from "lucide-react";
 
 interface BaseLinkItem {
   label: string;
@@ -40,9 +40,7 @@ export interface GroupProps {
 // ======================================
 // 페이지 별 Props
 export interface AdminSidebarProps {
-  collapsed: boolean;
   adminMenu: AdminMenuItem[];
-  onToggleSidebar: () => void;
 }
 
 export interface AdminHeaderProps {

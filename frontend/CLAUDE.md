@@ -12,7 +12,8 @@ src/
 │   └── client/              # layout, main, auth/(google, kakao)
 ├── component/               # 순수 UI (props만 받아 렌더링)
 │   ├── common/              # errorBoundary
-│   └── admin/               # layout/ modal/ ui/(feedback, form, table, loading, pagination)
+│   └── admin/               # layout/(sideBar, login) modal/
+│                            # ui/(form, feedback, table) + statCard skeleton pagination loading
 ├── hooks/
 │   ├── auth/                # OAuth 로그인·콜백, publicRoute, privateRoute
 │   └── common/              # useAPI.ts useAuth.ts getCookie.ts
@@ -169,20 +170,34 @@ loginMutation.mutate(body, {
 
 ## 스타일 — Tailwind
 
-두 계열이 공존한다. **신규 작업은 시맨틱 토큰 우선.**
+**전체 규칙과 토큰 표는 루트 [`DESIGN.md`](../DESIGN.md) 에 있다.** 여기엔 코드 쓸 때 걸리는 것만.
 
-**시맨틱 토큰** (`index.css`의 CSS 변수 기반, `darkMode: "class"`로 자동 전환)
+Vercel 콘솔 계열 시스템이다. 색은 `index.css`의 CSS 변수로 정의하고 `tailwind.config.js`가
+클래스로 노출한다 (`darkMode: "class"`로 자동 전환). **색을 직접 쓰지 말고 토큰을 쓴다.**
 
 | 그룹 | 클래스 |
 |------|--------|
 | 배경 | `bg-bg` `bg-bg-card` `bg-bg-sub` `bg-bg-hover` `bg-bg-active` `bg-bg-disabled` |
 | 텍스트 | `text-text-main` `text-text-sub` `text-text-disabled` `text-text-placeholder` `text-text-inverse` |
 | 테두리 | `border-line` `border-line-strong` `border-line-focus` |
-| 강조 | `bg-primary` `bg-primary-light` `bg-primary-dark` |
+| 강조 | `bg-primary` `bg-primary-light` `bg-primary-dark` (라이트=near-black, 다크=near-white) |
 | 상태 | `text-success` `bg-success-bg` / `error` `warning` `info` 동일 패턴 |
 | 포인트 | `text-point-green` `point-red` `point-amber` `point-blue` — **`bg-point`는 DEFAULT가 없어 존재하지 않는다** |
-| 기타 | `bg-overlay` `bg-surface-raised` `bg-skeleton-base` `bg-skeleton-shine` |
+| 기타 | `bg-overlay` `bg-surface-raised` `bg-skeleton-base` `bg-skeleton-shine` `text-ship` `text-preview` `text-develop` |
 
-**Admin 고정 색상** (다크모드 전환 없음): `main`(#1C1C1C) / `sub1`(#3A3A3A) / `sub2`(#F2F2F2) — 각각 `-hover` `-active` 변형 존재
+**깊이는 `border`가 아니라 `shadow-border`로 준다.** 1px 링이라 레이아웃 크기를 바꾸지 않아
+hover·focus에서 요소가 밀리지 않는다. 그 외 `shadow-subtle` `shadow-card` `shadow-focus`.
 
-새 클래스를 쓰기 전에 `tailwind.config.js`에 실제로 있는지 확인할 것. 없는 클래스는 에러 없이 조용히 무시된다.
+**트래킹**: `tracking-display`(−0.06em) `tracking-heading` `tracking-title`(−0.04em) `tracking-tight`(−0.02em).
+큰 글자일수록 조인다.
+**radius**: `rounded-micro`(2) `rounded-subtle`(4) `rounded`(6) `rounded-comfy`(8) `rounded-image`(12) `rounded-tab`.
+**폰트**: Geist → Pretendard (`font-sans`) / Geist Mono (`font-mono`, 식별자·코드에만).
+폰트 크기는 임의값(`text-[13px]`)을 쓴다 — 기본 스케일은 이 밀도에 비해 성기다.
+숫자가 세로로 정렬되는 곳(표·지표)에는 `tabular-nums`.
+
+**Admin 고정 색상** (다크모드 전환 없음): `main`(#1C1C1C) / `sub1`(#3A3A3A) / `sub2`(#F2F2F2) — 각각 `-hover` `-active` 변형 존재.
+레거시다. **신규 작업엔 쓰지 말 것** — 테마와 무관하게 고정해야 하는 자리에만 남겨뒀다.
+
+새 클래스를 쓰기 전에 `tailwind.config.js`에 실제로 있는지 확인할 것. 없는 클래스는 에러 없이
+조용히 무시된다 — 실제로 어드민 레이아웃이 `bg-adminMain`(존재하지 않는 클래스)을 쓰고 있어서
+배경색이 통째로 안 먹고 있었다.

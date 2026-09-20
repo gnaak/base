@@ -1,25 +1,20 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { LogOut } from "lucide-react";
 import GroupLink from "./groupLink";
 import SubLink from "./subLink";
-import Logo from "@/assets/profile.png";
-import { LogOut, SidebarCloseIcon, SidebarOpenIcon } from "lucide-react";
 import { usePost } from "@/hooks/common/useAPI";
-import { useNavigate } from "react-router-dom";
-import { useState } from "react";
-import { AdminSidebarProps } from "@/types/admin/sidebar";
+import { type AdminSidebarProps } from "@/types/admin/sidebar";
 import { useAuth } from "@/hooks/common/useAuth";
-import Modal from "@/component/admin/ui/feedback/modal";
+import ConfirmModal from "@/component/admin/ui/feedback/confirmModal";
 
-const AdminSidebar = ({
-  collapsed,
-  adminMenu,
-  onToggleSidebar,
-}: AdminSidebarProps) => {
+const AdminSidebar = ({ adminMenu }: AdminSidebarProps) => {
   const navigate = useNavigate();
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
   const logoutMutation = usePost<void, void>("api/auth/logout_admin");
   const { admin, setAdmin } = useAuth();
-  // email은 백엔드 session_info에 추가했을 때만 내려온다
-  const displayName = admin?.email ?? admin?.user_nickname ?? "";
+  const name = admin?.user_nickname || "관리자";
+  const initial = name.trim().charAt(0).toUpperCase();
 
   const handleLogout = () => {
     logoutMutation.mutate(undefined, {
@@ -31,117 +26,61 @@ const AdminSidebar = ({
   };
 
   return (
-    <aside
-      className={`
-        h-screen flex flex-col overflow-hidden border-r transition-all duration-300 ease-in-out
-        bg-main text-sub2 border-sub1
-        ${collapsed ? "w-16" : "w-64"}
-      `}
-    >
-      <div className="flex h-full flex-col">
-        {/* 헤더 영역 */}
-        <div className="group flex h-16 items-center flex-shrink-0 border-b border-sub1 relative overflow-hidden text-white">
-          <div className="relative flex items-center justify-center w-16 h-full shrink-0 z-10">
-            <img
-              src={Logo}
-              alt="Profile"
-              className={`h-6 w-6 object-contain transition-opacity duration-200 
-        ${collapsed ? "group-hover:opacity-0" : "opacity-100"}`}
-            />
+    <aside className="hidden md:flex flex-col w-60 shrink-0 h-svh sticky top-0 border-r border-line bg-bg">
+      <div className="px-5 h-14 flex items-center">
+        <span className="font-mono text-[13px] font-medium tracking-tight text-text-main">
+          base · admin
+        </span>
+      </div>
 
-            {collapsed && (
-              <div
-                onClick={onToggleSidebar}
-                className="absolute inset-0 flex items-center justify-center z-20 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-              >
-                <SidebarOpenIcon className="w-4 h-4" />
-              </div>
-            )}
+      <nav className="flex flex-col gap-1.5 px-2 py-3">
+        {adminMenu.map((item, idx) =>
+          item.type === "link" ? (
+            <SubLink key={`${item.to}-${idx}`} {...item} />
+          ) : (
+            <GroupLink key={`${item.title}-${idx}`} item={item} />
+          ),
+        )}
+      </nav>
+
+      <div className="mt-auto px-3 py-3 border-t border-line">
+        <div className="flex items-center gap-2 px-2 py-1.5">
+          <div className="w-7 h-7 rounded-full bg-bg-sub shadow-border flex items-center justify-center text-[11px] font-medium text-text-sub shrink-0">
+            {initial}
           </div>
-
-          <div
-            className={`
-    absolute left-14 transition-all duration-300 ease-in-out
-    ${collapsed ? "opacity-0 -translate-x-2 invisible" : "opacity-100 translate-x-0 visible"}
-  `}
+          <div className="flex-1 min-w-0">
+            <div className="text-[13px] font-medium text-text-main truncate">
+              {name}
+            </div>
+            <div className="text-[11px] text-text-sub truncate">관리자</div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setLogoutModalOpen(true)}
+            aria-label="로그아웃"
+            title="로그아웃"
+            className="
+              shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-full
+              text-text-sub hover:text-text-main
+              hover:bg-bg-hover active:bg-bg-active
+              transition-colors duration-150
+            "
           >
-            <h1 className="text-xl font-bold whitespace-nowrap tracking-tight">
-              Admin
-            </h1>
-          </div>
-
-          {!collapsed && (
-            <div
-              onClick={onToggleSidebar}
-              className="absolute right-4 top-1/2 -translate-y-1/2 z-20 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-            >
-              <SidebarCloseIcon className="w-4 h-4" />
-            </div>
-          )}
-        </div>
-
-        {/* 메뉴 리스트 */}
-        <nav className="flex-1 overflow-y-auto px-2 py-6">
-          <div className="flex flex-col gap-y-1">
-            {adminMenu.map((item, idx) =>
-              item.type === "link" ? (
-                <SubLink
-                  key={`${item.to}-${idx}`}
-                  {...item}
-                  collapsed={collapsed}
-                />
-              ) : (
-                <GroupLink
-                  key={`${item.title}-${idx}`}
-                  item={item}
-                  collapsed={collapsed}
-                />
-              ),
-            )}
-          </div>
-        </nav>
-
-        {/* 프로필 + 로그아웃 */}
-        <div className="flex-shrink-0 border-t border-sub1 overflow-hidden">
-          <div className="group flex items-center h-[62px] relative">
-            <div className="flex items-center justify-center w-16 shrink-0">
-              <div className="w-8 h-8 rounded-full bg-sub1 flex items-center justify-center text-white font-bold text-xs shrink-0">
-                {displayName[0]?.toUpperCase() ?? "A"}
-              </div>
-            </div>
-            <div
-              className={`transition-all duration-300 ease-in-out overflow-hidden ${collapsed ? "opacity-0 w-0" : "opacity-100 w-full"}`}
-            >
-              <p className="text-xs font-bold text-white truncate w-28">
-                {displayName}
-              </p>
-              <p className="text-[10px] text-sub2/60 truncate w-28">관리자</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setLogoutModalOpen(true)}
-              className={`shrink-0 text-sub2/60 hover:text-red-400 transition-colors duration-200 flex items-center justify-center ${collapsed
-                ? "absolute inset-0 w-full h-full opacity-0 group-hover:opacity-100 group-hover:bg-main-hover"
-                : "mr-3 p-1.5"
-                }`}
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
-          </div>
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
-      <Modal
+      <ConfirmModal
         open={logoutModalOpen}
-        onClose={() => setLogoutModalOpen(false)}
-        title="로그아웃"
-        description="로그아웃 하시겠습니까?"
-        buttonCount={2}
-        primaryText="로그아웃"
-        primaryVariant="danger"
-        onPrimary={handleLogout}
-        secondaryText="취소"
-        onSecondary={() => setLogoutModalOpen(false)}
+        onCancel={() => setLogoutModalOpen(false)}
+        onConfirm={handleLogout}
+        title="로그아웃 하시겠습니까?"
+        description="현재 세션이 종료되며, 다시 로그인하셔야 콘솔에 접근할 수 있습니다."
+        variant="warning"
+        size="sm"
+        confirmLabel="로그아웃"
+        cancelLabel="취소"
       />
     </aside>
   );

@@ -1,11 +1,7 @@
+import Skeleton from "@/component/admin/ui/skeleton";
 import type { Column, TableRow } from "./table";
 
-/**
- * `render`가 없을 때의 기본 셀 표시.
- *
- * 객체·배열은 `[object Object]`처럼 보이게 둔다 — 조용히 빈칸으로 만들면
- * 데이터가 없는 건지 표시를 안 한 건지 구분이 안 된다. 그런 값은 `render`로 직접 그릴 것.
- */
+/** `render`가 없을 때의 기본 셀 표시. 객체·배열은 `render`로 직접 그릴 것. */
 const defaultCell = (value: unknown): React.ReactNode =>
   value === null || value === undefined ? "" : String(value);
 
@@ -25,8 +21,12 @@ interface TableBodyProps<Row extends TableRow> {
   rowSizeClass: string;
   striped: boolean;
   rowCount?: number;
+  loading?: boolean;
   onRowClick?: (row: Row) => void;
 }
+
+/** 로딩 중 표시할 기본 행 수. */
+const SKELETON_ROWS = 8;
 
 /**
  * TableBody 컴포넌트
@@ -53,19 +53,64 @@ const TableBody = <Row extends TableRow>({
   rowSizeClass,
   striped,
   rowCount,
+  loading,
   onRowClick,
 }: TableBodyProps<Row>) => {
   const target = rowCount && rowCount > 0 ? rowCount : data.length;
   const emptyCount = Math.max(0, target - data.length);
+
+  // 데이터가 오기 전에 "데이터가 없습니다."를 띄우면 행이 들어올 때 화면이 뒤집힌다.
+  if (loading && data.length === 0) {
+    const rows = rowCount && rowCount > 0 ? rowCount : SKELETON_ROWS;
+    return (
+      <tbody>
+        {Array.from({ length: rows }).map((_, i) => (
+          <tr key={`skeleton-${i}`} className={rowSizeClass}>
+            {columns.map((col) => (
+              <td
+                key={col.key}
+                className="px-3 py-2.5 align-middle bg-bg-card border-b border-line"
+              >
+                <Skeleton className="h-3 w-full" />
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    );
+  }
+
+  // 데이터가 없을 경우 테이블 바디 영역에 안내 메시지 출력
+  if (data.length === 0) {
+    return (
+      <tbody>
+        <tr>
+          <td
+            colSpan={columns.length}
+            className="px-3 py-16 text-center text-[13px] text-text-disabled"
+          >
+            데이터가 없습니다.
+          </td>
+        </tr>
+      </tbody>
+    );
+  }
+
   return (
     <tbody>
       {data.map((row, index) => {
         const stripedClass =
-          striped && index % 2 === 1 ? "bg-[#FFF6DA]" : "bg-white";
+          striped && index % 2 === 1 ? "bg-bg-sub" : "bg-bg-card";
+        const clickable = !!onRowClick;
         return (
           <tr
             key={`row-${index}`}
-            className={`${rowSizeClass} ${stripedClass}`}
+            className={[
+              rowSizeClass,
+              stripedClass,
+              "transition-colors hover:bg-bg-hover",
+              clickable ? "cursor-pointer" : "",
+            ].join(" ")}
             onClick={() => {
               if (onRowClick) onRowClick(row);
             }}
@@ -81,7 +126,11 @@ const TableBody = <Row extends TableRow>({
               return (
                 <td
                   key={col.key}
-                  className={`px-3 py-2.5 align-middle ${alignClass} ${index < data.length - 1 ? "border-b border-gray-200" : ""}`}
+                  className={[
+                    "px-3 py-2.5 align-middle text-text-main",
+                    alignClass,
+                    index < data.length - 1 ? "border-b border-line" : "",
+                  ].join(" ")}
                 >
                   {col.render ? col.render(row) : defaultCell(row[col.key])}
                 </td>
@@ -95,7 +144,10 @@ const TableBody = <Row extends TableRow>({
         Array.from({ length: emptyCount }).map((_, i) => (
           <tr key={`empty-${i}`} className={rowSizeClass}>
             {columns.map((col) => (
-              <td key={col.key} className="px-3 py-2.5 bg-white">
+              <td
+                key={col.key}
+                className="px-3 py-2.5 bg-bg-card border-b border-line"
+              >
                 &nbsp;
               </td>
             ))}

@@ -1,88 +1,101 @@
-import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { User, Lock, Eye, EyeOff, Loader2, ArrowRight } from "lucide-react";
 import InputBox from "@/component/admin/ui/form/inputbox";
-import Button from "@/component/admin/ui/form/button";
 
 interface LoginFormProps {
-  email: string;
-  setEmail: (val: string) => void;
+  adminId: string;
+  setAdminId: (val: string) => void;
   password: string;
   setPassword: (val: string) => void;
   showPw: boolean;
   setShowPw: (val: boolean) => void;
   onSubmit: (e: React.FormEvent) => void;
+  isLoading?: boolean;
 }
 
 const LoginForm = ({
-  email,
-  setEmail,
+  adminId,
+  setAdminId,
   password,
   setPassword,
   showPw,
   setShowPw,
-  onSubmit
+  onSubmit,
+  isLoading = false,
 }: LoginFormProps) => {
+  const disabled = !adminId || !password || isLoading;
+
   return (
-    <div className="w-1/3 flex items-center justify-center px-20 relative">
-      <div className="w-full max-w-sm flex flex-col gap-12">
-        <div className="flex flex-col gap-3">
-          <h3 className="text-4xl font-bold tracking-tight">관리자 로그인</h3>
-          <p className="text-main/50 font-medium">서비스 관리를 위해 로그인이 필요합니다.</p>
-        </div>
-
-        <form onSubmit={onSubmit} className="flex flex-col gap-8">
-          <div className="flex flex-col gap-5">
-            <div className="flex flex-col gap-2">
-              <InputBox
-                type="email"
-                value={email}
-                placeholder="이메일 주소"
-                onChange={(val) => setEmail(val)}
-                className="bg-white transition-all"
-                leftIcon={<Mail className="w-5 h-5 text-sub1/60" />}
-              />
-            </div>
-
-            <div className="flex flex-col gap-2 relative">
-              <InputBox
-                type={showPw ? "text" : "password"}
-                value={password}
-                placeholder="비밀번호"
-                onChange={(val) => setPassword(val)}
-                className="bg-white transition-all"
-                leftIcon={<Lock className="w-5 h-5 text-sub1/60" />}
-                onRightIconClick={() => setShowPw(!showPw)}
-                rightIcon={
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setShowPw(!showPw);
-                    }}
-                    className="flex items-center justify-center hover:opacity-70 transition-opacity"
-                  >
-                    {showPw ? (
-                      <Eye className="w-5 h-5 text-sub1/60" />
-                    ) : (
-                      <EyeOff className="w-5 h-5 text-sub1/60" />
-                    )}
-                  </button>
-                }
-              />
-            </div>
-          </div>
-
-          <Button
-            variant="main"
-            full
-            onClick={onSubmit}
-            disabled={!email || !password}
-            className="font-semibold shadow-md active:scale-[0.98] transition-transform"
-          >
-            로그인
-          </Button>
-        </form>
+    <form onSubmit={onSubmit} className="flex flex-col gap-5">
+      <div className="flex flex-col gap-1.5">
+        <label className="text-[12px] font-medium text-neutral-600">
+          관리자 ID
+        </label>
+        <InputBox
+          type="text"
+          value={adminId}
+          placeholder="admin"
+          onChange={(val) => setAdminId(val)}
+          className="bg-neutral-50/60"
+          leftIcon={<User className="w-4 h-4 text-neutral-400" />}
+        />
       </div>
-    </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="text-[12px] font-medium text-neutral-600">
+          비밀번호
+        </label>
+        <InputBox
+          type={showPw ? "text" : "password"}
+          value={password}
+          placeholder="••••••••"
+          onChange={(val) => setPassword(val)}
+          className="bg-neutral-50/60"
+          leftIcon={<Lock className="w-4 h-4 text-neutral-400" />}
+          onRightIconClick={() => setShowPw(!showPw)}
+          rightIcon={
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                setShowPw(!showPw);
+              }}
+              className="flex items-center justify-center text-neutral-400 hover:text-neutral-600 transition-colors"
+              aria-label={showPw ? "비밀번호 숨기기" : "비밀번호 표시"}
+            >
+              {showPw ? (
+                <Eye className="w-4 h-4" />
+              ) : (
+                <EyeOff className="w-4 h-4" />
+              )}
+            </button>
+          }
+        />
+      </div>
+
+      <button
+        type="submit"
+        disabled={disabled}
+        className="
+          mt-1 inline-flex items-center justify-center gap-1.5 h-10 rounded-xl
+          bg-neutral-900 text-white text-[13px] font-medium
+          hover:bg-neutral-800 active:scale-[0.99]
+          disabled:bg-neutral-300 disabled:cursor-not-allowed disabled:active:scale-100
+          transition-all
+        "
+      >
+        {isLoading ? (
+          <>
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            로그인 중...
+          </>
+        ) : (
+          <>
+            로그인
+            <ArrowRight className="w-3.5 h-3.5" />
+          </>
+        )}
+      </button>
+    </form>
   );
 };
 

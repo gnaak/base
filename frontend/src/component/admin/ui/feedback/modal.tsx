@@ -125,7 +125,7 @@ const Modal = ({
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        onClose();
+        onClose?.();
       }
     };
 
@@ -141,7 +141,7 @@ const Modal = ({
 
   const handleOverlayClick = (e: MouseEvent<HTMLDivElement>) => {
     if (!closeOnOverlay) return;
-    if (mouseDownOnOverlay.current && e.target === e.currentTarget) onClose();
+    if (mouseDownOnOverlay.current && e.target === e.currentTarget) onClose?.();
   };
 
   const handleContentClick = (e: MouseEvent<HTMLDivElement>) => {
@@ -150,12 +150,12 @@ const Modal = ({
 
   const handlePrimary = () => {
     if (onPrimary) onPrimary();
-    else onClose();
+    else onClose?.();
   };
 
   const handleSecondary = () => {
     if (onSecondary) onSecondary();
-    else onClose();
+    else onClose?.();
   };
 
   return (

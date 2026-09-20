@@ -7,8 +7,7 @@ import type { HeaderColumn } from "./table";
  * @property rowSizeClass   행 높이 및 텍스트 크기 클래스 (Table에서 전달)
  */
 interface TableHeaderProps {
-  // 헤더는 행 데이터를 보지 않으므로 render 를 뺀 형태로 받는다.
-  // (Column<Row> 를 그대로 받으면 render 의 인자 타입 때문에 변성 문제가 생긴다)
+  // 헤더는 render 를 보지 않는다 (Column<Row> 를 그대로 받으면 변성 문제가 생긴다)
   columns: HeaderColumn[];
   rowSizeClass: string;
 }
@@ -31,7 +30,7 @@ interface TableHeaderProps {
  */
 const TableHeader = ({ columns, rowSizeClass }: TableHeaderProps) => {
   return (
-    <thead className="bg-[#4F4F4F]/5 border-t border-b">
+    <thead className="bg-bg-sub border-b border-line">
       <tr className={rowSizeClass}>
         {columns.map((col) => {
           const alignClass =
@@ -44,13 +43,13 @@ const TableHeader = ({ columns, rowSizeClass }: TableHeaderProps) => {
           return (
             <th
               key={col.key}
-              className="px-3 py-2 font-medium text-gray-700 border-b border-gray-200"
+              className="px-3 py-2 text-[12px] font-semibold uppercase tracking-tight text-text-sub"
               style={col.width ? { width: col.width } : undefined}
             >
               <div className={`flex items-center gap-1 ${alignClass}`}>
                 <span>{col.header}</span>
                 {col.icon && (
-                  <span className="text-gray-400 text">{col.icon}</span>
+                  <span className="text-text-disabled">{col.icon}</span>
                 )}
               </div>
             </th>
