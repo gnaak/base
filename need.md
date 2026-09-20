@@ -25,7 +25,7 @@
 | [B7](#b7-docker-compose) | ~~docker-compose (MySQL + Redis)~~ | 인프라 | ✅ 완료 |
 | [B8](#b8-ci) | ~~CI (pytest + tsc + build)~~ | 인프라 | ✅ 완료 |
 | [B9](#b9-ruff) | ~~ruff (백엔드 린터·포매터)~~ | 품질 | ✅ 완료 |
-| [B10](#b10-requirements-분리) | ~~requirements dev/prod 분리~~ | 품질 | ✅ 완료 |
+| [B10](#b10-의존성-관리) | ~~의존성 관리 (uv + pyproject + lock)~~ | 품질 | ✅ 완료 |
 | [B11](#b11-프론트-테스트) | ~~프론트 테스트 (vitest)~~ | 품질 | ✅ 완료 |
 | [B12](#b12-페이지네이션-계약) | ~~페이지네이션 응답 규약~~ | 기능 | ✅ 완료 |
 | [B13](#b13-파일-업로드) | ~~파일 업로드 엔드포인트~~ | 기능 | ✅ 완료 |
@@ -515,17 +515,29 @@ MySQL 8 + Redis 7 만 띄운다. **앱은 컨테이너에 넣지 않았다** —
 백엔드에 린터·포매터가 없다. `isort` 가 `requirements.txt` 에 있지만 설정도 없고 쓰이지도 않는다.
 ruff 하나가 lint + format + isort 를 전부 대체한다. `isort` 는 제거.
 
-## B10. requirements 분리
+## B10. 의존성 관리
 
-- [x] **완료** — `requirements-dev.txt` 신규 (pytest · pytest-asyncio · fakeredis)
+- [x] **완료** — 1차: `requirements-dev.txt` 분리 / 2차: **uv 전환**
 
-운영 이미지에는 `requirements.txt` 만 설치된다. B8 의 Dockerfile 을 제대로 만들려면
-어차피 필요해서 같이 처리했다.
+처음엔 `requirements.txt`(운영) / `requirements-dev.txt`(개발) 두 갈래로 나눴다.
+당시 `pyproject.toml` 로 안 간 이유는 "pyproject 는 lock 이 아니라서 freeze 보다
+재현성이 낮다" 였는데, **uv 를 쓰면 그 전제가 무너진다** — `uv.lock` 이 플랫폼별
+해시까지 들고 있어서 freeze 보다 재현성이 높고, 파이썬 인터프리터 버전까지 고정된다.
 
-**`pyproject.toml` 로 안 간 이유** — pyproject 는 lock 파일이 아니다. 지금의 freeze 가
-오히려 재현성이 높다. pyproject 의 진짜 이득은 흩어진 도구 설정을 모으는 것인데,
-지금 모을 게 `pytest.ini` 하나뿐이다. **B9(ruff) 때 같이 도입하는 게 자연스럽다**
-(ruff 설정 + pytest 설정을 `pyproject.toml` 하나로). 의존성은 그때도 `requirements.txt` 유지.
+최종 상태:
+
+| 파일 | 역할 |
+|------|------|
+| `pyproject.toml` | 의존성 선언 + ruff + pytest. 사람이 고치는 건 여기뿐 |
+| `uv.lock` | 해석 결과. 커밋한다 |
+| `.python-version` | `3.12`. uv 가 없으면 받아온다 |
+
+- 그룹 3개 — 기본(운영) / `dev`(pytest·fakeredis·ruff) / `prod`(gunicorn)
+- CI·Docker·서버는 전부 `--frozen` → 배포 때 버전이 조용히 오르지 않는다
+- **덤으로 잡힌 것**: `deploy/fastapi.service` 가 gunicorn 을 실행하는데 gunicorn 이
+  어디에도 선언돼 있지 않았다. 그 유닛 그대로 쓰면 기동 실패한다. `prod` 그룹으로 편입
+- 전환하면서 의존성이 전부 최신으로 올라갔다 (redis 7.3→8.1, starlette 1.0→1.6,
+  uvicorn 0.42→0.53, pydantic 2.12→2.13). 84개 테스트 + ruff 통과로 확인
 
 ## B11. 프론트 테스트
 

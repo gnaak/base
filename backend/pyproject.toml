@@ -1,19 +1,84 @@
-# 백엔드 도구 설정을 한 곳에 모은다 (ruff + pytest).
+# 백엔드의 단일 설정 파일 — 의존성(uv) + ruff + pytest.
 #
-# 의존성은 여기 적지 않고 requirements.txt / requirements-dev.txt 가 계속 맡는다.
-# pyproject 의 `[project.dependencies]` 는 **범위 선언**이지 lock 이 아니라서,
-# 배포 재현성은 지금의 freeze 쪽이 높다. 나중에 uv 로 갈 때 uv.lock 과 함께 옮기면 된다.
+# 의존성은 **여기에만** 적는다. 정확한 버전은 `uv.lock` 이 잡는다.
+# (예전엔 requirements.txt / requirements-dev.txt 로 freeze 했는데,
+#  freeze 는 "내 윈도우에서 풀린 결과" 라 리눅스 서버에서 같다는 보장이 없었다.
+#  uv.lock 은 플랫폼별 해시까지 들고 있어서 재현성이 더 높다.)
 #
-# `[project]` 섹션이 없는 것도 의도다 — 이 패키지는 설치 대상이 아니라 앱이다.
+#   uv sync                  # 개발 (dev 그룹 포함)
+#   uv sync --no-dev         # 운영
+#   uv add httpx             # 패키지 추가 (pyproject + lock 동시 갱신)
+#   uv lock --upgrade        # 전체 업그레이드
+#   uv export --no-dev --no-emit-project > requirements.txt   # pip 만 되는 곳용 탈출구
+
+[project]
+name = "base-backend"
+version = "0.1.0"
+description = "FastAPI + SQLAlchemy 풀스택 템플릿의 백엔드"
+# `.python-version` 과 Dockerfile(python:3.12-slim), CI 가 모두 3.12 다.
+# uv 는 이 범위에 맞는 인터프리터를 **없으면 직접 받아서** 쓴다 —
+# "파이썬 버전이 달라서" 나던 문제가 여기서 끝난다.
+requires-python = ">=3.12,<3.13"
+
+dependencies = [
+    # ── 웹 ──
+    "fastapi>=0.135.2",
+    "uvicorn>=0.42.0",
+    "starlette>=1.0.0",       # 예외 핸들러·미들웨어에서 직접 import 한다
+    "websockets>=15.0.1",     # uvicorn 의 WebSocket 구현
+    "python-multipart>=0.0.32", # UploadFile / Form
+    # ── DB ──
+    "sqlalchemy>=2.0.54",
+    "aiomysql>=0.2.0",
+    "alembic>=1.18.4",
+    "redis>=7.3.0",
+    # ── 설정·검증 ──
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.13.1",
+    "python-dotenv>=1.2.2",
+    # ── 인증 ──
+    "pyjwt>=2.12.1",
+    "passlib>=1.7.4",
+    "argon2-cffi>=25.1.0",    # passlib 의 argon2 백엔드
+    # ── 기타 ──
+    "httpx>=0.28.1",          # OAuth 토큰 교환
+    "pytz>=2026.1.post1",
+    "openai>=2.29.0",
+]
+
+[dependency-groups]
+# 개발·테스트 전용. `uv sync --no-dev` 면 빠진다 (운영 이미지에 안 들어간다).
+dev = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.4.0",
+    "fakeredis>=2.34.1",
+    "ruff>=0.16.8",
+]
+# systemd(deploy/fastapi.service) 로 띄울 때만 필요하다.
+# Docker 이미지는 uvicorn 을 직접 실행하므로 안 쓴다.
+#   uv sync --no-dev --group prod
+# ⚠️ gunicorn 은 윈도우에서 **실행되지 않는다** (fcntl). 설치는 되니 lock 에는 남는다.
+prod = ["gunicorn>=23.0.0"]
+
+[tool.uv]
+# 이 저장소는 배포할 라이브러리가 아니라 앱이다. 자기 자신을 빌드·설치하지 않는다
+# (`[project]` 가 있어도 uv 가 `pip install -e .` 를 하지 않게 만드는 스위치).
+package = false
+# 기본 sync 대상. `uv sync` 만 쳐도 dev 가 들어온다.
+default-groups = ["dev"]
 
 # ── ruff ──────────────────────────────────────────────────────
-#   ruff check .          # 검사
-#   ruff check . --fix    # 자동 수정
-#   ruff format .         # 포매팅 (선택)
+#   uv run ruff check .          # 검사
+#   uv run ruff check . --fix    # 자동 수정
+#   uv run ruff format .         # 포매팅 (선택)
 [tool.ruff]
 # 88(기본)이면 한글 주석이 많은 이 코드베이스에서 E501 이 90개 넘게 뜬다.
 # 110 이면 5개까지 줄고, 그 5개는 실제로 줄일 만한 줄이었다.
 line-length = 110
+# 런타임은 3.12 지만 린트 기준은 일부러 py311 로 둔다.
+# py312 로 올리면 UP046 이 `class Page(BaseModel, Generic[T])` 를 PEP 695
+# (`class Page[T](BaseModel)`) 로 바꾸라고 하는데, Pydantic 제네릭 모델에서
+# 이 문법은 아직 굳이 갈아탈 이유가 없다. 바꾸고 싶어지면 py312 로 올리면 된다.
 target-version = "py311"
 extend-exclude = [".venv", "alembic/versions"]
 
@@ -47,7 +112,7 @@ ignore = [
 known-first-party = ["app", "tests"]
 
 # ── pytest ────────────────────────────────────────────────────
-# 예전 pytest.ini 를 그대로 옮겨왔다. 설정 파일이 하나 줄어든다.
+#   uv run pytest
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]

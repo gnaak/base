@@ -7,21 +7,34 @@
 #
 # ⚠️ 개발에는 쓰지 않는다. 소스를 바인드 마운트해야 핫리로드가 되는데, Windows 에서
 #    `C:\...` 를 마운트하면 파일 I/O 가 느리고 inotify 이벤트가 넘어오지 않아
-#    `--reload` 가 제대로 안 먹는다. 개발은 로컬 venv + `sh run.sh` 로 한다.
+#    `--reload` 가 제대로 안 먹는다. 개발은 `uv sync` + `sh run.sh` 로 한다.
 #    (MySQL·Redis 는 루트 docker-compose.yml 로 띄운다)
 
 # ── builder ──────────────────────────────────────────────────
-# 휠을 여기서 만들고 런타임 이미지에는 결과만 넣는다 — 컴파일러가 최종 이미지에 남지 않는다.
+# uv 가 lock 그대로 .venv 를 만든다. 휠 빌드/컴파일러는 이 스테이지에만 남는다.
 FROM python:3.12-slim AS builder
+
+# uv 는 공식 이미지에서 바이너리만 복사해 온다 (설치 단계 없음)
+COPY --from=ghcr.io/astral-sh/uv:0.8.4 /uv /uvx /bin/
 
 # argon2-cffi 등 일부 패키지가 C 확장을 빌드할 수 있다
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
     && rm -rf /var/lib/apt/lists/*
 
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PYTHON_DOWNLOADS=never
+
 WORKDIR /app
-COPY requirements.txt .
-RUN pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt
+
+# 의존성만 먼저 깐다 — 소스만 바뀐 빌드에서는 이 레이어가 캐시된다.
+#   --no-dev     pytest·ruff·fakeredis 는 운영 이미지에 넣지 않는다
+#   --frozen     lock 을 다시 풀지 않는다 (빌드마다 버전이 달라지는 것을 막는다)
+#   --no-install-project  `[tool.uv] package = false` 라 어차피 설치 대상이 없다
+COPY pyproject.toml uv.lock ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-install-project
 
 # ── runtime ──────────────────────────────────────────────────
 FROM python:3.12-slim AS runtime
@@ -46,10 +59,11 @@ RUN useradd --create-home --uid 10001 --shell /usr/sbin/nologin app
 
 WORKDIR /app
 
-COPY --from=builder /wheels /wheels
-COPY requirements.txt .
-RUN pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.txt \
-    && rm -rf /wheels
+# 빌더가 만든 가상환경을 통째로 가져온다. uv 바이너리는 런타임에 필요 없다.
+COPY --from=builder --chown=app:app /app/.venv /app/.venv
+# .venv/bin 을 앞에 둬서 `uvicorn`·`alembic` 이 그냥 잡히게 한다
+ENV PATH="/app/.venv/bin:$PATH" \
+    VIRTUAL_ENV=/app/.venv
 
 COPY --chown=app:app . .
 

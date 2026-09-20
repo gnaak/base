@@ -24,7 +24,8 @@ EC2 한 대에 nginx(정적 + 프록시) + gunicorn/uvicorn(앱)을 올리는 �
 서버에 아래가 이미 있어야 한다. 커스텀 AMI 를 쓴다면 거기 포함돼 있을 것이다.
 
 - nginx
-- Python 3.12+ 과 `backend/.venv` (의존성 설치 완료)
+- **uv** — `curl -LsSf https://astral.sh/uv/install.sh | sh`
+  (파이썬 3.12 는 uv 가 알아서 받아오므로 따로 깔 필요 없다)
 - Node 20+ (프론트를 서버에서 빌드한다면)
 - MySQL · Redis 접근 (같은 서버든 RDS/ElastiCache 든)
 
@@ -85,7 +86,9 @@ curl -sSI http://example.com | head -1
 ```bash
 # 코드
 git pull
-cd backend && pip install -r requirements.txt        # requirements-dev 는 제외
+# --frozen: lock 을 다시 풀지 않는다 (서버에서 조용히 버전이 오르는 것을 막는다)
+# --no-dev: pytest·ruff 제외 / --group prod: gunicorn 포함 (fastapi.service 가 쓴다)
+cd backend && uv sync --frozen --no-dev --group prod
 cd frontend && npm ci && npm run build               # → frontend/dist
 
 # 마이그레이션 (리비전 생성은 로컬에서만. 서버는 적용만)

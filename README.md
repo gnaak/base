@@ -23,7 +23,7 @@
 | **인증** | 로그인/로그아웃/refresh, refresh 로테이션 + 재사용 탐지, 세션 무효화, 계정 비활성화, 회원가입, Google·Kakao OAuth, 이중 세션 | 회원가입 **화면**, 비밀번호 재설정, 이메일 인증 |
 | **백엔드** | 계층 구조, DI, 공통 응답·에러코드, 예외 핸들러, 로깅, Alembic, 페이지네이션, 파일 업로드, ruff | 도메인 로직 (직접 채울 것) |
 | **테스트** | pytest 84개 + vitest 8개, 픽스처 일습 | E2E |
-| **프론트** | 관리자 레이아웃·사이드바, UI 킷(폼/테이블/모달/토스트), 라우트 가드, vitest | 디자인 시스템, 실제 화면 |
+| **프론트** | 디자인 시스템(라이트/다크 토큰, Geist·Pretendard), 관리자 레이아웃·사이드바·대시보드, UI 킷(폼/테이블/모달/토스트/지표/스켈레톤), 라우트 가드, vitest | 도메인 화면 |
 | **인프라** | 헬스체크, 요청 ID, CORS·보안 헤더, 레이트리밋, docker-compose(MySQL·Redis), 배포용 Dockerfile, nginx·systemd 설정, GitHub Actions CI | 프론트 Dockerfile, 무중단 배포, SSR/프리렌더(레시피만 문서화) |
 
 ### 이 템플릿에서 집중한 것
@@ -53,8 +53,9 @@ Spring은 프레임워크가 계층을 강제하지만 FastAPI는 아무것도 �
 | **Database** | MySQL 8 (aiomysql) + Alembic |
 | **Cache / Session** | Redis 7 |
 | **인증** | PyJWT (HS256) + HttpOnly Cookie + Argon2 + OAuth (Google, Kakao) |
-| **테스트** | pytest + pytest-asyncio + httpx AsyncClient + fakeredis |
+| **테스트** | pytest + pytest-asyncio + httpx AsyncClient + fakeredis / vitest + jsdom |
 | **로깅** | 표준 logging + QueueHandler 비동기 파이프라인 + 요청 ID |
+| **도구** | uv (파이썬·의존성) + ruff (린트) + GitHub Actions |
 
 ---
 
@@ -62,7 +63,8 @@ Spring은 프레임워크가 계층을 강제하지만 FastAPI는 아무것도 �
 
 ### 3.1 사전 준비
 
-- Python 3.11+, Node 20+
+- **uv** — 파이썬 인터프리터까지 uv 가 관리하므로 파이썬을 따로 설치할 필요가 없습니다 (설치법은 3.3)
+- Node 20+
 - Docker — MySQL·Redis를 띄우는 데만 씁니다 (앱은 로컬에서 실행)
 
 ```bash
@@ -99,8 +101,7 @@ cp frontend/.env.example frontend/.env
 | `backend/.env` | `jwt_secret` / `hash_key` | **프로젝트마다 새로 생성** (아래 참고) |
 | `frontend/.env` | `VITE_APP_PUBLIC_BASE_URL` | 백엔드 오리진 |
 
-> 의존성은 두 갈래입니다 — `requirements.txt`(운영) / `requirements-dev.txt`(pytest·fakeredis·ruff).
-> 운영 이미지에는 앞의 것만 설치됩니다.
+> 백엔드 의존성은 **uv** 가 관리합니다 (`pyproject.toml` + `uv.lock`). `pip` 은 쓰지 않습니다.
 
 ```bash
 # jwt_secret / hash_key 생성
@@ -111,11 +112,19 @@ OAuth 키를 비워두면 소셜 로그인만 동작하지 않고 서버는 정�
 
 ### 3.3 실행
 
+백엔드는 [uv](https://docs.astral.sh/uv/)가 필요합니다. 한 번만 설치하면 됩니다.
+
+```bash
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+# Windows (PowerShell)
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
 ```bash
 # Backend
 cd backend
-python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r requirements.txt -r requirements-dev.txt
+uv sync                     # 가상환경 + 의존성. 파이썬 3.12가 없으면 uv가 받아옵니다
 sh migrate.sh "init"        # 테이블 생성
 sh run.sh                   # http://localhost:8000  (문서: /docs)
 
@@ -124,6 +133,10 @@ cd frontend
 npm install
 npm run dev                 # http://localhost:3000
 ```
+
+> `uv sync` 는 `.venv` 생성 · 파이썬 버전 맞추기 · 의존성 설치를 한 번에 합니다.
+> **활성화(`activate`)할 필요가 없습니다** — 명령 앞에 `uv run` 을 붙이면 됩니다 (`uv run pytest`).
+> `run.sh` · `migrate.sh` 도 내부에서 `uv run` 을 씁니다.
 
 > **로컬에서는 프론트와 백엔드 호스트를 반드시 통일할 것** (`localhost`끼리 또는 `127.0.0.1`끼리).
 > 섞으면 cross-site가 돼서 `SameSite=Lax` 쿠키가 실리지 않고, **로그인은 200인데 세션이 안 잡히는** 증상이 납니다.
@@ -218,7 +231,9 @@ APP_ENV=prod uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 backend/
 ├── .env.example
-├── requirements.txt
+├── pyproject.toml                         # 의존성(uv) + ruff + pytest 설정
+├── uv.lock                                # 해석된 정확한 버전. 커밋 대상
+├── .python-version                        # 3.12
 ├── run.sh                                 # uvicorn --reload (단일 프로세스)
 ├── migrate.sh                             # 로컬 전용: 리비전 생성 + 적용
 ├── migrate_server.sh                      # 서버 전용: upgrade head 만
@@ -292,12 +307,12 @@ frontend/
     │
     ├── component/
     │   ├── admin/
-    │   │   ├── layout/                    # header, sideBar(groupLink·subLink), login
+    │   │   ├── layout/                    # sideBar(groupLink·subLink), login
     │   │   ├── ui/form/                   # button, inputbox, selectBox, comboBox, calendar,
     │   │   │                              #   checkbox, radioButton, toggle, textareaBox
-    │   │   ├── ui/feedback/               # modal, formModal, alert, toast
-    │   │   ├── ui/table/                  # table, tableHeader, tableBody
-    │   │   └── ui/                        # loading, pagination
+    │   │   ├── ui/feedback/               # modal, formModal, confirmModal, alert, toast
+    │   │   ├── ui/table/                  # table, tableHeader, tableBody (Row 제네릭)
+    │   │   └── ui/                        # statCard, skeleton, pagination, loading
     │   └── common/errorBoundary.tsx
     │
     ├── context/AuthProvider.tsx           # user/admin 두 세션을 함께 들고 있음
@@ -545,7 +560,7 @@ sh migrate.sh "add order table"     # revision --autogenerate + upgrade head
 git add backend/alembic/versions/   # 생성된 리비전은 반드시 커밋
 
 # 서버 — 배포 시
-git pull && pip install -r requirements.txt
+git pull && uv sync --frozen --no-dev --group prod
 APP_ENV=prod sh migrate_server.sh   # upgrade head 만
 ```
 
@@ -594,8 +609,8 @@ APP_ENV=prod sh migrate_server.sh   # upgrade head 만
 mysql -u root -p -e "CREATE DATABASE db_base_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
 
 cd backend
-.venv/Scripts/python.exe -m pytest                              # 전체 (84개)
-.venv/Scripts/python.exe -m pytest tests/test_user_router.py -v # 한 파일
+uv run pytest                              # 전체 (84개)
+uv run pytest tests/test_user_router.py -v # 한 파일
 ```
 
 | 파일 | 본보기로 삼을 것 |
@@ -726,9 +741,24 @@ useAPI: refresh 진행 중이 아니면 POST /api/auth/refresh_token
 <Route path="/mypage" element={<PrivateRoute><MyPage /></PrivateRoute>} />
 ```
 
-관리자 영역은 개별 가드 대신 `AdminLayout`이 통째로 가드 역할을 합니다.
+관리자 영역은 `App.tsx`에서 `<PrivateRoute authType="admin">`이 `AdminLayout`을 통째로 감쌉니다.
+**`AdminLayout`은 레이아웃만 담당하고 인증을 알지 못합니다** — 예전엔 같은 가드 로직이 양쪽에 있어서
+고칠 때 두 군데를 같이 봐야 했습니다.
 
-### 8.2 useAPI
+### 8.2 디자인 시스템
+
+Vercel 콘솔 계열의 토큰 시스템입니다. 전체 규칙은 **[`DESIGN.md`](DESIGN.md)** 에 있습니다.
+
+- 색은 `src/index.css`의 CSS 변수 → `tailwind.config.js`가 Tailwind 클래스로 노출.
+  `darkMode: "class"`로 라이트/다크가 자동 전환됩니다. **색을 직접 쓰지 말고 토큰을 쓸 것**
+- 깊이는 `border`가 아니라 **`shadow-border`**(1px 링) — 레이아웃 크기를 바꾸지 않아 hover·focus에서 요소가 밀리지 않습니다
+- 폰트는 Geist(`public/fonts/`) → Pretendard(CDN, 한글). 식별자·코드는 Geist Mono
+- 제목은 음수 트래킹(`tracking-title`·`tracking-heading`), 표·지표의 숫자는 `tabular-nums`
+
+새 프로젝트에서 색감을 바꿀 때는 `index.css`의 CSS 변수만 고치면 됩니다.
+값은 **공백으로 구분한 RGB 숫자**(`37 99 235`)여야 `bg-primary/50` 같은 알파 변형이 동작합니다.
+
+### 8.3 useAPI
 
 `fetch` 래퍼 + TanStack Query. 401을 만나면 자동으로 refresh 후 원 요청을 재시도합니다.
 
@@ -737,10 +767,10 @@ useAPI: refresh 진행 중이 아니면 POST /api/auth/refresh_token
 - refresh는 타입(`user`/`admin`)당 1회만 — 동시에 401이 여러 개 떠도 네트워크 호출은 한 번
 - refresh까지 실패하면 `AuthExpiredError`를 던지고 `auth:expired` 이벤트 발행. React Query 재시도 대상에서 제외
 
-### 8.3 관리자 메뉴 추가
+### 8.4 관리자 메뉴 추가
 
 메뉴는 `container/admin/layout.tsx`의 `adminMenu` 한 곳에서 정의합니다.
-헤더 제목(`routeConfig`)도 여기서 자동 유도되므로 따로 손댈 필요가 없습니다.
+어드민은 **사이드바 단독** 구성이라 상단 헤더가 없고, 페이지 제목은 각 컨테이너가 직접 그립니다.
 
 ```tsx
 const adminMenu: AdminMenuItem[] = [
@@ -764,14 +794,14 @@ const adminMenu: AdminMenuItem[] = [
 
 ---
 
-## 8.4 CI · 배포 이미지
+## 8.5 CI · 배포 이미지
 
 `.github/workflows/ci.yml` 이 push·PR마다 아래를 돌립니다. `CLAUDE.md` 의 "검증 명령"을
 사람 기억이 아니라 파이프라인에 고정한 것입니다.
 
 | job | 하는 일 |
 |-----|---------|
-| `backend` | MySQL·Redis 서비스 컨테이너를 띄우고 `pytest` (Python 3.12 고정) |
+| `backend` | MySQL·Redis 서비스 컨테이너를 띄우고 `ruff` + `pytest` (uv 가 파이썬까지 맞춥니다) |
 | `frontend` | `check:types` · `lint` · `build` |
 | `docker` | `backend/Dockerfile` 빌드 — 배포 직전에야 깨진 걸 아는 상황을 막습니다 |
 
@@ -785,7 +815,8 @@ docker run --rm -p 8000:8000 --env-file backend/.env base-backend
 ```
 
 - `python:3.12-slim` 고정 — 서버의 시스템 파이썬 버전과 무관해집니다
-- 멀티스테이지(휠 빌드 → 설치) 라 컴파일러가 최종 이미지에 남지 않습니다
+- 멀티스테이지 — 빌더에서 `uv sync --frozen --no-dev` 로 `.venv` 를 만들고 그것만 런타임으로 옮깁니다.
+  컴파일러도 uv 바이너리도 최종 이미지에 남지 않고, 소스만 바뀐 빌드는 의존성 레이어가 캐시됩니다
 - 비루트(`uid 10001`) 실행, `APP_ENV=prod` 가 이미지에 박혀 있습니다
   (이걸 빠뜨려 `local` 로 떨어지는 것이 이 템플릿의 단골 사고입니다)
 - `.env` 는 `.dockerignore` 로 제외됩니다 — 운영 값은 `--env-file` / `-e` 로 주입하세요
@@ -794,7 +825,7 @@ docker run --rm -p 8000:8000 --env-file backend/.env base-backend
 
 > **개발에는 이 이미지를 쓰지 마세요.** 핫리로드를 하려면 소스를 바인드 마운트해야 하는데,
 > Windows 에서 `C:\...` 를 마운트하면 파일 I/O 가 느리고 `inotify` 이벤트가 넘어오지 않아
-> `--reload` 와 Vite HMR 이 제대로 동작하지 않습니다. 개발은 로컬 venv 로 하고,
+> `--reload` 와 Vite HMR 이 제대로 동작하지 않습니다. 개발은 `uv sync` + `sh run.sh` 로 하고,
 > Docker 는 **인프라(compose)와 배포(이미지)** 에만 씁니다.
 
 ---

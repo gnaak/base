@@ -99,8 +99,8 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 
 ```bash
 docker compose up -d && docker compose ps      # 둘 다 healthy
-cd backend && sh migrate.sh "init"
-cd backend && .venv/Scripts/python.exe -m pytest
+cd backend && uv sync && sh migrate.sh "init"
+cd backend && uv run pytest
 cd frontend && npm install && npm run check:types && npm test
 ```
 

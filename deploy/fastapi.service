@@ -38,6 +38,9 @@ Environment="PATH=/srv/example/backend/.venv/bin"    # CHANGE
 # 다만 이 템플릿은 pydantic-settings 가 .env 를 직접 읽으므로 보통 불필요하다.
 # (APP_ENV 만은 예외 — os.getenv 로 읽으므로 .env 에 적어도 먹지 않는다)
 
+# gunicorn 은 pyproject.toml 의 `prod` 그룹에 있다. 배포 시
+#   uv sync --frozen --no-dev --group prod
+# 를 돌려야 이 경로에 생긴다 (`--group prod` 를 빠뜨리면 유닛이 기동 실패한다).
 ExecStart=/srv/example/backend/.venv/bin/gunicorn app.main:app \
     -k uvicorn.workers.UvicornWorker \
     --bind 127.0.0.1:8000 \

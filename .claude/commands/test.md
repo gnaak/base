@@ -10,10 +10,10 @@ $ARGUMENTS 도메인의 라우터 테스트를 작성하고 돌리세요.
 3. 테스트 실행:
 
    ```bash
-   cd backend && .venv/Scripts/ruff.exe check . && .venv/Scripts/python.exe -m pytest tests/test_{도메인}_router.py -v
+   cd backend && uv run ruff check . && uv run pytest tests/test_{도메인}_router.py -v
    ```
 
-   (venv가 없으면 `python -m pytest`)
+   (`uv run` 이 가상환경을 알아서 맞춘다 — activate 하지 말 것)
 
 4. 결과 처리:
    - **전부 통과** → 통과한 케이스 목록 보고하고 종료

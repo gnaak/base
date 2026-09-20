@@ -14,8 +14,8 @@ __pycache__/
 .pytest_cache/
 
 # 테스트는 운영 이미지에 넣지 않는다 (CI 가 컨테이너 밖에서 돌린다)
+# dev 의존성은 Dockerfile 의 `uv sync --no-dev` 가 알아서 빼므로 따로 제외할 게 없다.
 tests/
-requirements-dev.txt
 
 # 런타임에 생성되는 것
 logs/*

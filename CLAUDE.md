@@ -64,8 +64,8 @@ refresh 시점에만 하기 때문이고, 그게 "access는 15~30분" 권고의 
 **검증 명령** (Phase 완료 전 실행):
 
 ```bash
-cd backend  && .venv/Scripts/ruff.exe check .        # 린트
-cd backend  && .venv/Scripts/python.exe -m pytest    # 라우터를 건드렸다면
+cd backend  && uv run ruff check .                   # 린트
+cd backend  && uv run pytest                         # 라우터를 건드렸다면
 cd frontend && npm run check:types && npm run lint
 cd frontend && npm test                              # vitest
 cd frontend && npm run build

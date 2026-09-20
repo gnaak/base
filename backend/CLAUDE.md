@@ -2,6 +2,37 @@
 
 FastAPI + SQLAlchemy 2.0 (async) + MySQL(aiomysql) + Redis + Alembic
 
+## 의존성 관리 — uv
+
+패키지·파이썬 버전·가상환경을 전부 [uv](https://docs.astral.sh/uv/)가 맡는다.
+**`pip` 과 `python -m venv` 는 쓰지 않는다.**
+
+```bash
+uv sync                    # .venv 생성 + lock 대로 설치 (파이썬 3.12도 없으면 받아온다)
+uv run pytest              # .venv 를 활성화하지 않고 바로 실행
+uv add httpx               # 패키지 추가 → pyproject.toml + uv.lock 동시 갱신
+uv remove httpx
+uv lock --upgrade          # 전체 업그레이드 (그 뒤 반드시 테스트)
+```
+
+| 파일 | 역할 |
+|------|------|
+| `pyproject.toml` | 의존성 **선언** + ruff·pytest 설정. 사람이 고치는 건 여기뿐 |
+| `uv.lock` | 해석 결과(정확한 버전·해시). **커밋한다.** 손으로 고치지 않는다 |
+| `.python-version` | `3.12`. uv 가 이 버전을 찾거나 받아온다 |
+
+- **`uv add` 를 쓰고 `pyproject.toml` 을 직접 손으로 고치지 말 것.** 직접 고치면
+  lock 이 어긋나고, CI 의 `uv sync --frozen` 이 거기서 실패한다
+- 그룹은 셋이다 — 기본(운영) / `dev`(pytest·fakeredis·ruff) / `prod`(gunicorn, systemd 배포 전용).
+  개발자용은 `uv add --dev pkg`, 운영용은 `uv add pkg`
+- 서버·CI·Docker 는 전부 `--frozen` 을 쓴다. lock 을 다시 풀지 않으니
+  **배포 때 조용히 버전이 올라가는 일이 없다**
+- pip 만 되는 환경이 필요하면: `uv export --no-dev --no-emit-project > requirements.txt`
+
+> 예전엔 `requirements.txt` freeze 였다. freeze 는 "내 윈도우에서 풀린 결과"라
+> 리눅스 서버에서 같은 트리가 나온다는 보장이 없었고, 파이썬 버전은 아예 관리 대상이
+> 아니었다. `uv.lock` 은 플랫폼별 해시까지 들고 있어서 재현성이 더 높다.
+
 ## 폴더 구조
 
 ```
@@ -354,15 +385,15 @@ class ExampleRepository:
 
 ## 테스트 — 라우터 하나 끝나면 바로
 
-의존성은 두 갈래다 — `requirements.txt`(운영) / `requirements-dev.txt`(pytest·fakeredis·ruff).
-운영 이미지에는 앞의 것만 설치된다.
+의존성·ruff·pytest 설정이 전부 `pyproject.toml` 하나에 있다 ([의존성 관리](#의존성-관리--uv) 참고).
+dev 그룹(pytest·pytest-asyncio·fakeredis·ruff)은 운영 이미지에 들어가지 않는다.
 
-린터는 **ruff** 하나다. 설정은 `pyproject.toml`에 pytest 설정과 함께 들어 있다.
+린터는 **ruff** 하나다.
 
 ```bash
-ruff check .          # 검사 (CI가 이걸 돌린다)
-ruff check . --fix    # 자동 수정
-ruff format .         # 포매팅 — 선택. CI는 강제하지 않는다
+uv run ruff check .          # 검사 (CI가 이걸 돌린다)
+uv run ruff check . --fix    # 자동 수정
+uv run ruff format .         # 포매팅 — 선택. CI는 강제하지 않는다
 ```
 
 `B008`(FastAPI의 `Depends` 기본값)은 **끄는 게 맞다.** 프레임워크 관용구라
@@ -370,10 +401,8 @@ ruff format .         # 포매팅 — 선택. CI는 강제하지 않는다
 per-file-ignore 대상이다 — 그 import가 Base.metadata 등록이라는 목적을 갖고 있다.
 
 ```bash
-pip install -r requirements.txt -r requirements-dev.txt   # 개발 환경 준비
-
-cd backend && .venv/Scripts/python.exe -m pytest        # 전체
-.venv/Scripts/python.exe -m pytest tests/test_user_router.py -v   # 한 파일
+uv run pytest                                  # 전체 (84개)
+uv run pytest tests/test_user_router.py -v     # 한 파일
 ```
 
 **사전 준비 1회**: `CREATE DATABASE db_base_test;` — `.env`의 `test_mysql_db`와 같은 이름.
