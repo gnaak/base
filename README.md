@@ -893,4 +893,8 @@ Claude Code로 개발한다면 `CLAUDE.md`, `frontend/CLAUDE.md`, `backend/CLAUD
 [chatbot_kt](https://github.com/gnaak/chatbot_kt)의 계층 구조를 FastAPI로 옮기면서 시작했고,
 새 프로젝트를 만들 때마다 부족했던 부분을 되먹여 다듬고 있습니다.
 
+- [`need.md`](need.md) — 2026-09 감사에서 뭐가 문제였고 어떤 순서로 처리했는지
+- [`CHANGELOG.md`](CHANGELOG.md) — 각 변경을 **기존 → 변경 → 왜** 로. 그때 걸린 함정 포함
+- [`DESIGN.md`](DESIGN.md) — 디자인 토큰·컴포넌트 규칙
+
 API 키·DB 접속 정보 등 시크릿은 `.env`로 분리되어 있으며 저장소에 포함하지 않습니다.
