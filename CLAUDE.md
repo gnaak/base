@@ -9,6 +9,14 @@
 | Frontend | React 19 + TypeScript + Vite 6 + TanStack Query v5 + Tailwind CSS v3 + react-router v7 |
 | Backend  | FastAPI + SQLAlchemy 2.0 (async) + MySQL(aiomysql) + Redis + Alembic                   |
 | 인증     | 쿠키 기반 JWT + OAuth (Google, Kakao)                                                  |
+| 도구     | uv(파이썬·의존성) + ruff · vitest · GitHub Actions                                      |
+
+**백엔드는 `uv` 를 쓴다. `pip` · `python -m venv` 는 쓰지 않는다.** 의존성은
+`backend/pyproject.toml` 에 선언하고 `uv.lock` 이 버전을 잡는다. 명령 앞에 `uv run` 을
+붙이면 되고 activate 는 필요 없다. 자세한 건 `backend/CLAUDE.md` 의 "의존성 관리 — uv".
+
+**디자인은 `DESIGN.md` 를 먼저 읽는다.** 색·간격·깊이가 전부 토큰이라 직접 색을 쓰면
+다크모드가 따라오지 않는다.
 
 ## 네이밍 규칙
 
@@ -146,6 +154,9 @@ nginx 가 443 을 듣는지가 갈린다.
 | `backend/.env` → `prod_domain`            | 운영 도메인 (`gnaak.com`). CORS 오리진과 쿠키 도메인이 여기서 유도된다                                             |
 | `frontend/.env.production`                | `VITE_APP_PUBLIC_BASE_URL`이 비어 있음                                                                             |
 | `frontend/src/container/admin/layout.tsx` | `adminMenu` 샘플 메뉴                                                                                              |
+| `frontend/src/container/admin/main.tsx`   | 샘플 대시보드 (`SAMPLE_USERS` 더미 데이터). 지우고 실제 화면으로                                                   |
+| `frontend/src/index.css`                  | 브랜드 색. **CSS 변수만 고치면 된다** — `tailwind.config.js`는 그 변수를 가리킬 뿐. 값은 공백 구분 RGB (`37 99 235`) |
+| `frontend/index.html`                     | `BASE` · `example.com` — title·description·OG·canonical·JSON-LD. `/setup`이 채워준다                               |
 
 **배포 시 `APP_ENV=prod`를 반드시 명시할 것.** 안 주면 호스트명으로 추측하는데, 이 추측은 EC2
 기본 호스트명에서만 맞는다. Docker·Cloud Run에 올리면 조용히 `local`로 떨어져서 쿠키가
