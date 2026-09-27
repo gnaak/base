@@ -73,9 +73,14 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 - **`frontend/src/assets/`** · `public/image.png` — 샘플 이미지 교체
 - **git 재시작** 여부 — `rm -rf .git && git init` 을 했는지
 
-## ⑤ 배포 설정 (`deploy/`)
+## ⑤ 배포 설정
 
-배포까지 간다면 `CHANGE` 표시를 채운다. 상세는 `deploy/README.md`.
+**자동 배포(`infra/`)를 쓸 거면** `deploy/` 의 `CHANGE` 는 건드리지 않는다 — `deploy.sh` 가 배포마다
+자리표시를 바꿔 깐다. 대신 `infra/README.md` 의 "1회 준비" 를 안내한다:
+`infra/.env`(AWS 키·CF 토큰) · `infra/terraform.tfvars`(`project`·`aws_account_id`·`domain`·`github_repo`).
+이때 위 ② 의 `prod_*` · `frontend/.env.production` 은 채울 필요가 없다 (SSM 에서 온다).
+
+**손으로 배포한다면** `CHANGE` 표시를 채운다. 상세는 `deploy/README.md`.
 
 | 파일 | 바꿀 것 |
 | ---- | ------ |

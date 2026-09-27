@@ -53,8 +53,8 @@ systemctl enable redis-server
 systemctl restart redis-server
 
 # ── 임시 인증서 — nginx 443 블록이 뜨게 ────────────────────────────
-# Cloudflare 단계에서 Origin 인증서로 같은 경로를 덮는다. 그 전까지는 CF 를 거치지 않는
-# 요청이 없으므로(보안그룹이 CF IP 만 받는다) 자체 서명이어도 쓸 일이 없다
+# 첫 배포 때 deploy.sh 가 SSM 의 Origin 인증서(cloudflare.tf)로 같은 경로를 덮는다.
+# 그 전까지는 CF Full (strict) 가 이 자체 서명 인증서를 거부하므로 526 이 난다 — 정상이다
 install -d -m 755 /etc/ssl/app
 openssl req -x509 -nodes -newkey rsa:2048 -days 3650 -subj "/CN=${domain}" \
   -keyout /etc/ssl/app/key.pem -out /etc/ssl/app/cert.pem

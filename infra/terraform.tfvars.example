@@ -9,6 +9,9 @@ aws_account_id = "123456789012" # infra/.env 의 키가 이 계정 것이 아니
 domain         = "example.com"  # 스킴 없이. CORS·쿠키·nginx·OAuth 리다이렉트가 여기서 나온다
 github_repo    = "gnaak/myapp"  # 이 저장소의 main 만 배포할 수 있다
 
+# domain 이 서브도메인(app.example.com)이면 CF 에 올린 도메인을 적는다
+# cloudflare_zone = "example.com"
+
 # 이 AWS 계정에 GitHub OIDC 공급자가 이미 있으면 (다른 프로젝트가 만들었으면) false
 # create_github_oidc_provider = false
 

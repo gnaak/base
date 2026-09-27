@@ -15,6 +15,14 @@ terraform {
       source  = "hashicorp/random"
       version = "~> 3.6"
     }
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 5.0"
+    }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.0"
+    }
   }
 
   # 버킷 이름은 backend.hcl 에 있다. `tf.ps1 bootstrap` 이 버킷과 함께 만들고,
@@ -36,3 +44,6 @@ provider "aws" {
     }
   }
 }
+
+# 토큰은 infra/.env 의 CLOUDFLARE_API_TOKEN → 환경변수 (tf.ps1)
+provider "cloudflare" {}

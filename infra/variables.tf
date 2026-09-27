@@ -29,6 +29,12 @@ variable "domain" {
   }
 }
 
+variable "cloudflare_zone" {
+  description = "Cloudflare 에 올린 도메인(Zone). domain 이 서브도메인(app.example.com)일 때만 적는다 (example.com)"
+  type        = string
+  default     = null
+}
+
 variable "github_repo" {
   description = "배포 권한을 줄 저장소 (owner/name). 이 저장소의 main 브랜치 워크플로만 배포할 수 있다"
   type        = string

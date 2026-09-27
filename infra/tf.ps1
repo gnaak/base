@@ -61,12 +61,16 @@ foreach ($line in Get-Content $envFile -Encoding UTF8) {
     if ($v.Trim()) { Set-Item "Env:$($k.Trim())" $v.Trim() }
 }
 
-foreach ($k in 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_REGION') {
+$cmd = if ($args.Count) { $args[0] } else { '' }
+
+# bootstrap(state 버킷)은 AWS 만 쓴다. 본체는 Cloudflare 도 쓴다
+$required = @('AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_REGION')
+if ($cmd -ne 'bootstrap') { $required += 'CLOUDFLARE_API_TOKEN' }
+foreach ($k in $required) {
     if (-not (Test-Path "Env:$k")) { throw "infra/.env 에 $k 가 비어 있습니다." }
 }
 
 # ── 실행 ──────────────────────────────────────────────────────────
-$cmd = if ($args.Count) { $args[0] } else { '' }
 $rest = @($args | Select-Object -Skip 1)
 
 if ($cmd -eq 'bootstrap') {

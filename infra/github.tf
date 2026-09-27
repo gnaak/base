@@ -84,6 +84,7 @@ resource "aws_ssm_parameter" "deploy" {
   for_each = {
     instance_id    = aws_instance.app.id
     release_bucket = aws_s3_bucket.releases.id
+    domain         = var.domain # 배포 후 외부 확인 (CF → nginx → 앱)
   }
   name  = "/${var.project}/deploy/${each.key}"
   type  = "String"

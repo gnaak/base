@@ -10,6 +10,7 @@
 | Backend  | FastAPI + SQLAlchemy 2.0 (async) + MySQL(aiomysql) + Redis + Alembic                   |
 | 인증     | 쿠키 기반 JWT + OAuth (Google, Kakao)                                                  |
 | 도구     | uv(파이썬·의존성) + ruff · vitest · GitHub Actions                                      |
+| 인프라   | Terraform(EC2·RDS·S3·Cloudflare) + cloud-init + SSM — Docker 없이 nginx·systemd 직접      |
 
 **백엔드는 `uv` 를 쓴다. `pip` · `python -m venv` 는 쓰지 않는다.** 의존성은
 `backend/pyproject.toml` 에 선언하고 `uv.lock` 이 버전을 잡는다. 명령 앞에 `uv run` 을
@@ -127,10 +128,24 @@ CI에서 다시 볼 일이 없다.
 
 ## 배포
 
-`deploy/` — nginx(`nginx.conf` + `site.conf`) · systemd(`fastapi.service`) · 배포 절차(`README.md`).
-`CHANGE` 표시만 채우면 된다. `/setup` 이 같이 훑어준다.
+**자동 배포 — `infra/README.md`.** Terraform 이 EC2·RDS·S3·IAM·Cloudflare(DNS·Origin 인증서·HTTPS 강제)를
+만들고, main 에 푸시하면 CI 가 테스트 → 빌드 → S3 → SSM 으로 서버의 `infra/server/deploy.sh` 를 돌린다.
+구성은 **CF Full (strict) → EC2(nginx + 앱 + Redis) → RDS** 고정.
 
-**먼저 정할 것 — TLS 를 누가 끝내는가.** Cloudflare / AWS ALB / EC2 직접(certbot)에 따라
+- **키는 내 PC 의 `infra/.env` 에만** 있다. 서버는 IAM Role, CI 는 OIDC — GitHub Secrets 에 AWS 키가 없다.
+  `infra/.env` 를 `backend/.env` 와 합치지 말 것 (그건 서버로 가는 파일이다)
+- terraform 은 설치하지 않는다 — `./infra/tf.ps1` 이 `.terraform-version` 을 받아 쓴다
+- **운영 `backend/.env` 는 손으로 만들지 않는다.** 배포마다 SSM `/<project>/backend/*` 에서 새로 만든다.
+  OAuth 키 등은 Parameter Store 에 넣는다 (이름이 `RawEnv` 필드와 다르면 기동 거부)
+- AWS 연결 전(템플릿 그대로)에는 CI 의 `deploy` 잡이 **건너뛴다** — 실패가 아니다
+- EC2 는 교체되지 않게 막혀 있다 (Redis 에 세션 무효화 상태가 있다). 교체되면 `jwt_secret` 이 같이 바뀐다
+- 앱이 서버에 쓰는 폴더를 추가하면 `deploy.sh` 의 `keep` + `fastapi.service` 의 `ReadWritePaths` 둘 다에
+
+`deploy/` — nginx(`nginx.conf` + `site.conf`) · systemd(`fastapi.service`) · 수동 배포 절차(`README.md`).
+자동 배포는 이 파일들을 **자리표시만 바꿔서** 그대로 깐다 — 설정을 바꾸려면 여기를 고치고 푸시한다.
+systemd 파일에는 **줄 끝 주석을 쓰지 말 것** (`User=ubuntu  # 설명` 이 사용자 이름이 되어 기동 실패).
+
+**손으로 올린다면 먼저 정할 것 — TLS 를 누가 끝내는가.** Cloudflare / AWS ALB / EC2 직접(certbot)에 따라
 nginx 가 443 을 듣는지가 갈린다.
 
 > ⚠️ **어느 형태든 HTTP→HTTPS 리다이렉트가 반드시 있어야 한다.** 없으면 평문으로 들어온
@@ -150,7 +165,8 @@ nginx 가 443 을 듣는지가 갈린다.
 
 | 위치                                      | 내용                                                                                                               |
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `backend/.env` / `frontend/.env`          | DB·JWT·OAuth 키 전부. **`jwt_secret`·`hash_key`는 프로젝트마다 새로 생성할 것**                                    |
+| `backend/.env` / `frontend/.env`          | DB·JWT·OAuth 키 전부. **`jwt_secret`·`hash_key`는 프로젝트마다 새로 생성할 것** (로컬용. 운영 값은 SSM — 자동 생성) |
+| `infra/terraform.tfvars` / `infra/.env`   | 프로젝트명·계정 ID·도메인·저장소 / AWS 키·CF 토큰. `infra/README.md` 의 "1회 준비"                                  |
 | `backend/.env` → `prod_domain`            | 운영 도메인 (`gnaak.com`). CORS 오리진과 쿠키 도메인이 여기서 유도된다                                             |
 | `frontend/.env.production`                | `VITE_APP_PUBLIC_BASE_URL`이 비어 있음                                                                             |
 | `frontend/src/container/admin/layout.tsx` | `adminMenu` 샘플 메뉴                                                                                              |

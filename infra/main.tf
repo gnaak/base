@@ -11,8 +11,8 @@ data "aws_subnet" "app" {
   default_for_az    = true
 }
 
-# ── Cloudflare IP — 80/443 은 CF 를 거친 요청만 받는다 ──────────────
-# 인증 없는 공개 API 라 CF 토큰 없이도 된다 (Phase 4 전에도 plan 이 돈다)
+# ── Cloudflare IP — 443 은 CF 를 거친 요청만 받는다 ─────────────────
+# 인증 없는 공개 API 다 (cloudflare provider 를 거치지 않는다)
 data "http" "cloudflare_ips" {
   url = "https://api.cloudflare.com/client/v4/ips"
 
@@ -35,18 +35,16 @@ resource "aws_security_group" "app" {
   # description 은 영문만 된다 (AWS 제약)
   description = "${var.project} app - HTTP/HTTPS from Cloudflare only, no SSH (use SSM)"
 
+  # 443 만. Full (strict) 에서 CF 는 서버에 443 으로만 붙고, http:// 리다이렉트는 CF 가 한다.
   # ⚠️ 22(SSH)·8000(앱)은 열지 않는다. 접속은 SSM, 앱은 127.0.0.1 에만 바인딩된다
   #    (deploy/fastapi.service 의 --forwarded-allow-ips 주석 참고)
-  dynamic "ingress" {
-    for_each = [80, 443]
-    content {
-      description      = "Cloudflare"
-      from_port        = ingress.value
-      to_port          = ingress.value
-      protocol         = "tcp"
-      cidr_blocks      = local.cloudflare.ipv4_cidrs
-      ipv6_cidr_blocks = local.cloudflare.ipv6_cidrs
-    }
+  ingress {
+    description      = "Cloudflare"
+    from_port        = 443
+    to_port          = 443
+    protocol         = "tcp"
+    cidr_blocks      = local.cloudflare.ipv4_cidrs
+    ipv6_cidr_blocks = local.cloudflare.ipv6_cidrs
   }
 
   # 패키지 설치·RDS·외부 API(OAuth·OpenAI) — 나가는 건 막지 않는다

@@ -214,3 +214,22 @@ jobs:
           echo "── 서버 에러"; inv StandardErrorContent
           echo "상태: $status"
           test "$status" = Success
+
+      # deploy/README.md "배포 후 확인" 중 밖에서만 볼 수 있는 것 — CF → nginx → 앱 전 구간
+      - name: 외부 확인
+        run: |
+          test -n "$domain"
+          code=000
+          for _ in 1 2 3 4 5 6; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "https://$domain/api/health" || true)
+            [ "$code" = 200 ] && break
+            sleep 10
+          done
+          echo "https://$domain/api/health → $code"
+          # 526 = CF 가 서버 인증서를 거부 (Origin 인증서가 안 깔림) / 52x = CF 가 서버에 못 붙음
+          test "$code" = 200
+
+          # ⚠️ http:// 가 200 이면 Secure 쿠키가 저장되지 않아 "로그인은 200인데 세션이 안 잡힘" 이 난다
+          first=$(curl -sSI "http://$domain/" | head -1)
+          echo "http://$domain/ → $first"
+          echo "$first" | grep -qE ' 30[178] '

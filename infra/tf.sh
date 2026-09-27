@@ -60,14 +60,18 @@ set -a
 eval "$(tr -d '\r' < "$root/.env")"
 set +a
 
-for k in AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION; do
+cmd=${1:-}
+[ $# -gt 0 ] && shift
+
+# bootstrap(state 버킷)은 AWS 만 쓴다. 본체는 Cloudflare 도 쓴다
+required="AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION"
+[ "$cmd" = "bootstrap" ] || required="$required CLOUDFLARE_API_TOKEN"
+for k in $required; do
   eval "v=\${$k:-}"
   [ -n "$v" ] || { echo "infra/.env 에 $k 가 비어 있습니다." >&2; exit 1; }
 done
 
 # ── 실행 ─────────────────────────────────────────────────────────
-cmd=${1:-}
-[ $# -gt 0 ] && shift
 
 if [ "$cmd" = "bootstrap" ]; then
   "$terraform" -chdir="$root/bootstrap" init

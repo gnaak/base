@@ -812,6 +812,7 @@ const adminMenu: AdminMenuItem[] = [
 - 배포에 Docker 는 쓰지 않습니다 — EC2 한 대에 nginx + systemd 로 직접 올립니다.
   파이썬 버전은 `uv.lock` + `.python-version`, OS 는 Ubuntu 24.04 고정이 맡습니다
 - GitHub Secrets 에 AWS 키가 없습니다 (OIDC 임시 권한, `infra/github.tf`)
+- 처음 세팅(AWS 키 · Cloudflare · `apply` · GitHub 변수)은 **[`infra/README.md`](infra/README.md)**
 
 > Docker 는 **로컬 인프라(compose — MySQL·Redis)** 에만 씁니다. 앱을 컨테이너에서 개발하지 마세요 —
 > Windows 에서 `C:\...` 를 바인드 마운트하면 파일 I/O 가 느리고 `inotify` 이벤트가 넘어오지 않아

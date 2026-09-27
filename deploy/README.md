@@ -1,8 +1,11 @@
 # 배포
 
-> **이 폴더는 설정 파일 원본이다. 자동화 스크립트가 아니다.**
-> 실행하는 게 아니라 **서버에 복사해서 쓰는 것**이고, 패키지 설치·프로비저닝은 하지 않는다.
-> (그건 AMI·Ansible 등 각자의 방식으로 한다)
+> **자동 배포는 [`infra/README.md`](../infra/README.md) 를 본다** — Terraform 이 EC2·RDS·Cloudflare 를
+> 만들고, main 에 푸시하면 CI 가 배포한다. 그때 이 폴더의 파일은 `infra/server/deploy.sh` 가
+> **배포마다 자리표시(`example.com`·`/srv/example`·인증서 경로)만 바꿔서 서버에 깐다.**
+> 그러니 nginx·systemd 설정을 바꾸고 싶으면 **여기를 고치고 푸시**하면 된다.
+>
+> 아래 절차는 서버를 **손으로** 올릴 때의 것이다. 주석의 지뢰 설명은 어느 쪽이든 그대로 유효하다.
 
 EC2 한 대에 nginx(정적 + 프록시) + gunicorn/uvicorn(앱)을 올리는 구성.
 
@@ -46,7 +49,7 @@ Amazon Linux · RHEL 계열이면 아래를 바꿔야 한다.
 
 ## 0. 먼저 정할 것 — TLS 를 누가 끝내는가
 
-여기서 나머지가 전부 갈린다.
+여기서 나머지가 전부 갈린다. (`infra/` 자동 배포는 **Cloudflare Full (strict)** 로 고정이다)
 
 | 배포 형태 | TLS 종단 | nginx 포트 | HTTP→HTTPS 리다이렉트 | 서버 인증서 |
 |---|---|---|---|---|
@@ -128,6 +131,7 @@ curl -sSI https://example.com/api/health | grep -i x-request-id
 |---|---|
 | 로그인 200 인데 세션 안 잡힘 | `APP_ENV` 누락 / HTTP 리다이렉트 없음 / 쿠키 도메인 불일치 |
 | 모든 사용자가 한 레이트리밋에 묶임 | `X-Forwarded-For` 프록시 헤더 누락 → 전부 `127.0.0.1` 로 보임 |
+| CF 뒤에서 사용자들이 서로 429 를 맞음 | nginx `real_ip` 없음 → `$remote_addr` 가 CF IP 몇 개. `set_real_ip_from <CF 대역>` + `real_ip_header CF-Connecting-IP` (자동 배포는 deploy.sh 가 한다) |
 | 업로드가 nginx HTML 을 반환 | `client_max_body_size` 가 앱의 `MAX_UPLOAD_BYTES` 보다 작음 |
 | 로그인에 빡센 한도가 안 걸림 | `location /auth` 로 적었다 — 실제 라우트는 `/api/auth/**` 다 |
 | 배포했는데 옛 화면 | `index.html` 이 캐시됨 — `no-store` 확인 |
