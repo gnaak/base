@@ -11,7 +11,8 @@ if [ -z "$APP_ENV" ]; then
     echo "⚠️  APP_ENV가 비어 있음 — 호스트명으로 env를 추측합니다 (의도한 DB인지 확인!)"
 fi
 
-# --frozen: lock 을 다시 풀지 않는다. 서버에서 조용히 버전이 올라가는 것을 막는다.
-uv run --frozen alembic upgrade head
+# --no-sync: 배포 절차상 `uv sync --no-dev --group prod` 가 먼저 돈다. 여기서 다시 sync 하면
+#            default-groups(dev) 기준으로 맞춰서 **운영 서버에 pytest·ruff 가 깔린다.**
+uv run --no-sync alembic upgrade head
 echo "현재 리비전:"
-uv run --frozen alembic current
+uv run --no-sync alembic current

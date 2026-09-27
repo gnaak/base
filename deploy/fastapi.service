@@ -6,6 +6,10 @@
 #   sudo journalctl -u fastapi -f        # 기동 로그 확인
 #
 # ⚠️ 바꿀 곳은 User / WorkingDirectory / 경로뿐이다 (CHANGE 표시).
+#    infra/server/deploy.sh 로 배포하면 `/srv/example` 은 알아서 바뀐다.
+#
+# ⚠️ systemd 는 **줄 끝 주석을 지원하지 않는다.** `User=ubuntu  # 설명` 은 사용자 이름이
+#    "ubuntu  # 설명" 이 되어 기동에 실패한다. 주석은 반드시 줄을 따로 쓴다.
 
 [Unit]
 Description=FastAPI (base backend)
@@ -16,9 +20,10 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=ubuntu                                     # CHANGE
-Group=ubuntu                                    # CHANGE
-WorkingDirectory=/srv/example/backend           # CHANGE
+# CHANGE — 아래 세 줄
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/srv/example/backend
 
 # ══════════════════════════════════════════════════════════════
 #  APP_ENV — 이 줄이 없으면 배포 사고가 난다
@@ -31,7 +36,8 @@ WorkingDirectory=/srv/example/backend           # CHANGE
 # `근거: hostname 추측` 이면 운에 기대고 있는 상태다.
 Environment="APP_ENV=prod"
 Environment="PYTHONUNBUFFERED=1"
-Environment="PATH=/srv/example/backend/.venv/bin"    # CHANGE
+# CHANGE
+Environment="PATH=/srv/example/backend/.venv/bin"
 
 # .env 를 유닛에서 읽고 싶다면 (선택):
 #   EnvironmentFile=/srv/example/backend/.env
@@ -82,8 +88,9 @@ StandardError=journal
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full
-# 앱이 써야 하는 곳만 열어준다 (로그·업로드)
-ReadWritePaths=/srv/example/backend/logs /srv/example/backend/media   # CHANGE
+# 앱이 써야 하는 곳만 열어준다 (로그·업로드). CHANGE
+# ⚠️ 여기 적은 폴더가 없으면 유닛이 기동에 실패한다 (deploy.sh 가 만든다)
+ReadWritePaths=/srv/example/backend/logs /srv/example/backend/media
 
 [Install]
 WantedBy=multi-user.target

@@ -1,0 +1,5 @@
+# 셸 스크립트는 어느 OS 에서 clone 해도 LF 로 받는다.
+# 윈도우 git 은 기본(autocrlf)으로 CRLF 로 바꾸는데, 그러면 리눅스 bash 가
+# `$'\r': command not found` 로 죽는다. 특히 infra/server/cloud-init.sh 는 Terraform 이
+# **작업 폴더에서** 읽어 서버에 넘기므로 윈도우 PC 에서 apply 하면 첫 부팅이 통째로 실패한다.
+*.sh text eol=lf

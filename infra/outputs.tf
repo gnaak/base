@@ -12,6 +12,11 @@ output "db_host" {
   value       = aws_db_instance.db.address
 }
 
+output "release_bucket" {
+  description = "CI 가 빌드 묶음을 올리는 곳"
+  value       = aws_s3_bucket.releases.id
+}
+
 output "ssm_connect" {
   description = "서버 접속 (AWS CLI + Session Manager 플러그인 필요. 콘솔 EC2 → 연결 → Session Manager 도 된다)"
   value       = "aws ssm start-session --target ${aws_instance.app.id} --region ${data.aws_region.current.region}"

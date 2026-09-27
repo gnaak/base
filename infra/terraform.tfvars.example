@@ -6,6 +6,7 @@
 
 project        = "myapp"        # 소문자·숫자·하이픈. 리소스 이름 접두사
 aws_account_id = "123456789012" # infra/.env 의 키가 이 계정 것이 아니면 멈춘다
+domain         = "example.com"  # 스킴 없이. CORS·쿠키·nginx·OAuth 리다이렉트가 여기서 나온다
 
 # instance_type = "t3.small"
 # volume_size   = 20

@@ -19,8 +19,18 @@ variable "aws_account_id" {
   }
 }
 
+variable "domain" {
+  description = "서비스 도메인 (스킴 없이). CORS·쿠키(prod_domain)·nginx server_name·OAuth 리다이렉트가 여기서 나온다"
+  type        = string
+
+  validation {
+    condition     = can(regex("^([a-z0-9-]+\\.)+[a-z]{2,}$", var.domain))
+    error_message = "domain 은 example.com 처럼 적습니다 (https:// · 끝의 / 없이)."
+  }
+}
+
 variable "instance_type" {
-  description = "앱 + nginx + Redis 가 한 대에 올라간다. 1GB(micro)는 프론트 빌드에서 메모리가 모자란다"
+  description = "앱 + nginx + Redis 가 한 대에 올라간다 (빌드는 CI 가 한다). x86 만 — AMI 가 amd64 다"
   type        = string
   default     = "t3.small"
 }

@@ -72,7 +72,7 @@ resource "aws_iam_role" "app" {
   })
 }
 
-# SSM 접속용. Phase 3 에서 "자기 설정 읽기" 권한이 여기 추가된다
+# SSM 접속 · Run Command 수신용. "자기 설정 읽기" 권한은 server.tf
 resource "aws_iam_role_policy_attachment" "ssm_core" {
   role       = aws_iam_role.app.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
@@ -104,6 +104,15 @@ resource "aws_instance" "app" {
 
   # 콘솔에서 실수로 "종료"를 눌러도 막힌다
   disable_api_termination = true
+
+  # 최초 부팅 1회: 패키지 · Redis · 임시 인증서. 앱은 deploy.sh 가 올린다
+  # CRLF 를 뗀다 — 윈도우 에디터가 저장하면 붙는데, 리눅스 bash 가 그걸로 죽는다 (.gitattributes 와 이중)
+  user_data = replace(templatefile("${path.module}/server/cloud-init.sh", {
+    project        = var.project
+    region         = data.aws_region.current.region
+    domain         = var.domain
+    release_bucket = aws_s3_bucket.releases.id
+  }), "\r\n", "\n")
 
   metadata_options {
     http_endpoint = "enabled"
