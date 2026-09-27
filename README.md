@@ -125,7 +125,7 @@ powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 # Backend
 cd backend
 uv sync                     # 가상환경 + 의존성. 파이썬 3.12가 없으면 uv가 받아옵니다
-sh migrate.sh "init"        # 테이블 생성
+uv run alembic upgrade head # 테이블 생성 (커밋된 리비전을 적용만 한다)
 sh run.sh                   # http://localhost:8000  (문서: /docs)
 
 # Frontend
@@ -822,27 +822,97 @@ const adminMenu: AdminMenuItem[] = [
 
 ## 9. 새 프로젝트로 가져갈 때
 
+clone 부터 운영 배포까지 순서대로. **Claude Code 를 쓴다면 clone 직후 `/setup` 한 번** — 아래
+9.2~9.4 를 훑어서 아직 템플릿 기본값인 것을 표로 보여주고, 항목별로 승인받아 고칩니다.
+
+### 9.1 가져오기
+
 ```bash
 git clone https://github.com/gnaak/base.git my-project
 cd my-project
-rm -rf .git && git init
+rm -rf .git && git init          # 템플릿 히스토리를 끊는다
 ```
 
-**Claude Code 를 쓴다면 `/setup` 한 번이면 됩니다** — 아래 항목을 훑어서 무엇이 아직
-템플릿 기본값인지 표로 보여주고 항목별로 승인받아 고칩니다.
+GitHub 에 새 저장소를 만들고 `origin` 으로 연결합니다. CI 는 첫 푸시부터 돌고
+(테스트만 — 배포는 9.5 를 하기 전까지 **건너뜁니다**), 실패가 아닙니다.
 
-체크리스트:
+### 9.2 로컬에서 돌리기 — 이것만 하면 로그인까지 된다
 
-- [ ] `backend/.env.example` → `backend/.env` 복사 후 값 채우기
-- [ ] **`jwt_secret`·`hash_key`를 새로 생성** — 템플릿 값을 그대로 쓰면 다른 프로젝트에서 발급한 토큰이 통과합니다
-- [ ] `frontend/.env.example` → `frontend/.env` 복사 후 값 채우기
-- [ ] `backend/.env`의 `prod_domain` — 운영 도메인. CORS 오리진과 쿠키 도메인이 여기서 유도됩니다
-- [ ] `frontend/.env.production`의 `VITE_APP_PUBLIC_BASE_URL`
-- [ ] `container/admin/layout.tsx`의 `adminMenu` 샘플 교체
-- [ ] 테스트 DB 생성 — `CREATE DATABASE db_base_test;` (`.env`의 `test_mysql_db`와 같은 이름)
-- [ ] `backend/alembic/versions/` 초기화 여부 결정 (User·Admin 테이블을 그대로 쓸지)
-- [ ] OAuth 콘솔에 새 redirect URI 등록
-- [ ] 배포 시 `APP_ENV=prod` 명시
+| 파일 | 할 일 |
+|---|---|
+| `backend/.env` | `cp backend/.env.example backend/.env`. `local_mysql_*` · `local_redis_*` 채우기 |
+| `backend/.env` | **`jwt_secret` · `hash_key` 새로 생성** (§3.2 명령) — 템플릿 값을 쓰면 다른 프로젝트 토큰이 통과한다 |
+| `backend/.env` | `local_mysql_db` · `test_mysql_db` 를 프로젝트 이름으로. **둘이 같으면 안 된다** (테스트가 테이블을 지운다) |
+| `docker/mysql/init.sql` · `docker-compose.yml` | 위에서 바꾼 DB 이름 두 개를 맞춘다 (compose 가 처음 뜰 때 만든다) |
+| `frontend/.env` | `cp frontend/.env.example frontend/.env`. 기본값(`http://localhost:8000`) 그대로면 된다 |
+
+```bash
+docker compose up -d
+cd backend && uv sync && uv run alembic upgrade head && sh run.sh
+cd frontend && npm install && npm run dev
+```
+
+> 첫 실행에 `migrate.sh` 를 쓰지 말 것 — 그건 **리비전을 새로 만드는** 스크립트다. 빈 DB 에서는
+> alembic 이 "Target database is not up to date" 로 거부하고, DB 가 최신이면 빈 리비전 파일이 생긴다.
+> `migrate.sh` 는 모델을 바꾼 뒤에 쓴다.
+
+> 프론트·백엔드 호스트를 섞지 말 것 (`localhost` ↔ `127.0.0.1`) — cross-site 가 돼서 쿠키가 안 실린다.
+
+### 9.3 프로젝트 정체성 — 템플릿 흔적 지우기
+
+| 위치 | 템플릿 값 | 할 일 |
+|---|---|---|
+| `frontend/index.html` | `BASE` · `example.com` | title · description · OG · canonical · JSON-LD |
+| `frontend/index.html` | `google-site-verification` | 지우거나 내 서치 콘솔 값으로 (남의 값이면 소유 확인이 안 된다) |
+| `frontend/public/` | `robots.txt` · `sitemap.xml` · `llms.txt` 의 `example.com` · `BASE` | 도메인·서비스명 |
+| `frontend/public/image.png` | 샘플 | 파비콘·OG 이미지 |
+| `frontend/src/index.css` | 브랜드 색 `--primary` 등 | **CSS 변수만** 고친다. 공백 구분 RGB (`37 99 235`). `DESIGN.md` 먼저 |
+| `frontend/src/container/admin/layout.tsx` | `adminMenu` 샘플 | 실제 메뉴 |
+| `frontend/src/container/admin/main.tsx` | `SAMPLE_USERS` 더미 대시보드 | 지우고 실제 화면 |
+| `backend/pyproject.toml` · `frontend/package.json` | `base-backend` · `frontend` | 프로젝트 이름 (선택) |
+| `deploy/fastapi.service` | `Description=FastAPI (base backend)` | 프로젝트 이름 (선택) |
+| `README.md` · `CLAUDE.md` | 템플릿 설명 | 프로젝트 설명으로. **규칙 부분(인증 계약·무한 새로고침·검증 명령)은 남긴다** |
+
+### 9.4 결정할 것
+
+| 무엇 | 선택지 |
+|---|---|
+| `backend/alembic/versions/` | User·Admin 테이블을 그대로 쓰면 둔다. 새로 시작하면 지우고 `sh migrate.sh "init"` |
+| 토큰 수명 | `access_token_minutes` · `refresh_token_hours` — 서비스 성격별 권장값이 `.env.example` 에 있다 |
+| OAuth | 쓰면 Google·Kakao 콘솔에 `http://localhost:3000/{google,kakao}/login` 등록. 안 쓰면 비워도 기동된다 |
+| 검색 노출 | 로그인 뒤 도구면 신경 쓸 것 없음. 공개 페이지가 검색에 떠야 하면 `/seo_check` · `deploy/site.conf` 하단 프리렌더 |
+| `need.md` · `CHANGELOG.md` | 템플릿 개선 기록이다. 새 프로젝트에선 지워도 된다 |
+| 앱이 서버에 쓰는 폴더 | 업로드(`media/`)·로그 외에 더 있으면 `infra/server/deploy.sh` 의 `keep` + `fastapi.service` 의 `ReadWritePaths` |
+
+### 9.5 운영 배포 — `infra/README.md`
+
+Terraform 이 EC2·RDS·Cloudflare 를 만들고, 그 뒤로는 main 푸시 = 배포입니다. 해야 할 것만 추리면:
+
+1. **Cloudflare** — 사이트 추가 → 도메인 구매처에서 네임서버 변경 → **Active** 대기 → API 토큰 (그 Zone 만)
+2. **AWS** — IAM 사용자(Admin) → **PC 마다** 액세스 키
+3. **파일 두 개** — `infra/.env`(키·토큰, 커밋 ❌) · `infra/terraform.tfvars`(`project` · `aws_account_id` · `domain` · `github_repo`, 커밋 ✅)
+4. `./infra/tf.ps1 bootstrap` → `init` → `plan` → `apply` (terraform 설치 불필요)
+5. `./infra/tf.ps1 output -raw github_variables` 의 세 값을 GitHub 저장소 **Variables** 에
+6. OAuth·OpenAI 키를 **Parameter Store** 에 (`/<project>/backend/…`, `/<project>/frontend/…`)
+7. OAuth 콘솔에 `https://<domain>/{google,kakao}/login` 등록
+8. main 에 푸시 → CI 가 테스트 → 배포 → 안팎 확인까지. 초록불이면 끝
+
+> **운영용 `backend/.env` · `frontend/.env.production` 은 만들지 않습니다.** 배포마다 SSM 에서 만들어집니다.
+> `prod_*` 키도 비워 두세요 — `jwt_secret` 같은 운영 시크릿은 Terraform 이 생성합니다.
+> 손으로 배포하는 경우만 `deploy/README.md` 의 `CHANGE` 표시를 채웁니다.
+
+### 9.6 한 장 체크리스트
+
+- [ ] clone → `.git` 새로 → GitHub 저장소 연결
+- [ ] `backend/.env` · `frontend/.env` 복사, **`jwt_secret`·`hash_key` 새로 생성**
+- [ ] DB 이름 (`.env` · `init.sql` · compose) — local 과 test 가 다르게
+- [ ] `docker compose up -d` → `alembic upgrade head` → `run.sh` → 로그인 확인
+- [ ] `index.html` · `public/` 의 `BASE` · `example.com` · `google-site-verification`
+- [ ] 브랜드 색(`index.css` 변수) · `adminMenu` · `SAMPLE_USERS`
+- [ ] alembic 리비전 유지/초기화 결정
+- [ ] (배포) CF Active · AWS 키 · `infra/.env` · `terraform.tfvars` · `apply`
+- [ ] (배포) GitHub Variables 3개 · Parameter Store 에 OAuth 키 · OAuth 콘솔 운영 URI
+- [ ] (배포) main 푸시 → CI 초록불
 
 Claude Code로 개발한다면 `CLAUDE.md`, `frontend/CLAUDE.md`, `backend/CLAUDE.md`에 규칙이 정리돼 있습니다.
 
@@ -852,7 +922,7 @@ Claude Code로 개발한다면 `CLAUDE.md`, `frontend/CLAUDE.md`, `backend/CLAUD
 |---|---|
 | `commands/` | `/feature` `/design` `/fullstack` `/fix` `/test` — 에이전트 호출 순서를 묶은 슬래시 커맨드 |
 | `agents/` | 백엔드·프론트 탐색/작성 전담 서브에이전트 7종 |
-| `commands/setup.md` | `/setup` — 템플릿을 새 프로젝트로 가져왔을 때 바꿀 것들 (clone 직후 1회) |
+| `commands/setup.md` | `/setup` — 템플릿을 새 프로젝트로 가져왔을 때 바꿀 것들 (clone 직후 1회, 위 9.2~9.4) |
 | `commands/seo_check.md` | `/seo_check` — 검색·AI 인용이 조용히 0이 되는 사고를 정적 점검 (푸시 전) |
 | `skills/seo/` | SEO·AEO·GEO·LLMO·NEO(네이버) 진단·구현 스킬 |
 
@@ -870,6 +940,7 @@ Claude Code로 개발한다면 `CLAUDE.md`, `frontend/CLAUDE.md`, `backend/CLAUD
 | 로그인은 200인데 세션이 안 잡힘 | 쿠키가 실제로 저장됐는지 DevTools에서 확인. 프론트·백엔드 호스트 불일치(`localhost` ↔ `127.0.0.1`), `{env}_domain` 오타, `APP_ENV` 오인식 순으로 의심 |
 | 무한 새로고침 / 401 반복 | §7.3 참고. `user_info` 쿠키가 남아 있는지부터 확인 |
 | 배포 후 쿠키가 안 실림 | 기동 로그의 `env=` 확인. `local`로 떨어졌으면 `APP_ENV=prod`를 명시 |
+| 자동 배포가 안 됨 / 526 · 52x | `infra/README.md` 의 트러블슈팅 |
 | CORS 차단 | `{env}_domain`에 **포트까지** 적었는지 확인. 스킴은 적지 않음 |
 | 기동 즉시 종료 | DB·Redis 연결 검증(fail-fast) 실패. 로그에 원인이 찍힘 |
 | `alembic` 히스토리 충돌 | 서버에서 autogenerate 했을 가능성. 리비전은 로컬에서만 생성 |

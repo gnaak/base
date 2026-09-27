@@ -104,7 +104,7 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 
 ```bash
 docker compose up -d && docker compose ps      # 둘 다 healthy
-cd backend && uv sync && sh migrate.sh "init"
+cd backend && uv sync && uv run alembic upgrade head   # migrate.sh 는 리비전 생성용 — 첫 실행에 쓰지 않는다
 cd backend && uv run pytest
 cd frontend && npm install && npm run check:types && npm test
 ```
