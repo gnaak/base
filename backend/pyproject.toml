@@ -30,6 +30,10 @@ dependencies = [
     # ── DB ──
     "sqlalchemy>=2.0.54",
     "aiomysql>=0.2.0",
+    # MySQL 8 기본 인증(caching_sha2_password)을 SSL 없이 비번으로 할 때 필요하다.
+    # 없으면 서버 캐시가 빈 첫 접속(재시작 직후)에서 기동이 죽는다 — RDS(SSL 끔)도 해당.
+    # CI 는 비번 없는 MySQL 이라 이걸 못 잡는다
+    "cryptography>=50.0.1",
     "alembic>=1.18.4",
     "redis>=7.3.0",
     # ── 설정·검증 ──

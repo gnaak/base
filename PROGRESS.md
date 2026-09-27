@@ -67,5 +67,8 @@
   - 검증: `validate` · 워크플로 YAML 파싱 · 스텝 스크립트 `bash -n` · `uv lock --check`
 - 이슈/메모:
   - 롤백은 `git revert` 후 푸시 (릴리스는 S3 에 60일 남는다)
+  - 로컬 검증 5종에서 발견: `cryptography` 누락. MySQL 8 기본 인증을 SSL 없이 비번으로 하면 필요한데,
+    RDS 를 SSL 없이 붙게 했으므로 운영 첫 접속에서 죽었을 것. CI 는 비번 없는 MySQL 이라 못 잡았다 → 의존성 추가.
+    검증: ruff · pytest 84 · check:types · lint(기존 경고 1) · vitest 8 · build 통과
   - `VITE_APP_PUBLIC_KAKAO_REST_API_KEY` 는 백엔드 `kakao_client_id` 와 같은 값인데 SSM 에 두 번 넣는다 —
     배포 역할이 backend 시크릿 경로를 못 읽게 하려고 일부러 나눴다
