@@ -1,0 +1,49 @@
+variable "project" {
+  description = "리소스 이름 접두사. state 버킷 이름에도 들어간다"
+  type        = string
+
+  validation {
+    # S3 버킷 규칙(소문자·숫자·하이픈, 63자) — 뒤에 `-tfstate-<계정ID>` 21자가 붙는다
+    condition     = can(regex("^[a-z0-9][a-z0-9-]{1,40}[a-z0-9]$", var.project))
+    error_message = "project 는 소문자·숫자·하이픈 3~42자여야 합니다."
+  }
+}
+
+variable "aws_account_id" {
+  description = "이 프로젝트가 쓰는 AWS 계정. 키가 다른 계정 것이면 plan 단계에서 멈춘다"
+  type        = string
+
+  validation {
+    condition     = can(regex("^[0-9]{12}$", var.aws_account_id))
+    error_message = "aws_account_id 는 숫자 12자리입니다 (콘솔 우측 상단)."
+  }
+}
+
+variable "instance_type" {
+  description = "앱 + nginx + Redis 가 한 대에 올라간다. 1GB(micro)는 프론트 빌드에서 메모리가 모자란다"
+  type        = string
+  default     = "t3.small"
+}
+
+variable "volume_size" {
+  description = "루트 디스크(GB). 로그 14일 + 업로드(media/)가 여기 쌓인다"
+  type        = number
+  default     = 20
+}
+
+variable "db_instance_class" {
+  description = "RDS 크기. micro(1GB)로 시작해서 부족하면 올린다 — 올릴 때 수 분 끊긴다"
+  type        = string
+  default     = "db.t4g.micro"
+}
+
+variable "db_name" {
+  description = "RDS 안의 데이터베이스 이름 (backend/.env 의 prod_mysql_db)"
+  type        = string
+  default     = "app"
+
+  validation {
+    condition     = can(regex("^[a-zA-Z][a-zA-Z0-9_]{0,63}$", var.db_name))
+    error_message = "db_name 은 영문으로 시작하고 영문·숫자·밑줄만 됩니다 (하이픈 불가)."
+  }
+}

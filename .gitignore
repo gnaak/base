@@ -25,6 +25,14 @@ dist-ssr/
 #    backend/.gitignore의 `!logs/.keep` 이 먹지 않는다. 디렉토리 유지는 각 하위 .gitignore에 맡긴다.
 *.log
 
+# Terraform — state 에는 비밀값이 평문으로 들어간다 (원격 state 는 S3, infra/bootstrap 만 로컬)
+# .terraform.lock.hcl 과 backend.hcl 은 커밋한다
+.terraform/
+infra/.bin/
+*.tfstate
+*.tfstate.*
+*.tfplan
+
 # OS / 에디터
 .DS_Store
 Thumbs.db
