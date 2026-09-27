@@ -49,3 +49,23 @@
   - nginx·systemd 설정의 실제 검사(`nginx -t`·`systemd-analyze`)는 서버에서 `deploy.sh` 가 한다 (로컬 컨테이너 검사는 생략)
   - OAuth·OpenAI 키는 SSM `/<project>/backend/<키>` 에 콘솔로 넣는다 — 이름이 `RawEnv` 필드와 다르면 기동 거부
   - Docker 는 쓰지 않는다. `ci.yml` 의 이미지 빌드 작업은 Phase 3 에서 정리
+
+## 3 단계: 배포 파이프라인
+
+- 상태: 🔄 진행중 — 코드 완료, 실제 배포는 `apply` + GitHub 변수 3개 설정 후
+- 완료 시각:
+- 수행 내용:
+  - `infra/github.tf` — GitHub OIDC 공급자(계정당 하나 — 있으면 `create_github_oidc_provider=false`) ·
+    배포 역할(main 브랜치만) · 권한은 릴리스 올리기 · 그 서버에 SendCommand · `/deploy`·`/frontend` 설정 읽기뿐
+    (backend 시크릿은 못 읽는다) · SSM `/<project>/deploy/*` · `/<project>/frontend/VITE_*`
+  - `ci.yml` — `deploy` 잡: main 푸시 + 테스트 통과 + `vars.AWS_DEPLOY_ROLE_ARN` 있을 때만 (연결 전엔 skip).
+    운영 값으로 프론트 빌드 → tar → S3 → SSM Run Command 로 `deploy.sh` → 결과 폴링, 실패 시 워크플로 실패.
+    `workflow_dispatch` 로 재배포. main 은 실행 취소 안 함(배포 도중 끊김 방지)
+  - `deploy.sh` — 릴리스에 필수 파일이 없으면 rsync 전에 멈춘다 (빈 폴더로 `--delete` → `/srv/app` 전체 삭제 방지)
+  - Docker 제거 — CI 이미지 빌드 잡 · `backend/Dockerfile` · `.dockerignore`. README 8.5 를 "CI · 자동 배포" 로
+  - 출력 `github_variables` — `gh variable set` 세 줄 (역할 ARN · 리전 · 프로젝트)
+  - 검증: `validate` · 워크플로 YAML 파싱 · 스텝 스크립트 `bash -n` · `uv lock --check`
+- 이슈/메모:
+  - 롤백은 `git revert` 후 푸시 (릴리스는 S3 에 60일 남는다)
+  - `VITE_APP_PUBLIC_KAKAO_REST_API_KEY` 는 백엔드 `kakao_client_id` 와 같은 값인데 SSM 에 두 번 넣는다 —
+    배포 역할이 backend 시크릿 경로를 못 읽게 하려고 일부러 나눴다

@@ -1,16 +1,23 @@
 # CLAUDE.md 의 "검증 명령"을 파이프라인에 고정한다.
 # 사람이 기억해서 돌리는 것과, 못 돌리면 머지가 막히는 것은 다르다.
+#
+# main 에 푸시하면 테스트 → 통과하면 배포 (deploy 잡). 배포는 infra/ 로 AWS 를 연결한
+# 저장소에서만 돈다 — 연결 전에는 **건너뛴다** (실패가 아니다).
+# Actions 탭 → CI → Run workflow 로 같은 걸 손으로 돌릴 수도 있다 (재배포).
 name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
-# 같은 브랜치에 연달아 푸시하면 이전 실행을 취소한다
+# PR 은 연달아 푸시하면 이전 실행을 취소한다.
+# ⚠️ main 은 취소하지 않는다 — 배포 도중 끊기면 반쯤 교체된 서버가 남는다.
+#    다음 푸시는 앞 실행이 끝날 때까지 기다린다 (대기는 최신 하나만 남는다)
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   backend:
@@ -120,19 +127,90 @@ jobs:
       - run: npm run build
         working-directory: frontend
 
-  docker:
-    name: backend 이미지 빌드
+  # Docker 는 배포에 쓰지 않는다 — EC2 에 nginx + systemd 로 직접 올린다 (infra/server/deploy.sh)
+  deploy:
+    name: deploy
+    needs: [backend, frontend]
+    # AWS 연결 전(템플릿 그대로·막 clone 한 저장소)에는 건너뛴다.
+    # 연결 = infra/ apply 후 `tf.ps1 output github_variables` 의 세 변수를 저장소에 넣는 것
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.AWS_DEPLOY_ROLE_ARN != ''
     runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      id-token: write # OIDC — AWS 키 없이 임시 권한을 받는다 (infra/github.tf)
+      contents: read
+    env:
+      PROJECT: ${{ vars.APP_PROJECT }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
     steps:
       - uses: actions/checkout@v4
 
-      - uses: docker/setup-buildx-action@v3
-
-      # 배포 직전에야 "빌드가 깨져 있었네" 를 알게 되는 상황을 막는다.
-      # push 는 하지 않는다 — 레지스트리를 쓰게 되면 여기에 태그·푸시를 붙인다.
-      - uses: docker/build-push-action@v6
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
-          context: ./backend
-          push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      # SSM /<project>/deploy/* → 이후 스텝의 환경변수, /<project>/frontend/* → .env.production
+      - name: 배포 설정 읽기
+        run: |
+          get() {
+            aws ssm get-parameters-by-path --path "/$PROJECT/$1/" \
+              --query 'Parameters[].[Name,Value]' --output text
+          }
+          get deploy | while IFS=$'\t' read -r name value; do echo "${name##*/}=$value"; done >> "$GITHUB_ENV"
+          get frontend | while IFS=$'\t' read -r name value; do echo "${name##*/}=$value"; done > frontend/.env.production
+          echo "── frontend/.env.production (번들에 박히는 공개 값)"
+          cat frontend/.env.production
+          grep -q '^VITE_APP_PUBLIC_BASE_URL=' frontend/.env.production
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 프론트 빌드 (운영 값)
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      # 서버에 필요한 것만 묶는다. 테스트·가상환경·로컬 .env 는 빠진다
+      - name: 릴리스 묶기 · 올리기
+        run: |
+          test -n "$instance_id" && test -n "$release_bucket"
+          tar -czf release.tgz \
+            --exclude=backend/tests --exclude=backend/.venv --exclude='__pycache__' \
+            --exclude=backend/logs --exclude=backend/media --exclude='backend/.env*' \
+            backend frontend/dist deploy infra/server
+          ls -lh release.tgz
+          aws s3 cp release.tgz "s3://$release_bucket/releases/$GITHUB_SHA.tgz" --only-show-errors
+
+      # 서버가 받아서 infra/server/deploy.sh 를 돌린다. 그 스크립트의 확인(헬스체크 ·
+      # 근거: APP_ENV · nginx 경유)이 하나라도 실패하면 이 스텝이 실패한다
+      - name: 서버에 배포
+        run: |
+          params=$(jq -n --arg b "$release_bucket" --arg s "$GITHUB_SHA" --arg r "$AWS_REGION" '{
+            commands: [
+              "d=/tmp/release-\($s); rm -rf $d $d.tgz; mkdir -p $d",
+              "/usr/local/bin/aws s3 cp s3://\($b)/releases/\($s).tgz $d.tgz --region \($r) --only-show-errors && tar -xzf $d.tgz -C $d && bash $d/infra/server/deploy.sh $d; rc=$?; rm -rf $d $d.tgz; exit $rc"
+            ],
+            executionTimeout: ["1800"]
+          }')
+          id=$(aws ssm send-command --instance-ids "$instance_id" --document-name AWS-RunShellScript \
+            --comment "deploy $GITHUB_SHA" --parameters "$params" --query Command.CommandId --output text)
+          echo "SSM 명령: $id"
+
+          status=Pending
+          for _ in $(seq 1 180); do
+            sleep 10
+            status=$(aws ssm get-command-invocation --command-id "$id" --instance-id "$instance_id" \
+              --query Status --output text 2>/dev/null || echo Pending)
+            case $status in Pending | InProgress | Delayed) continue ;; *) break ;; esac
+          done
+
+          inv() { aws ssm get-command-invocation --command-id "$id" --instance-id "$instance_id" --query "$1" --output text; }
+          echo "── 서버 출력"; inv StandardOutputContent
+          echo "── 서버 에러"; inv StandardErrorContent
+          echo "상태: $status"
+          test "$status" = Success

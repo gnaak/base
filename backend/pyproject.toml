@@ -15,7 +15,7 @@
 name = "base-backend"
 version = "0.1.0"
 description = "FastAPI + SQLAlchemy 풀스택 템플릿의 백엔드"
-# `.python-version` 과 Dockerfile(python:3.12-slim), CI 가 모두 3.12 다.
+# `.python-version` 과 CI, 서버(Ubuntu 24.04 기본 파이썬)가 모두 3.12 다.
 # uv 는 이 범위에 맞는 인터프리터를 **없으면 직접 받아서** 쓴다 —
 # "파이썬 버전이 달라서" 나던 문제가 여기서 끝난다.
 requires-python = ">=3.12,<3.13"
@@ -54,8 +54,7 @@ dev = [
     "fakeredis>=2.34.1",
     "ruff>=0.16.8",
 ]
-# systemd(deploy/fastapi.service) 로 띄울 때만 필요하다.
-# Docker 이미지는 uvicorn 을 직접 실행하므로 안 쓴다.
+# systemd(deploy/fastapi.service) 로 띄울 때만 필요하다 (infra/server/deploy.sh 가 이걸로 sync 한다).
 #   uv sync --no-dev --group prod
 # ⚠️ gunicorn 은 윈도우에서 **실행되지 않는다** (fcntl). 설치는 되니 lock 에는 남는다.
 prod = ["gunicorn>=23.0.0"]

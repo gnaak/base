@@ -20,6 +20,13 @@ user=ubuntu
 [ -f /var/lib/app-setup.done ] || { echo "서버 준비(cloud-init)가 안 끝났습니다. /var/log/app-setup.log 확인" >&2; exit 1; }
 step() { printf '\n── %s\n' "$*"; }
 
+# ⚠️ 아래 rsync --delete 는 src 에 없는 걸 지운다. 다운로드가 반쯤 깨진 릴리스(빈 폴더)로
+#    돌면 /srv/app 이 통째로 비워진다 — 필요한 게 다 있는지 먼저 본다
+for f in backend/pyproject.toml backend/uv.lock backend/migrate_server.sh frontend/dist/index.html \
+  deploy/nginx.conf deploy/site.conf deploy/fastapi.service; do
+  [ -f "$src/$f" ] || { echo "릴리스에 $f 가 없습니다 — 배포를 멈춥니다 (서버는 그대로)" >&2; exit 1; }
+done
+
 # ── 1. 파일 교체 ─────────────────────────────────────────────────
 step "파일 교체: $src → $app"
 # 릴리스에 없는 것 = 서버에서 생긴 것. 여기 적지 않으면 --delete 가 지운다.

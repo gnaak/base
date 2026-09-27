@@ -24,7 +24,7 @@
 | **백엔드** | 계층 구조, DI, 공통 응답·에러코드, 예외 핸들러, 로깅, Alembic, 페이지네이션, 파일 업로드, ruff | 도메인 로직 (직접 채울 것) |
 | **테스트** | pytest 84개 + vitest 8개, 픽스처 일습 | E2E |
 | **프론트** | 디자인 시스템(라이트/다크 토큰, Geist·Pretendard), 관리자 레이아웃·사이드바·대시보드, UI 킷(폼/테이블/모달/토스트/지표/스켈레톤), 라우트 가드, vitest | 도메인 화면 |
-| **인프라** | 헬스체크, 요청 ID, CORS·보안 헤더, 레이트리밋, docker-compose(MySQL·Redis), 배포용 Dockerfile, nginx·systemd 설정, GitHub Actions CI | 프론트 Dockerfile, 무중단 배포, SSR/프리렌더(레시피만 문서화) |
+| **인프라** | 헬스체크, 요청 ID, CORS·보안 헤더, 레이트리밋, docker-compose(MySQL·Redis), nginx·systemd 설정, GitHub Actions CI, Terraform 자동 배포(EC2·RDS, `infra/`) | 컨테이너 배포, 무중단 배포, SSR/프리렌더(레시피만 문서화) |
 
 ### 이 템플릿에서 집중한 것
 
@@ -794,7 +794,7 @@ const adminMenu: AdminMenuItem[] = [
 
 ---
 
-## 8.5 CI · 배포 이미지
+## 8.5 CI · 자동 배포
 
 `.github/workflows/ci.yml` 이 push·PR마다 아래를 돌립니다. `CLAUDE.md` 의 "검증 명령"을
 사람 기억이 아니라 파이프라인에 고정한 것입니다.
@@ -802,31 +802,20 @@ const adminMenu: AdminMenuItem[] = [
 | job | 하는 일 |
 |-----|---------|
 | `backend` | MySQL·Redis 서비스 컨테이너를 띄우고 `ruff` + `pytest` (uv 가 파이썬까지 맞춥니다) |
-| `frontend` | `check:types` · `lint` · `build` |
-| `docker` | `backend/Dockerfile` 빌드 — 배포 직전에야 깨진 걸 아는 상황을 막습니다 |
+| `frontend` | `check:types` · `lint` · `test` · `build` |
+| `deploy` | main 푸시 + 위 둘 통과 시. 운영 값으로 프론트 빌드 → 릴리스 묶음 → S3 → 서버가 `infra/server/deploy.sh` 실행 |
 
 서비스 컨테이너는 `docker-compose.yml` 과 **같은 이미지·같은 healthcheck** 를 씁니다.
 
-### 배포용 이미지
+- **`deploy` 는 AWS 를 연결한 저장소에서만 돕니다.** 연결 전(템플릿 그대로)에는 실패가 아니라 건너뜁니다.
+  연결은 `infra/` 로 인프라를 만든 뒤 `./infra/tf.ps1 output github_variables` 의 세 변수를 저장소에 넣는 것
+- 배포에 Docker 는 쓰지 않습니다 — EC2 한 대에 nginx + systemd 로 직접 올립니다.
+  파이썬 버전은 `uv.lock` + `.python-version`, OS 는 Ubuntu 24.04 고정이 맡습니다
+- GitHub Secrets 에 AWS 키가 없습니다 (OIDC 임시 권한, `infra/github.tf`)
 
-```bash
-docker build -t base-backend ./backend
-docker run --rm -p 8000:8000 --env-file backend/.env base-backend
-```
-
-- `python:3.12-slim` 고정 — 서버의 시스템 파이썬 버전과 무관해집니다
-- 멀티스테이지 — 빌더에서 `uv sync --frozen --no-dev` 로 `.venv` 를 만들고 그것만 런타임으로 옮깁니다.
-  컴파일러도 uv 바이너리도 최종 이미지에 남지 않고, 소스만 바뀐 빌드는 의존성 레이어가 캐시됩니다
-- 비루트(`uid 10001`) 실행, `APP_ENV=prod` 가 이미지에 박혀 있습니다
-  (이걸 빠뜨려 `local` 로 떨어지는 것이 이 템플릿의 단골 사고입니다)
-- `.env` 는 `.dockerignore` 로 제외됩니다 — 운영 값은 `--env-file` / `-e` 로 주입하세요
-  (`.env` 가 없으면 pydantic-settings 가 실제 환경변수에서 읽습니다)
-- 마이그레이션은 컨테이너에서: `docker run --rm --env-file … base-backend alembic upgrade head`
-
-> **개발에는 이 이미지를 쓰지 마세요.** 핫리로드를 하려면 소스를 바인드 마운트해야 하는데,
-> Windows 에서 `C:\...` 를 마운트하면 파일 I/O 가 느리고 `inotify` 이벤트가 넘어오지 않아
-> `--reload` 와 Vite HMR 이 제대로 동작하지 않습니다. 개발은 `uv sync` + `sh run.sh` 로 하고,
-> Docker 는 **인프라(compose)와 배포(이미지)** 에만 씁니다.
+> Docker 는 **로컬 인프라(compose — MySQL·Redis)** 에만 씁니다. 앱을 컨테이너에서 개발하지 마세요 —
+> Windows 에서 `C:\...` 를 바인드 마운트하면 파일 I/O 가 느리고 `inotify` 이벤트가 넘어오지 않아
+> `--reload` 와 Vite HMR 이 제대로 동작하지 않습니다. 개발은 `uv sync` + `sh run.sh` 로 합니다.
 
 ---
 

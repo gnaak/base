@@ -25,7 +25,7 @@ uv lock --upgrade          # 전체 업그레이드 (그 뒤 반드시 테스트
   lock 이 어긋나고, CI 의 `uv sync --frozen` 이 거기서 실패한다
 - 그룹은 셋이다 — 기본(운영) / `dev`(pytest·fakeredis·ruff) / `prod`(gunicorn, systemd 배포 전용).
   개발자용은 `uv add --dev pkg`, 운영용은 `uv add pkg`
-- 서버·CI·Docker 는 전부 `--frozen` 을 쓴다. lock 을 다시 풀지 않으니
+- 서버·CI 는 전부 `--frozen` 을 쓴다. lock 을 다시 풀지 않으니
   **배포 때 조용히 버전이 올라가는 일이 없다**
 - pip 만 되는 환경이 필요하면: `uv export --no-dev --no-emit-project > requirements.txt`
 

@@ -29,6 +29,22 @@ variable "domain" {
   }
 }
 
+variable "github_repo" {
+  description = "배포 권한을 줄 저장소 (owner/name). 이 저장소의 main 브랜치 워크플로만 배포할 수 있다"
+  type        = string
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", var.github_repo))
+    error_message = "github_repo 는 owner/name 형식입니다 (예: gnaak/myapp)."
+  }
+}
+
+variable "create_github_oidc_provider" {
+  description = "GitHub OIDC 공급자는 계정당 하나다. 이 계정에 이미 있으면(다른 프로젝트가 만들었으면) false"
+  type        = bool
+  default     = true
+}
+
 variable "instance_type" {
   description = "앱 + nginx + Redis 가 한 대에 올라간다 (빌드는 CI 가 한다). x86 만 — AMI 가 amd64 다"
   type        = string
