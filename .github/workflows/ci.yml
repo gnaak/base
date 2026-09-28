@@ -127,10 +127,36 @@ jobs:
       - run: npm run build
         working-directory: frontend
 
+  # 인프라 코드 — 키 없이 돈다 (mock provider). edge 두 방식이 다 plan 되는지 본다
+  infra:
+    name: infra (terraform validate · test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: terraform 버전 (로컬 tf.ps1 과 같은 값)
+        id: tf
+        run: echo "version=$(tr -d ' \r\n' < infra/.terraform-version)" >> "$GITHUB_OUTPUT"
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ steps.tf.outputs.version }}
+
+      - name: fmt · validate · test
+        working-directory: infra
+        run: |
+          terraform fmt -check -recursive
+          terraform init -backend=false -input=false
+          terraform validate
+          terraform test
+
+      - name: 서버 스크립트 문법
+        run: bash -n infra/server/deploy.sh && bash -n infra/server/cloud-init.sh && sh -n infra/tf.sh
+
   # Docker 는 배포에 쓰지 않는다 — EC2 에 nginx + systemd 로 직접 올린다 (infra/server/deploy.sh)
   deploy:
     name: deploy
-    needs: [backend, frontend]
+    needs: [backend, frontend, infra]
     # AWS 연결 전(템플릿 그대로·막 clone 한 저장소)에는 건너뛴다.
     # 연결 = infra/ apply 후 `tf.ps1 output github_variables` 의 세 변수를 저장소에 넣는 것
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.AWS_DEPLOY_ROLE_ARN != ''

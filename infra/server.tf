@@ -92,6 +92,18 @@ resource "aws_ssm_parameter" "backend_secrets" {
   value    = local.backend_secrets[each.key]
 }
 
+# ── 앞단 정보 — deploy.sh 가 nginx 의 "방문자 실제 IP" 설정을 여기에 맞춰 만든다 ──
+# cloud-init(/etc/app.env)이 아니라 SSM 에 두는 이유: edge 를 나중에 바꿔도 다음 배포에 반영되게
+resource "aws_ssm_parameter" "server" {
+  for_each = {
+    edge     = var.edge
+    vpc_cidr = data.aws_vpc.default.cidr_block # edge=aws 일 때 ALB 가 이 대역에서 온다
+  }
+  name  = "/${var.project}/server/${each.key}"
+  type  = "String"
+  value = each.value
+}
+
 # ── 서버 권한 — 자기 설정 읽기 + 릴리스 받기. 그 외엔 아무것도 못 한다 ──────
 resource "aws_iam_role_policy" "app" {
   name = "read-own-config"

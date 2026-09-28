@@ -63,9 +63,10 @@ foreach ($line in Get-Content $envFile -Encoding UTF8) {
 
 $cmd = if ($args.Count) { $args[0] } else { '' }
 
-# bootstrap(state 버킷)은 AWS 만 쓴다. 본체는 Cloudflare 도 쓴다
+# bootstrap(state 버킷)은 AWS 만 쓴다. 본체는 edge = "cloudflare"(기본)일 때 Cloudflare 도 쓴다
+$edgeAws = (Get-Content $tfvars -Encoding UTF8) -match '^\s*edge\s*=\s*"aws"'
 $required = @('AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_REGION')
-if ($cmd -ne 'bootstrap') { $required += 'CLOUDFLARE_API_TOKEN' }
+if ($cmd -ne 'bootstrap' -and -not $edgeAws) { $required += 'CLOUDFLARE_API_TOKEN' }
 foreach ($k in $required) {
     if (-not (Test-Path "Env:$k")) { throw "infra/.env 에 $k 가 비어 있습니다." }
 }

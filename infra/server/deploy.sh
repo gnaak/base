@@ -81,38 +81,68 @@ render() {
     "$1"
 }
 
+ssm_get() {
+  aws ssm get-parameter --region "$AWS_REGION" --name "/$PROJECT/$1" \
+    --with-decryption --query Parameter.Value --output text 2>/dev/null
+}
+# 앞단 — infra/variables.tf 의 edge (cloudflare | aws). 예전 인프라엔 값이 없으므로 cloudflare
+edge=$(ssm_get server/edge) || edge=cloudflare
+echo "앞단: $edge"
+
 # nginx -t 가 실패하면 옛 설정으로 되돌린다 — 그대로 두면 다음 재부팅에 nginx 가 안 뜬다
+realip=/etc/nginx/conf.d/edge-realip.conf
 backup=$(mktemp -d)
 cp -a /etc/nginx/nginx.conf /etc/ssl/app/cert.pem /etc/ssl/app/key.pem "$backup/"
 [ -f /etc/nginx/sites-available/app ] && cp -a /etc/nginx/sites-available/app "$backup/"
-[ -f /etc/nginx/conf.d/cloudflare-realip.conf ] && cp -a /etc/nginx/conf.d/cloudflare-realip.conf "$backup/"
+[ -f "$realip" ] && cp -a "$realip" "$backup/"
+rm -f /etc/nginx/conf.d/cloudflare-realip.conf # 예전 이름
 
-# Origin 인증서 — SSM /<project>/tls/{cert,key} (cloudflare.tf). 없으면 cloud-init 의 임시 인증서 그대로
-tls_get() {
-  aws ssm get-parameter --region "$AWS_REGION" --name "/$PROJECT/tls/$1" \
-    --with-decryption --query Parameter.Value --output text 2>/dev/null
-}
-if cert=$(tls_get cert) && key=$(tls_get key) && [ -n "$cert" ] && [ -n "$key" ]; then
-  printf '%s\n' "$cert" > /etc/ssl/app/cert.pem
-  (umask 077 && printf '%s\n' "$key" > /etc/ssl/app/key.pem)
-  echo "Origin 인증서 설치"
-else
-  echo "⚠️ SSM 에 Origin 인증서가 없어 임시 인증서를 씁니다 — CF Full (strict) 에서는 526 이 납니다" >&2
+# ── 인증서 ──
+# cloudflare: SSM 의 Origin 인증서 (cloudflare.tf). CF Full (strict) 가 이걸 검증한다
+# aws:        cloud-init 의 임시 인증서 그대로 — ALB 는 서버 인증서를 검증하지 않는다 (사용자는 ACM 을 본다)
+if [ "$edge" = cloudflare ]; then
+  if cert=$(ssm_get tls/cert) && key=$(ssm_get tls/key) && [ -n "$cert" ] && [ -n "$key" ]; then
+    printf '%s\n' "$cert" > /etc/ssl/app/cert.pem
+    (umask 077 && printf '%s\n' "$key" > /etc/ssl/app/key.pem)
+    echo "Origin 인증서 설치"
+  else
+    echo "⚠️ SSM 에 Origin 인증서가 없어 임시 인증서를 씁니다 — CF Full (strict) 에서는 526 이 납니다" >&2
+  fi
 fi
 
-# 방문자 실제 IP — CF 뒤에서는 $remote_addr 가 CF 서버 IP 다. 안 풀면 nginx 레이트리밋
-# (nginx.conf 의 limit_req_zone)이 CF IP 몇 개에 **전 사용자를 묶는다**. 목록은 CF 가 가끔 바꾸므로 배포마다 받는다.
-# 받기에 실패하면 이전 파일을 그대로 쓴다
-ips=$(curl -fsS --max-time 10 https://www.cloudflare.com/ips-v4 && echo && curl -fsS --max-time 10 https://www.cloudflare.com/ips-v6) || ips=""
-ips=$(printf '%s\n' "$ips" | grep -E '^[0-9a-fA-F.:]+/[0-9]+$' || true)
-if [ -n "$ips" ]; then
-  {
-    echo "# deploy.sh 가 만든다 (Cloudflare IP 목록). 손으로 고치지 말 것"
-    printf '%s\n' "$ips" | sed 's/.*/set_real_ip_from &;/'
-    echo "real_ip_header CF-Connecting-IP;"
-  } > /etc/nginx/conf.d/cloudflare-realip.conf
+# ── 방문자 실제 IP ──
+# 앞단 뒤에서는 $remote_addr 가 앞단(CF 서버 / ALB) IP 다. 안 풀면 nginx 레이트리밋(limit_req_zone)이
+# 앞단 IP 몇 개에 **전 사용자를 묶는다**
+if [ "$edge" = aws ]; then
+  vpc_cidr=$(ssm_get server/vpc_cidr) || vpc_cidr=""
+  [ -n "$vpc_cidr" ] || { echo "SSM /$PROJECT/server/vpc_cidr 가 없습니다 — infra 를 apply 하세요" >&2; exit 1; }
+  cat > "$realip" <<EOF
+# deploy.sh 가 만든다 (edge=aws). 손으로 고치지 말 것
+# ALB 는 VPC 안($vpc_cidr)에서 온다. X-Forwarded-For 를 오른쪽부터 읽어 ALB 를 건너뛴 첫 IP 가 방문자다
+set_real_ip_from $vpc_cidr;
+real_ip_header X-Forwarded-For;
+real_ip_recursive on;
+# ⚠️ 앱(core/utils/rate_limit.py)은 CF-Connecting-IP 를 1순위로 믿는다. CF 는 이 헤더를 덮어쓰지만
+#    ALB 는 사용자가 보낸 값을 **그대로** 넘기므로, 위조하면 레이트리밋을 피할 수 있다 → 진짜 방문자 IP 로 덮는다
+proxy_set_header CF-Connecting-IP \$remote_addr;
+EOF
 else
-  echo "⚠️ Cloudflare IP 목록을 못 받아 이전 real_ip 설정을 유지합니다" >&2
+  # CF 목록은 CF 가 가끔 바꾸므로 배포마다 받는다. 받기에 실패하면 이전 파일을 그대로 쓴다
+  ips=$(curl -fsS --max-time 10 https://www.cloudflare.com/ips-v4 && echo && curl -fsS --max-time 10 https://www.cloudflare.com/ips-v6) || ips=""
+  ips=$(printf '%s\n' "$ips" | grep -E '^[0-9a-fA-F.:]+/[0-9]+$' || true)
+  if [ -n "$ips" ]; then
+    {
+      echo "# deploy.sh 가 만든다 (edge=cloudflare, Cloudflare IP 목록). 손으로 고치지 말 것"
+      printf '%s\n' "$ips" | sed 's/.*/set_real_ip_from &;/'
+      echo "real_ip_header CF-Connecting-IP;"
+    } > "$realip"
+  elif grep -q 'edge=cloudflare' "$realip" 2>/dev/null; then
+    echo "⚠️ Cloudflare IP 목록을 못 받아 이전 real_ip 설정을 유지합니다" >&2
+  else
+    # aws 에서 막 바꾼 경우의 옛 설정(ALB 용)은 CF 뒤에서 틀린 IP 를 믿게 하므로 지운다
+    rm -f "$realip"
+    echo "⚠️ Cloudflare IP 목록을 못 받았고 쓸 만한 이전 설정도 없습니다 — 다음 배포에서 다시 시도합니다" >&2
+  fi
 fi
 
 render "$src/deploy/nginx.conf" > /etc/nginx/nginx.conf
@@ -122,11 +152,7 @@ if ! nginx -t; then
   cp -a "$backup/nginx.conf" /etc/nginx/nginx.conf
   cp -a "$backup/cert.pem" "$backup/key.pem" /etc/ssl/app/
   if [ -f "$backup/app" ]; then cp -a "$backup/app" /etc/nginx/sites-available/app; else rm -f /etc/nginx/sites-enabled/app; fi
-  if [ -f "$backup/cloudflare-realip.conf" ]; then
-    cp -a "$backup/cloudflare-realip.conf" /etc/nginx/conf.d/
-  else
-    rm -f /etc/nginx/conf.d/cloudflare-realip.conf
-  fi
+  if [ -f "$backup/edge-realip.conf" ]; then cp -a "$backup/edge-realip.conf" "$realip"; else rm -f "$realip"; fi
   echo "nginx 설정이 틀려서 되돌렸습니다. deploy/nginx.conf · site.conf 를 확인하세요." >&2
   exit 1
 fi
@@ -163,7 +189,7 @@ journalctl -u fastapi --since "$since" --no-pager | grep -q '근거: APP_ENV' ||
   fail "기동 로그에 '근거: APP_ENV' 가 없습니다 — fastapi.service 의 APP_ENV=prod 확인"
 echo "✓ env=prod (근거: APP_ENV)"
 
-# ② nginx 경유 (Origin 인증서는 CF 만 신뢰하는 인증서라 -k)
+# ② nginx 경유 (서버 인증서는 CF Origin / 자체 서명이라 브라우저용이 아니다 → -k)
 curl -fsSk -o /dev/null --resolve "$DOMAIN:443:127.0.0.1" "https://$DOMAIN/api/health" ||
   fail "nginx 를 거친 헬스체크 실패 — deploy/site.conf 확인"
 echo "✓ nginx 경유 헬스체크"

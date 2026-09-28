@@ -3,22 +3,39 @@
 빈 AWS 계정에서 `apply` 한 번이면 서버·DB·도메인·HTTPS 가 다 서고,
 그 뒤로는 **main 에 푸시하면 테스트 → 배포**가 알아서 돈다.
 
+앞단(DNS·TLS)은 `terraform.tfvars` 의 **`edge` 하나로** 고른다.
+
 ```
-사용자 ──HTTPS──▶ Cloudflare ──HTTPS(Origin 인증서)──▶ EC2 ─ nginx ─ 앱(systemd) ─ Redis
-                  DNS · TLS · http→https                    │
-                                                            └──▶ RDS (MySQL 8.4, 프라이빗)
+edge = "cloudflare" (기본)
+사용자 ─HTTPS─▶ Cloudflare ─HTTPS(Origin 인증서)─▶ EC2 ─ nginx ─ 앱(systemd) ─ Redis
+               DNS · TLS · http→https                  │
+                                                       └──▶ RDS (MySQL 8.4, 프라이빗)
+edge = "aws"
+사용자 ─HTTPS─▶ Route 53 → ALB(ACM 인증서) ─HTTPS─▶ EC2 ─ (위와 같음)
+                          80 은 https 로 301
 
 GitHub Actions ─ 테스트 → 빌드 → S3(릴리스) → SSM ─▶ 서버의 deploy.sh
 ```
 
+| | `cloudflare` | `aws` |
+|---|---|---|
+| 비용 | 무료 | ALB 월 2~3만 원 + Route 53 월 $0.5 |
+| 서버 IP | 숨겨진다 | ALB 뒤라 서버는 안 보이지만 ALB 는 공개 |
+| DDoS · 캐시 | CF 가 해준다 | AWS 기본(Shield Standard)만 |
+| 서버 여러 대 | 못 한다 (DNS 가 서버 하나를 가리킨다) | 대상 그룹에 붙이면 된다 |
+| 필요한 것 | CF 계정 · API 토큰 | AWS 만 (CF 토큰 불필요) |
+
+바꿔도 서버·DB·nginx 설정은 그대로다 — 앞단만 갈린다. 서버는 어느 쪽이든 443 하나만 연다.
+
 | 누가 | 무엇을 |
 |---|---|
-| **사람 (프로젝트당 1회)** | AWS 키 · Cloudflare 사이트 추가·네임서버 · CF 토큰 · 파일 2개 채우기 · OAuth 키 |
-| **Terraform** | EC2 · 보안그룹 · 고정 IP · RDS · S3 · IAM · SSM 설정값 · 시크릿 생성 · CF DNS · Origin 인증서 · HTTPS 강제 |
+| **사람 (프로젝트당 1회)** | AWS 키 · 도메인 네임서버(CF 또는 Route 53) · (cloudflare 면) CF 토큰 · 파일 2개 · OAuth 키 |
+| **Terraform** | EC2 · 보안그룹 · 고정 IP · RDS · S3 · IAM · SSM 설정값 · 시크릿 생성 · 앞단(DNS · 인증서 · HTTPS 강제, ALB) |
 | **cloud-init** (첫 부팅 1회) | nginx · AWS CLI · uv · Redis · 임시 인증서 |
 | **GitHub Actions** (푸시마다) | 테스트 → 운영 값으로 빌드 → 릴리스 → 서버에 `deploy.sh` → 안팎 확인 |
 
-**대략 월 $45 (6만 원 안팎)** — 서울 리전, EC2 t3.small + RDS db.t4g.micro + 고정 IP 기준. 트래픽 제외. Cloudflare 는 무료 플랜.
+**대략 월 $45 (6만 원 안팎)** — 서울 리전, EC2 t3.small + RDS db.t4g.micro + 고정 IP 기준, `edge = "cloudflare"`.
+트래픽 제외. `aws` 면 ALB 만큼 더.
 
 ---
 
@@ -34,15 +51,29 @@ GitHub Actions ─ 테스트 → 빌드 → S3(릴리스) → SSM ─▶ 서버�
 > 이 키가 쓰이는 곳은 **내 PC 에서 `apply` 할 때 하나뿐**이다. 서버는 IAM Role, GitHub Actions 는
 > OIDC 로 권한을 받아서 키가 서버·GitHub 에 올라가지 않는다. root 는 이후로 쓰지 않는다.
 
-### ② Cloudflare — 도메인 올리기 · 토큰
+### ② 도메인 — 네임서버를 앞단으로
+
+어느 쪽이든 **도메인 구매처(가비아 등)의 네임서버를 바꾸는 것**만 사람이 한다. 자동화할 수 없는 유일한 부분이다.
+
+**`edge = "cloudflare"`**
 
 1. 대시보드 → **Add a site** → 도메인 입력 → Free 플랜
-2. CF 가 알려주는 **네임서버 2개로 도메인 구매처(가비아 등)의 네임서버를 바꾼다.**
+2. CF 가 알려주는 **네임서버 2개로 구매처의 네임서버를 바꾼다.**
    반영까지 몇 분~몇 시간. CF 대시보드에 **Active** 가 뜰 때까지 기다린다
    (CF 에서 산 도메인이면 이 단계는 없다)
 3. My Profile → **API Tokens → Create Token → Custom token**
    - 권한: `Zone · Zone · Read` / `Zone · DNS · Edit` / `Zone · SSL and Certificates · Edit` / `Zone · Zone Settings · Edit`
    - Zone Resources: **Specific zone → 이 도메인만** (새도 그 도메인만 영향받게)
+
+**`edge = "aws"`**
+
+1. AWS 콘솔 → **Route 53 → 호스팅 영역 생성** → 도메인 입력 → 퍼블릭
+2. 생긴 **NS 레코드 4개로 구매처의 네임서버를 바꾼다.** `nslookup -type=NS <도메인>` 에 AWS 네임서버가
+   보일 때까지 기다린다 (Route 53 에서 산 도메인이면 1·2 가 이미 돼 있다)
+3. 토큰은 필요 없다 — ①의 AWS 키로 전부 된다
+
+> ⚠️ `aws` 는 네임서버가 넘어가기 전에 `apply` 하면 **ACM 인증서 검증이 끝나지 않아** apply 가 한참
+> 멈춰 있다가 실패한다. 넘어간 걸 확인하고 돌린다.
 
 ### ③ 파일 두 개
 
@@ -53,8 +84,8 @@ cp infra/terraform.tfvars.example  infra/terraform.tfvars   # 설정 — 커밋�
 
 | 파일 | 내용 | 커밋 |
 |---|---|---|
-| `infra/.env` | `AWS_ACCESS_KEY_ID` · `AWS_SECRET_ACCESS_KEY` · `AWS_REGION` · `CLOUDFLARE_API_TOKEN` | ❌ |
-| `infra/terraform.tfvars` | `project` · `aws_account_id` · `domain` · `github_repo` | ✅ |
+| `infra/.env` | `AWS_ACCESS_KEY_ID` · `AWS_SECRET_ACCESS_KEY` · `AWS_REGION` · `CLOUDFLARE_API_TOKEN`(cloudflare 만) | ❌ |
+| `infra/terraform.tfvars` | `project` · `aws_account_id` · `domain` · `github_repo` · `edge`(생략하면 cloudflare) | ✅ |
 
 > ⚠️ `infra/.env` 를 `backend/.env` 와 합치지 말 것. `backend/.env` 는 서버로 가는 파일이고,
 > 이 키는 계정 전체 권한이다.
@@ -135,8 +166,8 @@ main 에 푸시하거나 **Actions → CI → Run workflow**. 초록불이면 �
 |---|---|
 | `/srv/app` | 릴리스를 푼 것. 배포마다 `rsync --delete` 로 교체 (`.venv`·`.env`·`logs`·`media` 는 보존) |
 | `/etc/app.env` | `PROJECT` · `AWS_REGION` · `DOMAIN` · `RELEASE_BUCKET` (cloud-init) |
-| `/etc/ssl/app/` | Origin 인증서 (배포마다 SSM 에서) |
-| `/etc/nginx/conf.d/cloudflare-realip.conf` | 방문자 실제 IP (배포마다 CF 목록에서) |
+| `/etc/ssl/app/` | cloudflare: Origin 인증서 (배포마다 SSM 에서) / aws: cloud-init 의 임시 인증서 (ALB 는 검증 안 함) |
+| `/etc/nginx/conf.d/edge-realip.conf` | 방문자 실제 IP — 배포마다 edge 에 맞춰 만든다 (cloudflare: CF 대역 / aws: VPC 대역 + `CF-Connecting-IP` 덮어쓰기) |
 | `/var/log/app-setup.log` | 첫 부팅 로그 |
 
 앱이 서버에 쓰는 폴더를 추가했다면(예: 기록 데이터를 쓰는 `backend/data`) `infra/server/deploy.sh` 의 `keep`
@@ -149,8 +180,10 @@ main 에 푸시하거나 **Actions → CI → Run workflow**. 초록불이면 �
 - 1-① 을 고객사 계정에서 한다. 키는 그 프로젝트 폴더의 `infra/.env` 에만. **폴더마다 자기 계정이라 섞이지 않는다**
 - `aws_account_id` 에 고객사 계정 ID. 키가 다른 계정 것이면 **아무것도 만들지 않고 멈춘다** (`allowed_account_ids`)
 - 그 계정에 GitHub OIDC 공급자가 이미 있으면 `create_github_oidc_provider = false`
+- 고객사가 CF 를 안 쓰면 `edge = "aws"` — Route 53 호스팅 영역만 있으면 CF 계정·토큰이 필요 없다
 - 도메인이 고객사 CF 에 있으면 그쪽에서 **그 Zone 만 권한이 있는 토큰**을 받는다. 서브도메인으로 들어가면
-  `cloudflare_zone` 에 상위 도메인을 적는다 — ⚠️ SSL strict·Always HTTPS 는 **Zone 전체**에 걸린다
+  `dns_zone` 에 상위 도메인을 적는다 — ⚠️ SSL strict·Always HTTPS 는 **Zone 전체**에 걸린다
+  (`aws` 는 레코드 하나만 건드리므로 이 문제가 없다)
 - root 는 받은 뒤 MFA 켜서 돌려준다. 계약이 끝나면 고객사가 IAM 사용자를 지우면 된다 —
   서버·CI 는 그 키에 기대지 않으므로 **지워도 서비스는 계속 돈다**
 
@@ -179,6 +212,10 @@ main 에 푸시하거나 **Actions → CI → Run workflow**. 초록불이면 �
 | `Not authorized to perform sts:AssumeRoleWithWebIdentity` | main 이 아닌 브랜치에서 돌았거나 `github_repo` 가 다르다 |
 | 도메인이 **526** | CF 가 서버 인증서를 거부 — 첫 배포 전(임시 인증서)이면 정상. 배포 뒤에도면 SSM `/<project>/tls/*` 확인 |
 | 도메인이 **521 / 522** | CF 가 서버에 못 붙음 — nginx 가 죽었거나 보안그룹 |
+| (aws) `apply` 가 ACM 검증에서 한참 멈춤 | 네임서버가 아직 Route 53 으로 안 넘어갔다 — `nslookup -type=NS <도메인>` |
+| (aws) 도메인이 **503** | 대상 그룹에 건강한 서버가 없다 — 콘솔 EC2 → 대상 그룹 → 상태. 첫 배포 전이면 정상 |
+| (aws) 도메인이 **502 / 504** | ALB 가 서버 443 에 못 붙음 / 응답이 늦음 — nginx·앱 상태, `journalctl -u fastapi` |
+| edge 를 바꿨다 | `apply` → 재배포. DNS 가 옮겨 가는 동안(수 분) 접속이 끊길 수 있다 |
 | 배포가 `서버 준비(cloud-init)가 안 끝났습니다` | 첫 부팅 중. `/var/log/app-setup.log` |
 | 배포가 `근거: APP_ENV 가 없습니다` | `deploy/fastapi.service` 의 `Environment="APP_ENV=prod"` |
 | 앱이 `Extra inputs are not permitted` 로 안 뜸 | Parameter Store 의 `/<project>/backend/` 에 `RawEnv` 에 없는 이름이 있다 |
@@ -190,12 +227,13 @@ main 에 푸시하거나 **Actions → CI → Run workflow**. 초록불이면 �
 
 | 결정 | 선택 | 이유 |
 |---|---|---|
-| 로드밸런서 | 없음 | EC2 한 대. CF 가 앞단(TLS·DDoS·캐시)을 한다. 여러 대가 되면 ALB 를 붙인다 |
+| 앞단 | `edge` 로 선택 (기본 cloudflare) | CF 는 무료에 DDoS·IP 숨김까지. CF 를 못 쓰는 고객사·여러 대 확장엔 aws(ALB). 서버 쪽은 같게 둬서 바꾸기 쉽게 |
+| ALB→서버 | HTTPS 443 (자체 서명) | ALB 는 서버 인증서를 검증하지 않는다. nginx 설정을 edge 별로 나누지 않아도 되고 구간도 암호화된다 |
 | DB | RDS | Terraform 이 EC2 를 교체하면 같은 서버의 DB 는 같이 날아간다 |
 | Redis | EC2 안 | 비용 0. EC2 교체 시 `jwt_secret` 교체로 끊은 세션 부활을 막는다 |
 | 코드 전달 | CI 빌드 → S3 → 서버는 교체만 | 테스트 통과한 빌드가 그대로 나간다 · 빌드가 깨져도 서버는 안 건드린다 · 서버에 Node·GitHub 키 없음 |
 | Docker | 안 씀 | 한 대에선 이점이 약하다. 재현성은 `uv.lock` + Ubuntu 24.04 고정 |
-| TLS | CF Full (strict) + Origin 인증서 | CF↔서버도 암호화·검증. Flexible 은 그 구간이 평문 |
+| TLS | cloudflare: Full (strict) + Origin 인증서 / aws: ACM | 앞단↔서버도 암호화. CF Flexible 은 그 구간이 평문이라 안 쓴다 |
 | 접속 | SSM | 22번을 열지 않는다. 키 페어 없음 |
 | 네트워크 | 기본 VPC | 새로 만들 이유가 없다 |
 | 키 | 로컬 `infra/.env` · 서버 IAM Role · CI OIDC | 계정 전체 권한 키는 내 PC 에만 |

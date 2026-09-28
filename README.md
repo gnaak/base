@@ -888,7 +888,9 @@ cd frontend && npm install && npm run dev
 
 Terraform 이 EC2·RDS·Cloudflare 를 만들고, 그 뒤로는 main 푸시 = 배포입니다. 해야 할 것만 추리면:
 
-1. **Cloudflare** — 사이트 추가 → 도메인 구매처에서 네임서버 변경 → **Active** 대기 → API 토큰 (그 Zone 만)
+1. **앞단 고르기** (`terraform.tfvars` 의 `edge`)
+   - `cloudflare`(기본, 무료) — CF 에 사이트 추가 → 구매처에서 네임서버 변경 → **Active** 대기 → API 토큰 (그 Zone 만)
+   - `aws`(ALB, 월 2~3만 원) — Route 53 호스팅 영역 생성 → 구매처에서 네임서버 변경 → 반영 확인. 토큰 불필요
 2. **AWS** — IAM 사용자(Admin) → **PC 마다** 액세스 키
 3. **파일 두 개** — `infra/.env`(키·토큰, 커밋 ❌) · `infra/terraform.tfvars`(`project` · `aws_account_id` · `domain` · `github_repo`, 커밋 ✅)
 4. `./infra/tf.ps1 bootstrap` → `init` → `plan` → `apply` (terraform 설치 불필요)
@@ -910,7 +912,7 @@ Terraform 이 EC2·RDS·Cloudflare 를 만들고, 그 뒤로는 main 푸시 = �
 - [ ] `index.html` · `public/` 의 `BASE` · `example.com` · `google-site-verification`
 - [ ] 브랜드 색(`index.css` 변수) · `adminMenu` · `SAMPLE_USERS`
 - [ ] alembic 리비전 유지/초기화 결정
-- [ ] (배포) CF Active · AWS 키 · `infra/.env` · `terraform.tfvars` · `apply`
+- [ ] (배포) `edge` 결정 · 네임서버(CF Active / Route 53) · AWS 키 · `infra/.env` · `terraform.tfvars` · `apply`
 - [ ] (배포) GitHub Variables 3개 · Parameter Store 에 OAuth 키 · OAuth 콘솔 운영 URI
 - [ ] (배포) main 푸시 → CI 초록불
 

@@ -49,7 +49,8 @@ Amazon Linux · RHEL 계열이면 아래를 바꿔야 한다.
 
 ## 0. 먼저 정할 것 — TLS 를 누가 끝내는가
 
-여기서 나머지가 전부 갈린다. (`infra/` 자동 배포는 **Cloudflare Full (strict)** 로 고정이다)
+여기서 나머지가 전부 갈린다. (`infra/` 자동 배포는 `edge` 로 **Cloudflare Full (strict)** 또는
+**ALB + ACM** 중 고른다 — 둘 다 서버 nginx 는 443 으로 받는다)
 
 | 배포 형태 | TLS 종단 | nginx 포트 | HTTP→HTTPS 리다이렉트 | 서버 인증서 |
 |---|---|---|---|---|

@@ -45,5 +45,9 @@ provider "aws" {
   }
 }
 
-# 토큰은 infra/.env 의 CLOUDFLARE_API_TOKEN → 환경변수 (tf.ps1)
-provider "cloudflare" {}
+# 토큰은 infra/.env 의 CLOUDFLARE_API_TOKEN → 환경변수 (tf.ps1).
+# edge = "aws" 면 CF 리소스가 하나도 없지만 provider 자체는 설정돼야 해서, 형식만 맞춘 자리표시를 준다
+# (CF API 는 한 번도 불리지 않는다)
+provider "cloudflare" {
+  api_token = local.use_cf ? null : "unused-edge-is-aws-000000000000000000000"
+}

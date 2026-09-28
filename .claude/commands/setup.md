@@ -77,7 +77,8 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 
 **자동 배포(`infra/`)를 쓸 거면** `deploy/` 의 `CHANGE` 는 건드리지 않는다 — `deploy.sh` 가 배포마다
 자리표시를 바꿔 깐다. 대신 `infra/README.md` 의 "1회 준비" 를 안내한다:
-`infra/.env`(AWS 키·CF 토큰) · `infra/terraform.tfvars`(`project`·`aws_account_id`·`domain`·`github_repo`).
+`infra/.env`(AWS 키·CF 토큰) · `infra/terraform.tfvars`(`project`·`aws_account_id`·`domain`·`github_repo`·`edge`).
+**앞단(`edge`)을 먼저 물어본다** — `cloudflare`(기본, 무료) / `aws`(Route 53 + ALB, 월 2~3만 원, CF 토큰 불필요).
 이때 위 ② 의 `prod_*` · `frontend/.env.production` 은 채울 필요가 없다 (SSM 에서 온다).
 
 **손으로 배포한다면** `CHANGE` 표시를 채운다. 상세는 `deploy/README.md`.

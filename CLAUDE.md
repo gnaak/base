@@ -78,10 +78,11 @@ cd backend  && uv run pytest                         # 라우터를 건드렸다
 cd frontend && npm run check:types && npm run lint
 cd frontend && npm test                              # vitest
 cd frontend && npm run build
+./infra/.bin/<버전>/terraform -chdir=infra test     # infra/ 를 건드렸다면 (키 불필요, mock)
 ```
 
-이 다섯 줄이 `.github/workflows/ci.yml`이 돌리는 것과 같다 — 푸시 전에 여기서 걸러내면
-CI에서 다시 볼 일이 없다.
+이 줄들이 `.github/workflows/ci.yml`이 돌리는 것과 같다 — 푸시 전에 여기서 걸러내면
+CI에서 다시 볼 일이 없다. (terraform 은 `./infra/tf.ps1` 을 한 번 부르면 `infra/.bin/` 에 받아진다)
 
 도메인 라우터를 하나 끝낼 때마다 `/test {도메인}` 으로 엣지 케이스까지 테스트를 붙인다.
 테스트가 앱 코드의 버그를 잡으면 **테스트를 느슨하게 고치지 말고 앱을 고친다.**
@@ -128,9 +129,11 @@ CI에서 다시 볼 일이 없다.
 
 ## 배포
 
-**자동 배포 — `infra/README.md`.** Terraform 이 EC2·RDS·S3·IAM·Cloudflare(DNS·Origin 인증서·HTTPS 강제)를
-만들고, main 에 푸시하면 CI 가 테스트 → 빌드 → S3 → SSM 으로 서버의 `infra/server/deploy.sh` 를 돌린다.
-구성은 **CF Full (strict) → EC2(nginx + 앱 + Redis) → RDS** 고정.
+**자동 배포 — `infra/README.md`.** Terraform 이 EC2·RDS·S3·IAM·앞단을 만들고, main 에 푸시하면
+CI 가 테스트 → 빌드 → S3 → SSM 으로 서버의 `infra/server/deploy.sh` 를 돌린다.
+구성은 **앞단 → EC2(nginx + 앱 + Redis) → RDS**. 앞단은 `terraform.tfvars` 의 **`edge`** 하나로 고른다:
+`cloudflare`(기본, 무료 — CF DNS · Origin 인증서 · Full strict) / `aws`(Route 53 · ALB · ACM).
+서버·nginx 설정은 둘 다 같다 — 갈리는 건 `cloudflare.tf` ↔ `aws_edge.tf` 와 deploy.sh 의 real_ip 뿐.
 
 - **키는 내 PC 의 `infra/.env` 에만** 있다. 서버는 IAM Role, CI 는 OIDC — GitHub Secrets 에 AWS 키가 없다.
   `infra/.env` 를 `backend/.env` 와 합치지 말 것 (그건 서버로 가는 파일이다)
@@ -140,6 +143,8 @@ CI에서 다시 볼 일이 없다.
 - AWS 연결 전(템플릿 그대로)에는 CI 의 `deploy` 잡이 **건너뛴다** — 실패가 아니다
 - EC2 는 교체되지 않게 막혀 있다 (Redis 에 세션 무효화 상태가 있다). 교체되면 `jwt_secret` 이 같이 바뀐다
 - 앱이 서버에 쓰는 폴더를 추가하면 `deploy.sh` 의 `keep` + `fastapi.service` 의 `ReadWritePaths` 둘 다에
+- ⚠️ 앱 레이트리밋은 `CF-Connecting-IP` 를 1순위로 믿는다. CF 는 이 헤더를 덮어쓰지만 **ALB 는 사용자 값을
+  그대로 넘긴다** — `edge=aws` 에서 nginx 가 덮어쓰는 줄(`edge-realip.conf`)을 지우면 위조로 한도가 뚫린다
 
 `deploy/` — nginx(`nginx.conf` + `site.conf`) · systemd(`fastapi.service`) · 수동 배포 절차(`README.md`).
 자동 배포는 이 파일들을 **자리표시만 바꿔서** 그대로 깐다 — 설정을 바꾸려면 여기를 고치고 푸시한다.

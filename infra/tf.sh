@@ -63,9 +63,11 @@ set +a
 cmd=${1:-}
 [ $# -gt 0 ] && shift
 
-# bootstrap(state 버킷)은 AWS 만 쓴다. 본체는 Cloudflare 도 쓴다
+# bootstrap(state 버킷)은 AWS 만 쓴다. 본체는 edge = "cloudflare"(기본)일 때 Cloudflare 도 쓴다
 required="AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION"
-[ "$cmd" = "bootstrap" ] || required="$required CLOUDFLARE_API_TOKEN"
+if [ "$cmd" != "bootstrap" ] && ! tr -d '\r' < "$root/terraform.tfvars" | grep -Eq '^[[:space:]]*edge[[:space:]]*=[[:space:]]*"aws"'; then
+  required="$required CLOUDFLARE_API_TOKEN"
+fi
 for k in $required; do
   eval "v=\${$k:-}"
   [ -n "$v" ] || { echo "infra/.env 에 $k 가 비어 있습니다." >&2; exit 1; }

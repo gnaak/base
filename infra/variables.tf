@@ -29,8 +29,23 @@ variable "domain" {
   }
 }
 
-variable "cloudflare_zone" {
-  description = "Cloudflare 에 올린 도메인(Zone). domain 이 서브도메인(app.example.com)일 때만 적는다 (example.com)"
+variable "edge" {
+  description = <<-EOT
+    앞단(DNS·TLS)을 누가 맡는가.
+      cloudflare — CF DNS · CF Origin 인증서 · Full (strict). 무료. 서버 IP 숨김 · DDoS 방어 · 캐시
+      aws        — Route 53 · ALB · ACM. ALB 비용(월 2~3만 원). 서버를 여러 대로 늘릴 때 그대로 쓴다
+  EOT
+  type        = string
+  default     = "cloudflare"
+
+  validation {
+    condition     = contains(["cloudflare", "aws"], var.edge)
+    error_message = "edge 는 \"cloudflare\" 또는 \"aws\" 입니다."
+  }
+}
+
+variable "dns_zone" {
+  description = "DNS 존(CF Zone / Route 53 호스팅 영역). domain 이 서브도메인(app.example.com)일 때만 적는다 (example.com)"
   type        = string
   default     = null
 }

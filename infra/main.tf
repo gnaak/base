@@ -11,10 +11,18 @@ data "aws_subnet" "app" {
   default_for_az    = true
 }
 
-# ── Cloudflare IP — 443 은 CF 를 거친 요청만 받는다 ─────────────────
+# ── 앞단 (variables.tf 의 edge) ─────────────────────────────────────
+# cloudflare → cloudflare.tf / aws → aws_edge.tf. 어느 쪽이든 서버는 443 하나만 연다
+locals {
+  use_cf  = var.edge == "cloudflare"
+  use_aws = var.edge == "aws"
+}
+
+# Cloudflare IP — edge=cloudflare 면 443 은 CF 를 거친 요청만 받는다.
 # 인증 없는 공개 API 다 (cloudflare provider 를 거치지 않는다)
 data "http" "cloudflare_ips" {
-  url = "https://api.cloudflare.com/client/v4/ips"
+  count = local.use_cf ? 1 : 0
+  url   = "https://api.cloudflare.com/client/v4/ips"
 
   lifecycle {
     # 실패했는데 그냥 넘어가면 빈 목록으로 보안그룹이 만들어져 사이트가 조용히 막힌다
@@ -26,25 +34,40 @@ data "http" "cloudflare_ips" {
 }
 
 locals {
-  cloudflare = jsondecode(data.http.cloudflare_ips.response_body).result
+  cloudflare = try(jsondecode(one(data.http.cloudflare_ips[*].response_body)).result, null)
 }
 
 resource "aws_security_group" "app" {
   name   = "${var.project}-app"
   vpc_id = data.aws_vpc.default.id
-  # description 은 영문만 된다 (AWS 제약)
+  # description 은 영문만 된다 (AWS 제약). 바꾸면 SG 가 교체되므로 edge 와 무관하게 고정
   description = "${var.project} app - HTTP/HTTPS from Cloudflare only, no SSH (use SSM)"
 
-  # 443 만. Full (strict) 에서 CF 는 서버에 443 으로만 붙고, http:// 리다이렉트는 CF 가 한다.
+  # 443 만. http:// 리다이렉트는 앞단(CF 설정 / ALB 80 리스너)이 한다.
   # ⚠️ 22(SSH)·8000(앱)은 열지 않는다. 접속은 SSM, 앱은 127.0.0.1 에만 바인딩된다
   #    (deploy/fastapi.service 의 --forwarded-allow-ips 주석 참고)
-  ingress {
-    description      = "Cloudflare"
-    from_port        = 443
-    to_port          = 443
-    protocol         = "tcp"
-    cidr_blocks      = local.cloudflare.ipv4_cidrs
-    ipv6_cidr_blocks = local.cloudflare.ipv6_cidrs
+  dynamic "ingress" {
+    for_each = local.use_cf ? [local.cloudflare] : []
+    content {
+      description      = "Cloudflare"
+      from_port        = 443
+      to_port          = 443
+      protocol         = "tcp"
+      cidr_blocks      = ingress.value.ipv4_cidrs
+      ipv6_cidr_blocks = ingress.value.ipv6_cidrs
+    }
+  }
+
+  # ALB → 서버도 HTTPS 다. ALB 는 서버 인증서를 검증하지 않아서 cloud-init 의 임시 인증서로 된다
+  dynamic "ingress" {
+    for_each = local.use_aws ? [one(aws_security_group.alb[*].id)] : []
+    content {
+      description     = "ALB"
+      from_port       = 443
+      to_port         = 443
+      protocol        = "tcp"
+      security_groups = [ingress.value]
+    }
   }
 
   # 패키지 설치·RDS·외부 API(OAuth·OpenAI) — 나가는 건 막지 않는다
