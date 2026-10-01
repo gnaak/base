@@ -133,6 +133,7 @@ Pretendard는 CDN에서 받아 한글을 맡는다.
 | `ui/table/` | Table · TableHeader · TableBody — `Row` 제네릭 |
 | `ui/` | **StatCard** · **Skeleton** · Pagination · Loading |
 | `layout/` | sideBar(GroupLink·SubLink) · login |
+| `component/common/` | **ThemeToggle**(라이트/다크) · ErrorBoundary — 관리자·고객 화면이 같이 쓴다 |
 
 ### 자주 쓰는 셋
 
@@ -149,8 +150,8 @@ const columns: Column<UserRow>[] = [
 ];
 <Table columns={columns} data={rows} loading={isLoading} />
 
-// 파괴적 동작 전 확인
-<ConfirmModal open={open} variant="warning" title="로그아웃 하시겠습니까?"
+// 파괴적 동작 전 확인 — 가운데 아이콘 → 제목 → 설명, 버튼은 반반. 아이콘은 variant 기본값 대신 바꿔 끼울 수 있다
+<ConfirmModal open={open} variant="danger" icon={<LogOut />} title="로그아웃 하시겠습니까?"
               onConfirm={handleLogout} onCancel={() => setOpen(false)} />
 ```
 
@@ -158,14 +159,16 @@ const columns: Column<UserRow>[] = [
 
 ## 6. 레이아웃
 
-- 어드민은 **사이드바 단독** 구성이다 (md 이상에서 상단 헤더 없음). 페이지 제목은 각 컨테이너가 그린다
+- 어드민은 **사이드바 + 얇은 상단 바(`h-14`)** 구성이다. 상단 바 우측에는 라이트/다크 토글이 있고, 페이지 제목은 각 컨테이너가 그린다
 - 본문 폭은 `max-w-6xl mx-auto px-6 py-8`
 - 높이는 `h-svh`를 쓴다 — 모바일 주소창이 접히고 펴질 때 `100vh`는 화면 밖으로 삐져나간다
-- 사이드바는 `w-60`. **md 미만에서는 숨는 대신 상단 바의 메뉴 버튼이 같은 사이드바를 드로어로 연다**
+- 사이드바는 `w-60`. **md 미만에서는 숨는 대신 상단 바 왼쪽의 메뉴 버튼이 같은 사이드바를 드로어로 연다**
   (`container/admin/layout.tsx`). 경로가 바뀌거나 ESC·바깥을 누르면 닫힌다 — 사장님이 휴대폰으로 열어도 이동할 수 있게
-- 다크모드는 `ThemeProvider`(`src/context/ThemeProvider.tsx`)가 `<html>` 에 `.dark` 를 붙여 켠다. 기본은 OS 설정을 따르고,
-  사이드바 하단 버튼으로 시스템 → 라이트 → 다크를 고른다(localStorage `theme`). 첫 페인트는 `index.html` 의 인라인 스크립트가 맡는다
+- 다크모드는 `ThemeProvider`(`src/context/ThemeProvider.tsx`)가 `<html>` 에 `.dark` 를 붙여 켠다. 처음엔 OS 설정을 따르고,
+  `ThemeToggle`(`component/common/themeToggle.tsx`, 라이트·다크 두 칸)로 고르면 localStorage `theme` 에 남는다.
+  관리자 상단 바와 고객 첫 화면 헤더가 같은 토글을 쓴다. 첫 페인트는 `index.html` 의 인라인 스크립트가 맡는다
 - 텍스트 선택을 막지 않는다 (전역 `user-select: none` 없음 — 버튼만 막는다). 판매자 정보·약관·표의 값은 복사돼야 한다
+- 한글 줄바꿈은 띄어쓰기에서 (`body` 의 `word-break: keep-all`). 음절에서 끊기면 "있습니 / 다" 처럼 한 글자가 다음 줄로 떨어진다
 
 ---
 

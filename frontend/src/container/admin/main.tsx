@@ -102,7 +102,7 @@ const AdminMain = () => {
           label="평균 응답"
           value={<span className="tabular-nums">128ms</span>}
           note="최근 1시간"
-          tone="warning"
+          tone="danger"
         />
       </section>
 

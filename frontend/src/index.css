@@ -191,6 +191,10 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
+  /* 한글을 음절이 아니라 띄어쓰기에서 끊는다 ("있습니 / 다" 방지). 이메일·URL 처럼
+     띄어쓰기 없는 긴 문자열은 break-word 가 칸 밖으로 넘치기 전에 자른다 */
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 .hide_scroll {

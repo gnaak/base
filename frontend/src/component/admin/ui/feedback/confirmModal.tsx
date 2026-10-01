@@ -1,6 +1,6 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useId, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, Info, X } from "lucide-react";
+import { AlertTriangle, Info } from "lucide-react";
 
 type Variant = "default" | "warning" | "danger";
 
@@ -9,8 +9,11 @@ interface ConfirmModalProps {
   onCancel: () => void;
   onConfirm: () => void;
   title: string;
+  /** 두 문장이면 `<br />` 로 직접 끊는다 — 자동 줄바꿈은 문장 중간에서 끊긴다 */
   description?: ReactNode;
   variant?: Variant;
+  /** variant 기본 아이콘 대신 쓸 아이콘 (예: 로그아웃이면 `<LogOut />`) — 색·크기는 variant 가 입힌다 */
+  icon?: ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
   confirmDisabled?: boolean;
@@ -27,29 +30,30 @@ const variantStyles: Record<
   }
 > = {
   default: {
-    iconWrap: "bg-bg-sub text-text-sub",
-    icon: <Info className="w-5 h-5" />,
+    iconWrap: "bg-bg-sub text-text-sub ring-bg-sub/50",
+    icon: <Info />,
     confirm:
       "bg-primary text-text-inverse hover:bg-primary/90 active:bg-primary-dark",
   },
   warning: {
-    iconWrap: "bg-warning-bg text-point-amber",
-    icon: <AlertTriangle className="w-5 h-5" />,
+    iconWrap: "bg-warning-bg text-point-amber ring-warning-bg/50",
+    icon: <AlertTriangle />,
     confirm:
       "bg-point-amber text-text-inverse hover:bg-point-amber/90 active:bg-point-amber",
   },
   danger: {
-    iconWrap: "bg-error-bg text-point-red",
-    icon: <AlertTriangle className="w-5 h-5" />,
+    iconWrap: "bg-error-bg text-point-red ring-error-bg/50",
+    icon: <AlertTriangle />,
     confirm:
       "bg-point-red text-text-inverse hover:bg-point-red/90 active:bg-point-red",
   },
 };
 
+// 가운데 정렬이라 넓으면 줄이 길게 늘어진다 — 확인 모달은 다른 모달보다 한 단계씩 좁다
 const sizeMap: Record<NonNullable<ConfirmModalProps["size"]>, string> = {
-  sm: "max-w-sm",
-  md: "max-w-md",
-  lg: "max-w-lg",
+  sm: "max-w-[320px]",
+  md: "max-w-sm",
+  lg: "max-w-md",
 };
 
 const ConfirmModal = ({
@@ -59,12 +63,15 @@ const ConfirmModal = ({
   title,
   description,
   variant = "default",
+  icon,
   confirmLabel = "확인",
   cancelLabel = "취소",
   confirmDisabled = false,
   hideCancel = false,
   size = "md",
 }: ConfirmModalProps) => {
+  const titleId = useId();
+
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
@@ -92,55 +99,40 @@ const ConfirmModal = ({
           "animate-[popIn_140ms_ease-out]",
           sizeMap[size],
         ].join(" ")}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-start gap-3 p-5 pb-4">
+        <div className="flex flex-col items-center text-center px-6 pt-7 pb-5">
           <div
             className={[
-              "shrink-0 w-10 h-10 rounded-xl flex items-center justify-center",
+              "w-12 h-12 rounded-full flex items-center justify-center ring-8 [&_svg]:w-[22px] [&_svg]:h-[22px]",
               style.iconWrap,
             ].join(" ")}
           >
-            {style.icon}
+            {icon ?? style.icon}
           </div>
-          <div className="flex-1 min-w-0 pt-0.5">
-            <h2 className="text-[15px] font-semibold tracking-tight text-text-main">
-              {title}
-            </h2>
-          </div>
-          <button
-            type="button"
-            onClick={onCancel}
-            aria-label="닫기"
-            className="
-              shrink-0 -mr-1 -mt-1 w-7 h-7 rounded-lg
-              flex items-center justify-center
-              text-text-disabled hover:text-text-sub hover:bg-bg-hover
-              transition-colors
-            "
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <h2 id={titleId} className="mt-5 text-[16px] font-semibold tracking-tight text-text-main">
+            {title}
+          </h2>
+          {description && (
+            <div className="mt-2 text-[13px] leading-relaxed text-text-sub flex flex-col gap-3">
+              {description}
+            </div>
+          )}
         </div>
 
-        {/* Body */}
-        {description && (
-          <div className="px-5 pb-5 text-[13px] leading-relaxed text-text-sub flex flex-col gap-3">
-            {description}
-          </div>
-        )}
-
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-2 px-5 py-3.5 border-t border-line bg-bg-sub/60 rounded-b-2xl">
+        {/* 버튼은 반반 — 취소를 숨기면 확인이 한 줄을 다 쓴다 */}
+        <div className="flex gap-2 px-6 pb-6">
           {!hideCancel && (
             <button
               type="button"
               onClick={onCancel}
               className="
-                inline-flex items-center justify-center h-9 px-4 rounded-lg
-                text-[13px] font-medium text-text-sub
-                hover:bg-bg-active/70 active:bg-bg-active
+                flex-1 inline-flex items-center justify-center h-10 rounded-lg
+                text-[13px] font-medium text-text-main
+                bg-bg-card shadow-border hover:bg-bg-hover active:bg-bg-active
                 transition-colors
               "
             >
@@ -152,7 +144,7 @@ const ConfirmModal = ({
             onClick={onConfirm}
             disabled={confirmDisabled}
             className={[
-              "inline-flex items-center justify-center h-9 px-4 rounded-lg",
+              "flex-1 inline-flex items-center justify-center h-10 rounded-lg",
               "text-[13px] font-medium transition-colors",
               "disabled:opacity-60 disabled:cursor-not-allowed",
               style.confirm,

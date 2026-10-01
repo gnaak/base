@@ -15,7 +15,7 @@ test("로그아웃하면 세션 쿠키가 지워지고 /admin 에 다시 못 들
   await loginAdmin(page);
 
   await page.getByRole("button", { name: "로그아웃" }).click();
-  await page.getByRole("button", { name: "로그아웃", exact: true }).last().click(); // 확인 모달
+  await page.getByRole("alertdialog", { name: "로그아웃 하시겠습니까?" }).getByRole("button", { name: "로그아웃" }).click();
 
   await expect(page).toHaveURL(/\/admin\/login$/);
   const names = await cookieNames(context);
@@ -27,20 +27,24 @@ test("로그아웃하면 세션 쿠키가 지워지고 /admin 에 다시 못 들
   await expect(page).toHaveURL(/\/admin\/login$/);
 });
 
-test("테마 버튼으로 다크모드가 켜지고 새로고침해도 유지된다", async ({ page }) => {
+test("우측 상단 토글로 다크/라이트가 바뀌고 새로고침해도 유지된다", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await loginAdmin(page);
   const isDark = () => page.evaluate(() => document.documentElement.classList.contains("dark"));
+  const dark = page.getByRole("button", { name: "다크 모드" });
+  const light = page.getByRole("button", { name: "라이트 모드" });
   expect(await isDark()).toBe(false);
+  await expect(light).toHaveAttribute("aria-pressed", "true"); // 처음엔 OS 설정(light)을 따른다
 
-  // 시스템 → 라이트 → 다크
-  const toggle = page.getByRole("button", { name: /^테마:/ });
-  await toggle.click();
-  await toggle.click();
+  await dark.click();
   expect(await isDark()).toBe(true);
+  await expect(dark).toHaveAttribute("aria-pressed", "true");
 
   await page.reload(); // index.html 의 첫 페인트 스크립트가 같은 값을 읽는다
   expect(await isDark()).toBe(true);
+
+  await light.click();
+  expect(await isDark()).toBe(false);
 });
 
 test("좁은 화면에서는 메뉴 버튼이 사이드바를 드로어로 연다", async ({ page }) => {
@@ -56,6 +60,9 @@ test("좁은 화면에서는 메뉴 버튼이 사이드바를 드로어로 연�
 
   await page.keyboard.press("Escape");
   await expect(drawer).toBeHidden();
+
+  // 좁은 화면에서도 상단 바에 테마 토글이 있다
+  await expect(page.getByRole("button", { name: "다크 모드" })).toBeVisible();
 });
 
 test("없는 관리자 경로는 사이드바가 있는 채로 404", async ({ page }) => {

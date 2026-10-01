@@ -44,6 +44,8 @@ test("죽은 세션 쿠키가 남아 있어도 새로고침 루프가 돌지 않
   ).toBe(1);
   expect(meCalls, "401 뒤에 같은 API 를 계속 부르면 안 된다").toBeLessThanOrEqual(2);
   expect(await cookieNames(context)).not.toContain("user_refresh_exp");
+  // 로그인 상태가 확실히 풀려 첫 화면이 로그인 카드를 보여준다
+  await expect(page.getByRole("heading", { name: "시작하기" })).toBeVisible();
 });
 
 test("access 쿠키만 없어졌으면 refresh 로 조용히 다시 로그인된다", async ({ page, context }) => {
@@ -56,4 +58,5 @@ test("access 쿠키만 없어졌으면 refresh 로 조용히 다시 로그인된
 
   expect(await cookieNames(context)).toContain("user_access_token");
   expect(await cookieNames(context)).toContain("user_user_info");
+  await expect(page.getByRole("heading", { name: /님, 반가워요$/ })).toBeVisible();
 });
