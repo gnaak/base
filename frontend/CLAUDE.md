@@ -204,3 +204,11 @@ hover·focus에서 요소가 밀리지 않는다. 그 외 `shadow-subtle` `shado
 새 클래스를 쓰기 전에 `tailwind.config.js`에 실제로 있는지 확인할 것. 없는 클래스는 에러 없이
 조용히 무시된다 — 실제로 어드민 레이아웃이 `bg-adminMain`(존재하지 않는 클래스)을 쓰고 있어서
 배경색이 통째로 안 먹고 있었다.
+
+**`npm run lint` 가 이걸 막는다 (디자인 린트, `eslint.config.js`)** — 셋 다 에러로 잡는다:
+- 고정색 (`bg-white`·`gray-*`·`[#hex]`) — `no-restricted-syntax`
+- `tailwind.config.js`·`src/**/*.css` 에 없는 클래스 — `tailwindcss/no-custom-classname`.
+  런타임에 붙이는 클래스는 `whitelist` 에 넣는다 (지금은 `theme-client`)
+- `-DEFAULT` 클래스 (`rounded-DEFAULT` 등) — 플러그인이 놓치는 패턴이라 따로 막는다. Tailwind 는 `rounded` 만 만든다
+
+`className` 속성·`clsx`·`cn` 밖(객체 맵 등)에 둔 클래스 문자열은 "없는 클래스" 검사가 못 본다 — 고정색 검사는 본다.

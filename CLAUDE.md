@@ -83,6 +83,8 @@ cd frontend && npm run build
 
 이 줄들이 `.github/workflows/ci.yml`이 돌리는 것과 같다 — 푸시 전에 여기서 걸러내면
 CI에서 다시 볼 일이 없다. (terraform 은 `./infra/tf.ps1` 을 한 번 부르면 `infra/.bin/` 에 받아진다)
+`npm run lint` 에는 **디자인 린트**(고정색·없는 클래스·`-DEFAULT` 클래스)가 들어 있다 — 빌드 에러 없이 조용히 틀리는 것들이다.
+**`/verify`** 가 위 명령 + 보안 검토 + 의존성 취약점 + 완료 기준 대조를 한 번에 돌린다.
 
 도메인 라우터를 하나 끝낼 때마다 `/test {도메인}` 으로 엣지 케이스까지 테스트를 붙인다.
 테스트가 앱 코드의 버그를 잡으면 **테스트를 느슨하게 고치지 말고 앱을 고친다.**
@@ -91,8 +93,9 @@ CI에서 다시 볼 일이 없다. (terraform 은 `./infra/tf.ps1` 을 한 번 �
 
 | | |
 | --- | --- |
-| `.claude/commands/` | `/setup`(clone 직후 1회) → `/plan`(기획 1회) → `/feature` `/design` `/fullstack` `/fix` `/test` · `/seo_check`(푸시 전) |
-| `.claude/agents/` | 단계별 서브에이전트 — `plan/`(리서치·PRD·페이지 맵·디자인) · `dev/backend/`(탐색·모델·API·**외부 연동**) · `dev/frontend/`(탐색·작성) · `verify/`(테스트 작성) |
+| `.claude/commands/` | `/setup`(clone 직후 1회) → `/plan`(기획 1회) → `/feature` `/design` `/fullstack` `/fix` `/test` → `/verify`(phase 끝·푸시 전) · `/seo_check`(푸시 전) |
+| `.claude/agents/` | 단계별 서브에이전트 — `plan/`(리서치·PRD·페이지 맵·디자인) · `dev/backend/`(탐색·모델·API·**외부 연동**) · `dev/frontend/`(탐색·작성) · `verify/`(테스트 작성·보안 검토·완료 기준 대조) |
+| `.claude/skills/security/` | 이 템플릿 기준 보안 체크리스트 — sec-reviewer·`/verify` 가 쓴다 |
 | `.claude/skills/seo/` | SEO·AEO·GEO·LLMO·NEO 진단·구현 ([원본](https://github.com/leopard627/fire-your-seo-agency), MIT) |
 
 > **에이전트 파일 규칙** — 폴더는 사람이 보기 위한 정리일 뿐, Claude는 `description` 만 보고 고른다.

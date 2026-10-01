@@ -198,6 +198,16 @@ body {
   scrollbar-width: none;
 }
 
+/* 스크롤은 되는데 스크롤바는 안 보이게. 관리자 본문·SelectBox 목록이 쓴다
+   (예전엔 쓰기만 하고 정의가 없던 클래스였다 — 디자인 린트가 찾았다) */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 .scrollbar-visible::-webkit-scrollbar {
   width: 6px;
   height: 8px;

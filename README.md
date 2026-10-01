@@ -927,10 +927,12 @@ Claude Code로 개발한다면 `CLAUDE.md`, `frontend/CLAUDE.md`, `backend/CLAUD
 | | |
 |---|---|
 | `commands/` | `/feature` `/design` `/fullstack` `/fix` `/test` — 에이전트 호출 순서를 묶은 슬래시 커맨드 |
-| `agents/` | 단계별 서브에이전트 — `plan/`(리서치·PRD·페이지 맵·디자인) · `dev/backend/` · `dev/frontend/`(탐색·작성) · `verify/`(테스트 작성) |
+| `agents/` | 단계별 서브에이전트 — `plan/`(리서치·PRD·페이지 맵·디자인) · `dev/backend/`(외부 연동 포함) · `dev/frontend/`(탐색·작성) · `verify/`(테스트 작성·보안 검토·완료 기준 대조) |
 | `commands/setup.md` | `/setup` — 템플릿을 새 프로젝트로 가져왔을 때 바꿀 것들 (clone 직후 1회, 위 9.2~9.4) |
 | `commands/plan.md` | `/plan` — 아이디어 → 인터뷰 → 리서치 → `PRD/` → 페이지 맵·디자인 테마 → `PROJECT.md` · `DECISIONS.md` (`/setup` 다음 1회, 인터뷰 뒤로 무인) |
+| `commands/verify.md` | `/verify` — 린트·타입·테스트·빌드·디자인 린트 + 보안 검토 + 의존성 취약점 + 완료 기준 대조 (phase 끝·푸시 전) |
 | `commands/seo_check.md` | `/seo_check` — 검색·AI 인용이 조용히 0이 되는 사고를 정적 점검 (푸시 전) |
+| `skills/security/` | 이 템플릿 기준 보안 체크리스트 (권한·쿠키·OAuth·업로드·nginx 헤더·WebSocket·외부 연동 등) |
 | `skills/seo/` | SEO·AEO·GEO·LLMO·NEO(네이버) 진단·구현 스킬 |
 
 > `skills/seo` 는 [fire-your-seo-agency](https://github.com/leopard627/fire-your-seo-agency)(MIT)를
