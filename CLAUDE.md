@@ -210,6 +210,7 @@ nginx 가 443 을 듣는지가 갈린다.
 | 위치                                      | 내용                                                                                                               |
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `backend/.env` / `frontend/.env`          | DB·JWT·OAuth 키 전부. **`jwt_secret`·`hash_key`는 프로젝트마다 새로 생성할 것** (로컬용. 운영 값은 SSM — 자동 생성) |
+| DB 이름 3개 · Redis                        | 개발(`local_mysql_db`, **실제로 있어야 뜬다**) · pytest(`test_mysql_db`) · E2E(`frontend/e2e/env.ts`, `db_base_e2e`)를 프로젝트 이름으로, `docker/mysql/init.sql` 도 같이. 한 MySQL·Redis 를 여러 프로젝트가 같이 쓰면 이름과 `redis_db` 번호를 프로젝트마다 다르게. `local_redis_password` 는 실제 Redis 와 맞출 것 (비밀번호 없는 Redis 에 값을 넣으면 AUTH 에러로 기동 실패) |
 | `infra/terraform.tfvars` / `infra/.env`   | 프로젝트명·계정 ID·도메인·저장소 / AWS 키·CF 토큰. `infra/README.md` 의 "1회 준비"                                  |
 | `backend/.env` → `prod_domain`            | 운영 도메인 (`gnaak.com`). CORS 오리진과 쿠키 도메인이 여기서 유도된다                                             |
 | `frontend/.env.production`                | `VITE_APP_PUBLIC_BASE_URL`이 비어 있음                                                                             |
@@ -225,7 +226,7 @@ nginx 가 443 을 듣는지가 갈린다.
 
 **로컬 개발 시**: 프론트와 백엔드 호스트를 반드시 통일할 것 (`localhost`끼리 또는 `127.0.0.1`끼리). 섞으면 cross-site가 돼서 `SameSite=Lax` 쿠키가 안 실리고, 로그인은 성공하는데 세션이 안 잡히는 증상이 난다.
 
-MySQL·Redis는 `docker compose up -d` 로 띄운다 (루트 `docker-compose.yml`). DB 두 개(`db_example`, `db_base_test`)가 자동 생성되고 값은 `backend/.env.example`과 맞춰져 있다. 직접 설치한 것을 써도 되지만 `backend/.env`의 `local_*` 값과 맞아야 한다 — 서버가 기동 시 연결을 검증(fail-fast)하고, 실패하면 원인을 로그에 남기고 그대로 종료된다.
+MySQL·Redis는 `docker compose up -d` 로 띄운다 (루트 `docker-compose.yml`). DB 세 개(`db_example`, `db_base_test`, `db_base_e2e`)가 자동 생성되고 값은 `backend/.env.example`과 맞춰져 있다. 직접 설치한 것을 써도 되지만 `backend/.env`의 `local_*` 값과 맞아야 한다 — 서버가 기동 시 연결을 검증(fail-fast)하고, 실패하면 원인을 로그에 남기고 그대로 종료된다.
 
 ## 트러블슈팅
 

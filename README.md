@@ -868,8 +868,10 @@ GitHub 에 새 저장소를 만들고 `origin` 으로 연결합니다. CI 는 �
 |---|---|
 | `backend/.env` | `cp backend/.env.example backend/.env`. `local_mysql_*` · `local_redis_*` 채우기 |
 | `backend/.env` | **`jwt_secret` · `hash_key` 새로 생성** (§3.2 명령) — 템플릿 값을 쓰면 다른 프로젝트 토큰이 통과한다 |
-| `backend/.env` | `local_mysql_db` · `test_mysql_db` 를 프로젝트 이름으로. **둘이 같으면 안 된다** (테스트가 테이블을 지운다) |
-| `docker/mysql/init.sql` · `docker-compose.yml` | 위에서 바꾼 DB 이름 두 개를 맞춘다 (compose 가 처음 뜰 때 만든다) |
+| `backend/.env` | `local_mysql_db` · `test_mysql_db` 를 프로젝트 이름으로. **둘이 같으면 안 된다** (테스트가 테이블을 지운다). `local_mysql_db` 는 **실제로 있는 DB** 여야 서버가 뜬다 |
+| `frontend/e2e/env.ts` | E2E DB 기본값 `db_base_e2e` 를 프로젝트 이름으로 — 한 MySQL 에 여러 프로젝트가 있으면 겹친다 |
+| `backend/.env` | `local_redis_password` 는 실제 Redis 와 맞춘다 (비밀번호 없는 Redis 에 값을 넣으면 `AUTH` 에러로 기동 실패). 한 Redis 를 다른 프로젝트와 같이 쓰면 `redis_db` 를 프로젝트마다 다르게 |
+| `docker/mysql/init.sql` · `docker-compose.yml` | 위에서 바꾼 DB 이름 세 개(개발·pytest·E2E)를 맞춘다 (compose 가 처음 뜰 때 만든다) |
 | `frontend/.env` | `cp frontend/.env.example frontend/.env`. 기본값(`http://localhost:8000`) 그대로면 된다 |
 
 ```bash
@@ -933,7 +935,8 @@ Terraform 이 EC2·RDS·Cloudflare 를 만들고, 그 뒤로는 main 푸시 = �
 
 - [ ] clone → `.git` 새로 → GitHub 저장소 연결
 - [ ] `backend/.env` · `frontend/.env` 복사, **`jwt_secret`·`hash_key` 새로 생성**
-- [ ] DB 이름 (`.env` · `init.sql` · compose) — local 과 test 가 다르게
+- [ ] DB 이름 3개 (`.env` · `frontend/e2e/env.ts` · `init.sql`) — 개발·pytest·E2E 가 서로 다르게, 개발 DB 는 실제로 있게
+- [ ] Redis — `local_redis_password` 를 실제 Redis 와 맞추기, 다른 프로젝트와 같이 쓰면 `redis_db` 번호 나누기
 - [ ] `docker compose up -d` → `alembic upgrade head` → `run.sh` → 로그인 확인
 - [ ] `index.html` · `public/` 의 `BASE` · `example.com` · `google-site-verification`
 - [ ] 브랜드 색(`index.css` 변수) · `adminMenu` · `SAMPLE_USERS`

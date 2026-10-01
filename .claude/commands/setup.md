@@ -35,13 +35,16 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 | 파일 | 키 | 할 일 |
 | ---- | -- | ---- |
 | `backend/.env` | `prod_domain` | 운영 도메인. **CORS 오리진과 쿠키 도메인이 여기서 유도된다** |
-| `backend/.env` | `local_mysql_db` | 프로젝트별 DB 이름 |
+| `backend/.env` | `local_mysql_db` | 프로젝트별 DB 이름. **실제로 있는 DB 인지 확인** — 없으면 서버가 기동 때 죽는다 (없으면 만들지 물어본다) |
 | `backend/.env` | `test_mysql_db` | `db_base_test` → 프로젝트명으로. local/prod 와 **절대 같으면 안 된다** |
+| `frontend/e2e/env.ts` | `E2E_MYSQL_DB` 기본값 | `db_base_e2e` → 프로젝트명으로 (한 MySQL 에 여러 프로젝트가 있으면 겹친다). local·test 와도 다르게 |
+| `backend/.env` | `local_redis_password` | **실제 Redis 와 맞출 것** — Redis 에 비밀번호가 없는데 값을 넣으면 `AUTH` 에러로 기동이 막힌다 |
+| `backend/.env` | `redis_db` | 한 Redis 를 다른 프로젝트와 같이 쓰면 프로젝트마다 다른 번호 (0~14. 15 는 E2E) |
 | `backend/.env` | `access_token_minutes` · `refresh_token_hours` | 서비스 성격에 맞게 (기본 30분 / 7일) |
 | `backend/.env` | `cookie_samesite` | 프론트·백엔드가 같은 사이트면 `lax` 유지 |
 | `frontend/.env` | `VITE_APP_PUBLIC_BASE_URL` | 백엔드 오리진 |
 | `frontend/.env.production` | 전부 | 운영 값. **비어 있으면 빌드가 빈 값으로 굳는다** |
-| `docker/mysql/init.sql` | DB 이름 2개 | `.env` 와 맞출 것 |
+| `docker/mysql/init.sql` | DB 이름 3개 (개발·pytest·E2E) | `.env` · `frontend/e2e/env.ts` 와 맞출 것 |
 | `deploy/nginx.conf` | `CHANGE` 표시 4곳 | 도메인·경로 |
 
 `{env}_domain` 규칙: 스킴 없이, CORS 때문에 포트까지, 서브도메인 공유가 필요할 때만 앞에 점.
