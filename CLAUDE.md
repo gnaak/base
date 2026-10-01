@@ -64,13 +64,13 @@ refresh 시점에만 하기 때문이고, 그게 "access는 15~30분" 권고의 
 
 ## 작업 원칙
 
-1. Phase 단위로 작업. 한 번에 여러 Phase 수행 금지.
-2. 매 Phase 완료 시 `PROGRESS.md` 업데이트 후 커밋.
-3. 테스트 통과 후 다음 Phase 진행.
+1. phase 단위로 작업. 한 번에 여러 phase 수행 금지.
+2. 매 phase 완료 시 `PROGRESS.md` 업데이트 후 커밋.
+3. 테스트 통과 후 다음 phase 진행.
 4. 불확실하면 멈추고 질문.
 5. 과도한 추상화 금지.
 
-**검증 명령** (Phase 완료 전 실행):
+**검증 명령** (phase 완료 전 실행):
 
 ```bash
 cd backend  && uv run ruff check .                   # 린트
@@ -91,35 +91,49 @@ CI에서 다시 볼 일이 없다. (terraform 은 `./infra/tf.ps1` 을 한 번 �
 
 | | |
 | --- | --- |
-| `.claude/commands/` | `/feature` `/design` `/fullstack` `/fix` `/test` · `/setup`(clone 직후 1회) · `/seo_check`(푸시 전) |
-| `.claude/agents/` | 단계별 서브에이전트 — `dev/backend/` · `dev/frontend/`(탐색·작성) · `verify/`(테스트 작성) |
+| `.claude/commands/` | `/setup`(clone 직후 1회) → `/plan`(기획 1회) → `/feature` `/design` `/fullstack` `/fix` `/test` · `/seo_check`(푸시 전) |
+| `.claude/agents/` | 단계별 서브에이전트 — `plan/`(리서치·PRD) · `dev/backend/` · `dev/frontend/`(탐색·작성) · `verify/`(테스트 작성) |
+| `.claude/skills/seo/` | SEO·AEO·GEO·LLMO·NEO 진단·구현 ([원본](https://github.com/leopard627/fire-your-seo-agency), MIT) |
 
 > **에이전트 파일 규칙** — 폴더는 사람이 보기 위한 정리일 뿐, Claude는 `description` 만 보고 고른다.
 > 도구 제한은 **`tools:`** 필드다. `allowed-tools:`(커맨드·스킬용)를 쓰면 조용히 무시되고 모든 도구가 열린다.
 > 탐색 전담은 `Read, Grep, Glob` 만 — "터미널 금지"를 프롬프트에 적는 것보다 도구를 빼는 게 확실하다.
-> 모델은 **판단·설계·검토 = `opus`**(DB 모델링, API 로직, 리뷰어), **탐색·대량 작성 = `sonnet`**. haiku 는 쓰지 않는다 —
+> 모델은 **판단·설계·검토 = `opus`**(DB 모델링, API 로직, PRD, 리뷰어), **탐색·대량 작성 = `sonnet`**. haiku 는 쓰지 않는다 —
 > 탐색이 틀리면 뒤 단계가 전부 틀린다. 별칭(`opus`/`sonnet`)은 그 계열의 최신 모델을 따라간다.
-| `.claude/skills/seo/` | SEO·AEO·GEO·LLMO·NEO 진단·구현 ([원본](https://github.com/leopard627/fire-your-seo-agency), MIT) |
+> 에이전트 파일은 고친 뒤 **반영까지 몇 분 걸릴 수 있다** (커맨드는 바로 반영된다). 그 사이 호출하면 옛 정의로 돈다 —
+> 도구 제한을 확인하려면 에이전트에게 "지금 가진 도구 목록만 답하라"고 시켜 본다.
 
 > **SEO 스킬 주의** — 이 템플릿의 프론트는 CSR이라 `curl`로 받은 HTML에 본문이 없다.
 > 검색 노출이 목표면 렌더링 전략(프리렌더/SSR)부터 정해야 하고, 로그인 뒤에서만 쓰는
 > 관리자 도구라면 애초에 손댈 필요가 없다. 스킬이 그 선택지를 먼저 제시한다.
 
-## Phase 관리
+## phase 관리
 
-**시작 순서**: `PROJECT.md`에 기능 정의 작성 → Claude가 Phase 계획 수립 → 사용자 승인 → Phase 1부터 개발
+**시작 순서**: `/plan {아이디어}` → 인터뷰 → 외부 리서치 → `PRD/02_PRD.md` → 사용자 승인 →
+`PROJECT.md`·`PROGRESS.md` 생성 → phase 1부터 개발
 
-> `PROJECT.md`, `PROGRESS.md`는 템플릿에 없다. 새 프로젝트를 시작할 때 만든다.
+> `PRD/`, `PROJECT.md`, `PROGRESS.md`는 템플릿에 없다. 새 프로젝트에서 `/plan` 이 만든다.
+> 기획이 이미 끝나 있으면 아래 양식대로 `PROJECT.md` 를 직접 써도 된다.
 
-**Phase 양식** (`PROJECT.md`):
+- **완료 기준은 PRD 의 문장을 ID 째로 옮긴다** (`F3-2 ...`). 검증 단계가 이 문장을 그대로 대조하므로
+  phase 를 짜면서 바꿔 쓰지 않는다. 바꿔야 하면 `PRD/02_PRD.md` 부터 고친다
+- **PRD 는 결정, 엣지 케이스는 개발** — 코드를 봐도 답이 없는 것(권한·돈·법·범위)만 완료 기준이 된다.
+  타임아웃·재시도·상태값 같은 구현 엣지 케이스는 PRD 12장 → phase 의 "개발에서 다룰 것" → `/test` 로 간다.
+  기획이 구현까지 정하려 들면 PRD 가 명세서가 되고, 코드를 모르고 정한 내용이라 결국 다시 쓴다
+- **phase 0 "준비"** 는 개발이 아니라 사람이 할 일이다 — PG·알림톡 심사, 사업자·인허가처럼 코드 밖에서
+  리드타임이 긴 것. 개발보다 먼저 시작해야 일정이 안 밀린다
+
+**phase 양식** (`PROJECT.md`):
 
 ```markdown
-## Phase N: [이름]
+## phase N: [이름]
 
 **목표**: ...
+**기능**: F1, F3 (`PRD/02_PRD.md`)
 **수행 내용**: ...
-**완료 기준**: - [ ] ...
-**커밋**: `N단계: [설명]`
+**완료 기준**: - [ ] F1-1 ... (PRD 5장 문장 그대로)
+**개발에서 다룰 것**: PRD 12장 항목 — 완료 기준이 아니라 `/test` 가 덮을 엣지 케이스
+**커밋**: `feat: [설명]`   ← 영역 접두사 (feat · fix · refactor · docs · infra)
 ```
 
 **진행 기록 양식** (`PROGRESS.md`):

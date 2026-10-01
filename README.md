@@ -824,6 +824,8 @@ const adminMenu: AdminMenuItem[] = [
 
 clone 부터 운영 배포까지 순서대로. **Claude Code 를 쓴다면 clone 직후 `/setup` 한 번** — 아래
 9.2~9.4 를 훑어서 아직 템플릿 기본값인 것을 표로 보여주고, 항목별로 승인받아 고칩니다.
+그다음 **`/plan {아이디어 한두 줄}`** 이 인터뷰 → 외부 리서치(경쟁·UX·연동·규제) → PRD 를 거쳐,
+승인을 받으면 `PROJECT.md` 의 phase 계획까지 만듭니다. 개발은 그 phase 1 부터입니다.
 
 ### 9.1 가져오기
 
@@ -912,6 +914,7 @@ Terraform 이 EC2·RDS·Cloudflare 를 만들고, 그 뒤로는 main 푸시 = �
 - [ ] `index.html` · `public/` 의 `BASE` · `example.com` · `google-site-verification`
 - [ ] 브랜드 색(`index.css` 변수) · `adminMenu` · `SAMPLE_USERS`
 - [ ] alembic 리비전 유지/초기화 결정
+- [ ] `/plan {아이디어}` → PRD 승인 → `PROJECT.md` (phase 0 의 심사·신청은 개발보다 먼저)
 - [ ] (배포) `edge` 결정 · 네임서버(CF Active / Route 53) · AWS 키 · `infra/.env` · `terraform.tfvars` · `apply`
 - [ ] (배포) GitHub Variables 3개 · Parameter Store 에 OAuth 키 · OAuth 콘솔 운영 URI
 - [ ] (배포) main 푸시 → CI 초록불
@@ -923,8 +926,9 @@ Claude Code로 개발한다면 `CLAUDE.md`, `frontend/CLAUDE.md`, `backend/CLAUD
 | | |
 |---|---|
 | `commands/` | `/feature` `/design` `/fullstack` `/fix` `/test` — 에이전트 호출 순서를 묶은 슬래시 커맨드 |
-| `agents/` | 단계별 서브에이전트 — `dev/backend/` · `dev/frontend/`(탐색·작성) · `verify/`(테스트 작성) |
+| `agents/` | 단계별 서브에이전트 — `plan/`(리서치·PRD) · `dev/backend/` · `dev/frontend/`(탐색·작성) · `verify/`(테스트 작성) |
 | `commands/setup.md` | `/setup` — 템플릿을 새 프로젝트로 가져왔을 때 바꿀 것들 (clone 직후 1회, 위 9.2~9.4) |
+| `commands/plan.md` | `/plan` — 아이디어 → 인터뷰 → 리서치 → `PRD/` → 승인 → `PROJECT.md` (`/setup` 다음 1회) |
 | `commands/seo_check.md` | `/seo_check` — 검색·AI 인용이 조용히 0이 되는 사고를 정적 점검 (푸시 전) |
 | `skills/seo/` | SEO·AEO·GEO·LLMO·NEO(네이버) 진단·구현 스킬 |
 
