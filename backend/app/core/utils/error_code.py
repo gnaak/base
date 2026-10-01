@@ -52,7 +52,9 @@ class ErrorCode(StrEnum):
     OAUTH_EMAIL_REQUIRED = "OAUTH_EMAIL_REQUIRED"
 
     # ── 외부 호출 ─────────────────────────────────────────
-    UPSTREAM_UNREACHABLE = "UPSTREAM_UNREACHABLE"
+    UPSTREAM_UNREACHABLE = "UPSTREAM_UNREACHABLE"            # 요청이 안 나감 (502) — 다시 해도 된다
+    UPSTREAM_TIMEOUT = "UPSTREAM_TIMEOUT"                    # 응답을 못 받음 (504) — 결과 불명
+    UPSTREAM_RATE_LIMITED = "UPSTREAM_RATE_LIMITED"          # 업체가 429·503 (503) — 잠시 뒤
     UPSTREAM_INVALID_RESPONSE = "UPSTREAM_INVALID_RESPONSE"
 
     # ── 파일 업로드 ───────────────────────────────────────

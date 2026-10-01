@@ -475,6 +475,15 @@ url = await save_upload(file, "image", allowed=IMAGE_EXTENSIONS)   # → "/media
 - 외부 HTTP 호출은 `core/utils/http_client.py`의 `request_json()`을 쓴다 —
   `httpx.AsyncClient`를 직접 만들지 말 것. 타임아웃·아웃바운드 로깅·에러→`fail()` 변환·쿠키 격리가
   전부 여기에 있다 (공유 클라이언트는 lifespan이 열고 닫는다)
+  - **연결 실패와 타임아웃은 다르다.** 연결 실패(요청이 안 나감)는 502 `UPSTREAM_UNREACHABLE`,
+    응답 대기 중 끊김·타임아웃은 504 `UPSTREAM_TIMEOUT` — **업체가 처리했는지 모른다.**
+    결제·발송처럼 돈이나 부작용이 있는 호출이면 실패로 처리하지 말고 "결과 불명"으로 두고 업체에 결과를 조회한다.
+    실패로 보고 다시 결제하면 이중결제가 난다
+  - `retries=N` 은 요청이 처리되지 않은 게 확실한 경우(연결 실패, 업체의 429·503)만 다시 보낸다.
+    타임아웃은 절대 다시 보내지 않으므로 결제에 줘도 안전하다. 429 는 `Retry-After` 를 따르되 최대 10초
+  - `upstream_errors=True` 면 업체의 4xx·5xx 를 `UpstreamError(status_code, body)` 로 받는다 —
+    결제 거절 사유처럼 업체 본문을 읽어야 할 때. body 를 클라이언트에 그대로 내보내지 말 것
+  - 테스트는 `hc._build_client(httpx.MockTransport(handler))` 로 업체만 바꿔 끼운다 (`tests/test_http_client.py`)
 - 무인증 헬스체크는 `GET /api/health` — 도메인이 아니라서 `main.py`에 직접 선언되어 있다.
   경로 상수는 `middleware/request_id.py`의 `HEALTH_PATH` (액세스 로그 제외 대상과 공유)
 - 로그는 콘솔과 `backend/logs/app.log`(자정 로테이션, 14일 보관)에 함께 남는다 — `core/logging/config.py`.

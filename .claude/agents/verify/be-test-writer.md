@@ -66,6 +66,10 @@ tools: Read, Grep, Glob, Write, Edit
 - `@pytest.mark.asyncio` 붙이지 말 것 (`asyncio_mode = auto`)
 - 상태코드만 보지 말고 `errorCode`까지 단언할 것
 - 목킹하지 말 것. 인증도 DB도 진짜를 쓴다 — 못 쓰겠으면 그 이유를 보고할 것
+  - **예외는 외부 업체 하나** — 결제·알림톡처럼 진짜로 부를 수 없는 업체는 전송 계층만 바꾼다:
+    `http_client._client` 에 `hc._build_client(httpx.MockTransport(handler))` 를 끼운다 (`tests/test_http_client.py`).
+    서비스 함수를 통째로 mock 하지 말 것 — 재시도·에러 변환을 안 타서 테스트가 아무것도 검증하지 않는다
+  - 외부 호출이 있는 엔드포인트면 업체 타임아웃(504 `UPSTREAM_TIMEOUT`, 결과 불명)일 때의 상태도 덮는다
 - 각 테스트는 자기가 쓸 데이터를 자기가 만든다. 다른 테스트 순서에 기대지 말 것
 - 테스트 파일만 작성. **앱 코드는 절대 수정하지 말 것** — 고칠 곳을 찾으면 보고만
 

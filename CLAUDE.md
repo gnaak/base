@@ -92,7 +92,7 @@ CI에서 다시 볼 일이 없다. (terraform 은 `./infra/tf.ps1` 을 한 번 �
 | | |
 | --- | --- |
 | `.claude/commands/` | `/setup`(clone 직후 1회) → `/plan`(기획 1회) → `/feature` `/design` `/fullstack` `/fix` `/test` · `/seo_check`(푸시 전) |
-| `.claude/agents/` | 단계별 서브에이전트 — `plan/`(리서치·PRD·페이지 맵·디자인) · `dev/backend/` · `dev/frontend/`(탐색·작성) · `verify/`(테스트 작성) |
+| `.claude/agents/` | 단계별 서브에이전트 — `plan/`(리서치·PRD·페이지 맵·디자인) · `dev/backend/`(탐색·모델·API·**외부 연동**) · `dev/frontend/`(탐색·작성) · `verify/`(테스트 작성) |
 | `.claude/skills/seo/` | SEO·AEO·GEO·LLMO·NEO 진단·구현 ([원본](https://github.com/leopard627/fire-your-seo-agency), MIT) |
 
 > **에이전트 파일 규칙** — 폴더는 사람이 보기 위한 정리일 뿐, Claude는 `description` 만 보고 고른다.
