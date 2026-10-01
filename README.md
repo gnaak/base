@@ -609,7 +609,7 @@ APP_ENV=prod sh migrate_server.sh   # upgrade head 만
 mysql -u root -p -e "CREATE DATABASE db_base_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
 
 cd backend
-uv run pytest                              # 전체 (84개)
+uv run pytest                              # 전체
 uv run pytest tests/test_user_router.py -v # 한 파일
 ```
 
@@ -663,6 +663,29 @@ async def test_내_정보를_반환한다(client, make_user):
 돌린 뒤 pytest를 실행합니다. 덮어야 할 엣지 케이스 목록은 `.claude/agents/verify/be-test-writer.md`에
 있습니다. 테스트가 앱 버그를 잡으면 에이전트는 **고치지 않고 멈춰서 보고**하도록 되어 있습니다 —
 기대값에 맞춰 테스트를 느슨하게 만드는 게 제일 흔한 실패 방식이라서.
+
+#### 브라우저 E2E — `frontend/e2e/` (Playwright)
+
+단위 테스트로는 안 보이는 것을 진짜 브라우저로 봅니다 — 무한 새로고침, 세션 쿠키 정리, refresh 로 조용히 복구,
+로그아웃, 다크모드, 모바일 메뉴, 모달이 실제로 눌리는지. 백엔드와 프론트를 **E2E 전용 포트(8100/3100)·전용 DB**로
+직접 띄우므로 개발 서버와 섞이지 않습니다.
+
+```bash
+# 최초 1회 — E2E 전용 DB (docker compose 를 안 쓰는 경우)
+mysql -u root -p -e "CREATE DATABASE db_base_e2e CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+cd frontend && npx playwright install chromium
+
+cd frontend && npm run e2e     # 마이그레이션 적용·관리자 생성(globalSetup) → 서버 두 개 → 테스트
+```
+
+| 변수 | 기본값 | |
+|---|---|---|
+| `E2E_MYSQL_DB` | `db_base_e2e` | 백엔드 `LOCAL_MYSQL_DB` 로 넘어간다 (`.env` 는 그대로) |
+| `E2E_REDIS_DB` | `15` | 한 Redis 를 여러 프로젝트가 같이 써도 키가 섞이지 않게 |
+| `E2E_WEB_PORT` / `E2E_API_PORT` | `3100` / `8100` | 이미 떠 있는 서버는 재사용하지 않는다 (다른 프로젝트 서버를 테스트하는 사고 방지) |
+
+CI 의 `e2e` 잡이 같은 것을 돌리고, **빈 DB 에 마이그레이션을 처음부터 적용한 뒤 `alembic check`** 로
+모델과 리비전이 어긋나지 않았는지도 본다. 배포 잡은 이 잡이 통과해야 돈다.
 
 ---
 

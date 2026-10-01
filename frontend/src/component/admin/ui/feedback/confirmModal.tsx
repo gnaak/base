@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { AlertTriangle, Info, X } from "lucide-react";
 
 type Variant = "default" | "warning" | "danger";
@@ -77,7 +78,9 @@ const ConfirmModal = ({
 
   const style = variantStyles[variant];
 
-  return (
+  // body 로 portal 한다 — 부모가 sticky·transform 이면 쌓임 맥락에 갇혀 z-index 가 안 먹고,
+  // 뒤에 오는 형제(<main>)가 모달 위로 그려져 버튼이 안 눌린다 (사이드바의 로그아웃 확인이 그랬다)
+  return createPortal(
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-overlay/40 backdrop-blur-sm px-4 animate-[fadeIn_120ms_ease-out]"
       onClick={onCancel}
@@ -167,7 +170,8 @@ const ConfirmModal = ({
           to { opacity: 1; transform: translateY(0) scale(1) }
         }
       `}</style>
-    </div>
+    </div>,
+    document.body,
   );
 };
 

@@ -1,4 +1,5 @@
 import { useEffect, useRef, type MouseEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import Button from "@/component/admin/ui/form/button";
 
@@ -190,9 +191,10 @@ const FormModal = ({
       ? "items-center text-center"
       : "items-start text-left";
 
-  return (
+  // body 로 portal 한다 — 부모의 쌓임 맥락(sticky·transform)에 갇히지 않게 (confirmModal.tsx 와 같은 이유)
+  return createPortal(
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-overlay/30"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/30"
       onMouseDown={handleOverlayMouseDown}
       onClick={handleOverlayClick}
     >
@@ -279,7 +281,8 @@ const FormModal = ({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
 

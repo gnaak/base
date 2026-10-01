@@ -101,6 +101,9 @@ cd backend && APP_ENV=prod sh migrate_server.sh
 # 재시작
 sudo systemctl restart fastapi
 sudo nginx -t && sudo systemctl reload nginx
+
+# 처음 한 번 — 관리자 계정 (가입 API 는 없다. 비밀번호는 프롬프트로 받는다)
+cd backend && sudo -u ubuntu env APP_ENV=prod uv run python -m scripts.create_admin admin@example.com
 ```
 
 ## 2. 배포 후 확인 — 이 네 줄은 매번

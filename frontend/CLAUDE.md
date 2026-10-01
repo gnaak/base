@@ -55,6 +55,21 @@ npm run test:watch
   이 템플릿에서 반복적으로 터졌던 지점이라 여기부터 고정했다
   (동시 refresh 1회 합치기, 실패 시 쿠키 삭제, **새로고침 금지**)
 
+## 테스트 — 브라우저 E2E (Playwright, `e2e/`)
+
+```bash
+npm run e2e       # 백엔드 8100 · 프론트 3100 을 직접 띄운다 (E2E 전용 DB db_base_e2e — README "브라우저 E2E")
+```
+
+- vitest(jsdom)로는 안 보이는 것을 본다 — 페이지 **재로드**가 일어나는지, 쿠키가 실제로 지워지는지,
+  모달 버튼이 실제로 눌리는지(다른 요소가 가리면 클릭이 실패한다), 다크모드·모바일 드로어
+- 본보기는 `e2e/session.spec.ts` — 죽은 세션 쿠키로 들어가도 **재로드 0번**. `load` 이벤트와 window 표식으로 센다
+  (`framenavigated` 는 라우트 이동도 세서 루프 판정에 쓰면 안 된다). 일부러 `reload()` 를 심으면 실패하는 것까지 확인했다
+- 로그인은 IP 당 10회/분 — 테스트는 한 줄로(workers 1) 돌고, 로그인 횟수를 늘릴 땐 이 한도를 생각할 것
+- 선택자는 역할·이름(`getByRole("button", { name: "로그아웃" })`)으로. 버튼에 글자가 없으면 `aria-label` 을 단다
+- **모달은 `document.body` 로 portal 한다** — sticky·transform 부모 안에서 그리면 쌓임 맥락에 갇혀 뒤 형제가 모달을 덮는다.
+  관리자 사이드바의 로그아웃 확인이 실제로 그래서 눌리지 않았다 (E2E 가 찾았다)
+
 **규칙**
 - `container/` = 페이지 (로직 + 훅) / `component/` = 순수 UI. 컴포넌트가 API를 직접 호출하게 되면 컨테이너로 로직을 올릴 것
 - 상태: TanStack Query(서버) + useState(로컬). 전역은 context

@@ -81,6 +81,21 @@ module/[domain]/
   **autogenerate 금지** — 환경마다 히스토리가 갈라진다
 - 기존에 다른 방식으로 스키마를 만든 서버 DB에 처음 도입할 때는, 스키마가 모델과 일치하는지
   확인한 뒤 `alembic stamp head`를 1회 실행해 기준점을 맞춘다 (안 하면 upgrade가 처음부터 다시 돈다)
+- **CI(e2e 잡)가 빈 DB 에 `alembic upgrade head` → `alembic check` 를 돌린다.** pytest 는 `create_all` 로 테이블을 만들어서
+  리비전이 깨져도 모른다 — 여기서 잡는다. 모델을 바꾸고 리비전을 안 만들었으면 `alembic check` 가 실패한다
+
+## 관리자 계정 — `scripts/create_admin.py`
+
+관리자 가입 API 는 일부러 없다. 첫 관리자(운영 포함)는 이 스크립트로 만든다:
+
+```bash
+uv run python -m scripts.create_admin admin@example.com                   # 비밀번호는 프롬프트
+uv run python -m scripts.create_admin admin@example.com --password-env X  # 환경변수에서 (CI·E2E)
+uv run python -m scripts.create_admin admin@example.com --reset           # 이미 있으면 비밀번호를 바꾼다
+sudo -u ubuntu env APP_ENV=prod uv run python -m scripts.create_admin …   # 운영 서버 (/srv/app/backend 에서)
+```
+
+비밀번호는 명령행 인자로 받지 않는다 (셸 히스토리·`ps` 에 남는다).
 
 ## infra 모듈 — service만 (모델·라우터 없음)
 

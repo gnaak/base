@@ -16,7 +16,11 @@ def get_redis() -> redis.Redis:
             host=settings.redis_host,
             port=settings.redis_port,
             password=settings.redis_password or None,
-            db=0,
+            db=settings.raw.redis_db,
+            # RESP2 로 고정한다. redis-py 8 은 기본이 RESP3 라 연결할 때 HELLO 를 보내는데,
+            # Windows 개발 PC 에 흔한 옛 Redis(3.x)는 HELLO 를 몰라서 아예 붙지 못한다.
+            # 앱은 RESP3 기능을 쓰지 않고, 테스트의 fakeredis 와도 응답 형태가 같아진다
+            protocol=2,
             decode_responses=True,
             health_check_interval=30,  # idle 후 첫 명령 전에 ping으로 연결 확인
             socket_keepalive=True,     # 방화벽/NAT의 idle 컷 방어

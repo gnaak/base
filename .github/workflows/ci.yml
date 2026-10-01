@@ -127,6 +127,104 @@ jobs:
       - run: npm run build
         working-directory: frontend
 
+  # 진짜 브라우저로 백엔드·프론트를 함께 띄워 본다 (frontend/e2e, playwright.config.ts).
+  # 단위 테스트로는 안 보이는 것 — 새로고침 루프, 쿠키, 모달이 눌리는지 — 을 잡는다.
+  # 마이그레이션도 여기서 처음으로 진짜 DB 에 적용된다 (pytest 는 create_all 을 쓴다).
+  e2e:
+    name: e2e (migrations · playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -u root"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=10
+    env:
+      # playwright.config.ts · e2e/env.ts 가 읽는다 — 백엔드는 이 값으로 띄워진다
+      E2E_MYSQL_DB: db_example
+      E2E_REDIS_DB: "0"
+      E2E_REDIS_PASSWORD: ""
+      APP_ENV: local
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.8.4"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 의존성 설치
+        run: |
+          (cd backend && uv sync --frozen)
+          (cd frontend && npm ci)
+
+      - name: DB 생성
+        run: mysql -h 127.0.0.1 -u root -e "CREATE DATABASE IF NOT EXISTS db_example CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+      - name: .env 준비
+        run: |
+          cp backend/.env.example backend/.env
+          {
+            echo "jwt_secret=ci-$(openssl rand -hex 32)"
+            echo "hash_key=ci-$(openssl rand -hex 32)"
+          } >> backend/.env
+          cp frontend/.env.example frontend/.env
+
+      # 빈 DB 에 리비전을 처음부터 적용한다 — 배포 때 서버가 하는 일과 같다 (migrate_server.sh)
+      - name: 마이그레이션 적용
+        working-directory: backend
+        env:
+          LOCAL_MYSQL_DB: db_example
+        run: uv run --frozen alembic upgrade head
+
+      # 모델을 바꿨는데 리비전을 안 만들었으면 여기서 실패한다 — 배포 뒤 "테이블에 컬럼이 없다" 500 을 미리 막는다
+      - name: 모델 ↔ 마이그레이션 일치
+        working-directory: backend
+        env:
+          LOCAL_MYSQL_DB: db_example
+        run: uv run --frozen alembic check
+
+      - name: 브라우저 설치
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: playwright
+        working-directory: frontend
+        run: npm run e2e
+
+      - name: 실패하면 리포트 올리기
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+          retention-days: 7
+
   # 인프라 코드 — 키 없이 돈다 (mock provider). edge 두 방식이 다 plan 되는지 본다
   infra:
     name: infra (terraform validate · test)
@@ -156,7 +254,7 @@ jobs:
   # Docker 는 배포에 쓰지 않는다 — EC2 에 nginx + systemd 로 직접 올린다 (infra/server/deploy.sh)
   deploy:
     name: deploy
-    needs: [backend, frontend, infra]
+    needs: [backend, frontend, e2e, infra]
     # AWS 연결 전(템플릿 그대로·막 clone 한 저장소)에는 건너뛴다.
     # 연결 = infra/ apply 후 `tf.ps1 output github_variables` 의 세 변수를 저장소에 넣는 것
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.AWS_DEPLOY_ROLE_ARN != ''

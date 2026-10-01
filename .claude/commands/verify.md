@@ -24,8 +24,11 @@ $ARGUMENTS
 ```bash
 cd backend  && uv run ruff check . && uv run pytest -q
 cd frontend && npm run check:types && npm run lint && npm test && npm run build
+cd frontend && npm run e2e                             # 화면·인증·세션 흐름이 바뀌었거나 full 이면 (브라우저 E2E)
 ./infra/.bin/<버전>/terraform -chdir=infra test        # infra/ 가 바뀌었으면
 ```
+
+`npm run e2e` 는 E2E 전용 DB(`db_base_e2e`)가 있어야 돈다 — 없으면 README "브라우저 E2E" 의 최초 1회를 안내하고 이 줄만 건너뛴다.
 
 `npm run lint` 에 **디자인 린트**가 들어 있다 — 고정색(`bg-white`·`gray-*`·`[#hex]`), `tailwind.config.js` 에 없는 클래스,
 `-DEFAULT` 클래스. 셋 다 빌드 에러 없이 조용히 틀리는 것이라 무인 개발에서 특히 중요하다.

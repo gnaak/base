@@ -78,6 +78,7 @@ cd backend  && uv run pytest                         # 라우터를 건드렸다
 cd frontend && npm run check:types && npm run lint
 cd frontend && npm test                              # vitest
 cd frontend && npm run build
+cd frontend && npm run e2e                           # 화면·세션 흐름을 바꿨다면 (전용 포트 3100/8100 · DB db_base_e2e)
 ./infra/.bin/<버전>/terraform -chdir=infra test     # infra/ 를 건드렸다면 (키 불필요, mock)
 ```
 

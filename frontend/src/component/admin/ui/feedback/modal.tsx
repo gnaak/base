@@ -1,4 +1,5 @@
 import { useEffect, useRef, type MouseEvent } from "react";
+import { createPortal } from "react-dom";
 import Button from "@/component/admin/ui/form/button";
 
 /**
@@ -158,9 +159,10 @@ const Modal = ({
     else onClose?.();
   };
 
-  return (
+  // body 로 portal 한다 — 부모의 쌓임 맥락(sticky·transform)에 갇히지 않게 (confirmModal.tsx 와 같은 이유)
+  return createPortal(
     <div
-      className="fixed inset-0 z-10 flex items-center justify-center bg-overlay/40"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/40"
       onMouseDown={handleOverlayMouseDown}
       onClick={handleOverlayClick}
     >
@@ -222,7 +224,8 @@ const Modal = ({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
 

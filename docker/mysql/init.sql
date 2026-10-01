@@ -12,3 +12,8 @@ CREATE DATABASE IF NOT EXISTS db_example
 -- (같은 이름이면 tests/conftest.py 가 기동 시점에 막는다).
 CREATE DATABASE IF NOT EXISTS db_base_test
   CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- 브라우저 E2E 전용 DB (frontend/playwright.config.ts 의 E2E_MYSQL_DB 기본값).
+-- 테스트가 관리자·사용자를 만들고 지우지 않으므로 개발용과 나눈다.
+CREATE DATABASE IF NOT EXISTS db_base_e2e
+  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

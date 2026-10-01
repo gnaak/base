@@ -75,6 +75,10 @@ class RawEnv(BaseSettings):
     prod_redis_port: int
     prod_redis_password: str | None = None
 
+    # Redis DB 번호 (0~15). 한 Redis 를 여러 프로젝트·E2E 가 같이 쓰면 키(세션 무효화·레이트리밋)가 섞인다 —
+    # 그럴 때 번호를 나눈다. 운영 서버는 앱 전용 Redis 라 0 그대로
+    redis_db: int = 0
+
     # 사이트 도메인 (쉼표 구분). CORS 허용 오리진과 쿠키 도메인을 여기서 함께 유도한다.
     #
     #   local_domain=localhost:3000,127.0.0.1:3000

@@ -19,6 +19,11 @@ dist/
 dist-ssr/
 *.local
 
+# Playwright (E2E 결과물)
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+
 # 로그
 # ⚠️ 여기에 `logs/`를 쓰면 안 된다. 앞에 슬래시가 없는 디렉토리 패턴은 모든 깊이에 적용돼서
 #    backend/logs 자체가 제외되고, 그러면 Git이 그 안으로 내려가지 않아
