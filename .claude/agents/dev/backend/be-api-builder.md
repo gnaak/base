@@ -7,6 +7,11 @@ tools: Read, Grep, Glob, Write, Edit
 
 be-researcher 결과를 보고 HTTP / WebSocket 중 어느 쪽인지 먼저 판단한 뒤 해당 경로로 진행.
 
+**루트에 `PROJECT.md` 가 있으면** 이 작업이 속한 phase 의 **"설정값"** 줄을 먼저 본다. 거기 적힌 결정(U*)에 걸린 값
+(수수료율·마감 시각·실패 허용 횟수 등)은 **하드코딩하지 않는다** — `core/config/settings.py` 의 `RawEnv` 에 기본값을 가진
+필드로 두고 서비스는 `settings` 에서 읽는다. 사람이 나중에 `DECISIONS.md` 를 보고 값 하나로 바꾸게 하기 위해서다.
+`.env.example` 에도 같은 키를 기본값과 함께 적는다 (운영 값은 SSM `/<project>/backend/<키>` — 이름이 `RawEnv` 필드와 같아야 한다).
+
 ## HTTP 도메인
 
 1. {domain}_schema.py     ← Pydantic 모델. 요청은 `XxxIn`, 응답은 `XxxOut`

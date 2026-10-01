@@ -69,7 +69,7 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 - **`backend/alembic/versions/`** — `User`·`Admin` 테이블을 그대로 쓸지 결정한다.
   새로 시작하려면 리비전을 지우고 `sh migrate.sh "init"` 으로 다시 만든다
 - **`need.md`** — 템플릿 개선 기록이다. 새 프로젝트에서는 지워도 된다
-- **`PROJECT.md` · `PROGRESS.md`** — 템플릿에 없다. 이 커맨드가 끝나면 **`/plan {아이디어}`** 로 만든다
+- **`PROJECT.md` · `PROGRESS.md` · `DECISIONS.md`** — 템플릿에 없다. 이 커맨드가 끝나면 **`/plan {아이디어}`** 로 만든다
   (기획이 이미 있으면 `CLAUDE.md` 의 phase 양식대로 직접 써도 된다)
 - **`frontend/src/assets/`** · `public/image.png` — 샘플 이미지 교체
 - **git 재시작** 여부 — `rm -rf .git && git init` 을 했는지

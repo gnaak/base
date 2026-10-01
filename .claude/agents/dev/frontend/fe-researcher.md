@@ -13,5 +13,7 @@ tools: Read, Grep, Glob
 4. 관련 훅 (/src/hooks/common/ 탐색 — useAPI.ts, useAuth.ts, getCookie.ts)
 5. 인증이 얽힌 화면이면 AuthProvider와 useAuth 사용처 확인
 6. 주의해야 할 의존성
+7. 루트 `PRD/03_PAGE.md` · `PRD/04_DESIGN.md` 가 있으면 요청과 관련된 P-ID 의 행(라우트·대상·F-ID·UI 패턴)과
+   그 페이지가 쓸 컴포넌트(04_DESIGN.md 7장)를 뽑는다. `.theme-client` 가 이미 적용됐는지(phase 1)도 확인
 
 코드 구현 절대 하지 말고 요약만 반환.
