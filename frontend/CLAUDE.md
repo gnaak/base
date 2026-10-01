@@ -11,7 +11,7 @@ src/
 │   ├── admin/               # layout, login, main, group
 │   └── client/              # layout, main, auth/(google, kakao)
 ├── component/               # 순수 UI (props만 받아 렌더링)
-│   ├── common/              # errorBoundary
+│   ├── common/              # errorBoundary · themeToggle (관리자·고객 공통)
 │   └── admin/               # layout/(sideBar, login) modal/
 │                            # ui/(form, feedback, table) + statCard skeleton pagination loading
 ├── hooks/

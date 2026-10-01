@@ -45,7 +45,8 @@ fe-researcher 결과를 바탕으로:
   - table: Table (Row 제네릭 — Column<Row>[] 로 선언하면 render 인자에도 타입이 붙는다) → /src/component/admin/ui/table/
   - 기타: StatCard, Skeleton, Pagination, Loading → /src/component/admin/ui/
   - layout: sideBar(SideBar, GroupLink, SubLink), login(LoginForm) → /src/component/admin/layout/
-    (상단 헤더는 없다 — 어드민은 사이드바 단독 구성이고 페이지 제목은 각 컨테이너가 그린다)
+    (상단 바·테마 토글은 AdminLayout 이 그린다 — 페이지 제목은 각 컨테이너가 그린다)
+  - 공통: ThemeToggle(라이트/다크), ErrorBoundary → /src/component/common/
 - 로딩 상태는 0 이나 빈 값을 먼저 그리지 말고 Skeleton / 컴포넌트의 loading prop 을 쓴다
 - 컴포넌트는 화살표 함수 + default export, 폴더·파일 이름은 camelCase
 - 이벤트 핸들러는 handle 접두사

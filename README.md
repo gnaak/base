@@ -22,7 +22,7 @@
 |---|---|---|
 | **인증** | 로그인/로그아웃/refresh, refresh 로테이션 + 재사용 탐지, 세션 무효화, 계정 비활성화, 회원가입, Google·Kakao OAuth, 이중 세션 | 회원가입 **화면**, 비밀번호 재설정, 이메일 인증 |
 | **백엔드** | 계층 구조, DI, 공통 응답·에러코드, 예외 핸들러, 로깅, Alembic, 페이지네이션, 파일 업로드, ruff | 도메인 로직 (직접 채울 것) |
-| **테스트** | pytest 84개 + vitest 8개, 픽스처 일습 | E2E |
+| **테스트** | pytest 142개 + vitest 37개 + 브라우저 E2E 10개(Playwright), 픽스처 일습, CI 에서 마이그레이션 검사 | 부하 테스트 |
 | **프론트** | 디자인 시스템(라이트/다크 토큰, Geist·Pretendard), 관리자 레이아웃·사이드바·대시보드, 고객 첫 화면(소셜 로그인 카드), UI 킷(폼/테이블/모달/토스트/지표/스켈레톤), 라우트 가드, vitest | 도메인 화면 |
 | **인프라** | 헬스체크, 요청 ID, CORS·보안 헤더, 레이트리밋, docker-compose(MySQL·Redis), nginx·systemd 설정, GitHub Actions CI, Terraform 자동 배포(EC2·RDS, `infra/`) | 컨테이너 배포, 무중단 배포, SSR/프리렌더(레시피만 문서화) |
 
@@ -989,7 +989,7 @@ Claude Code로 개발한다면 `CLAUDE.md`, `frontend/CLAUDE.md`, `backend/CLAUD
 [chatbot_kt](https://github.com/gnaak/chatbot_kt)의 계층 구조를 FastAPI로 옮기면서 시작했고,
 새 프로젝트를 만들 때마다 부족했던 부분을 되먹여 다듬고 있습니다.
 
-- [`need.md`](need.md) — 2026-09 감사에서 뭐가 문제였고 어떤 순서로 처리했는지
+- [`need.md`](need.md) — 2026-09 감사에서 뭐가 문제였고 어떤 순서로 처리했는지, **zero-to-one 로드맵에서 남은 것(D)**
 - [`CHANGELOG.md`](CHANGELOG.md) — 각 변경을 **기존 → 변경 → 왜** 로. 그때 걸린 함정 포함
 - [`DESIGN.md`](DESIGN.md) — 디자인 토큰·컴포넌트 규칙
 

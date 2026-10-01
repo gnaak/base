@@ -436,7 +436,7 @@ uv run ruff format .         # 포매팅 — 선택. CI는 강제하지 않는�
 per-file-ignore 대상이다 — 그 import가 Base.metadata 등록이라는 목적을 갖고 있다.
 
 ```bash
-uv run pytest                                  # 전체 (84개)
+uv run pytest                                  # 전체 (142개)
 uv run pytest tests/test_user_router.py -v     # 한 파일
 ```
 

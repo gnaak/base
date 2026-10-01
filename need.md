@@ -5,6 +5,7 @@
 - **A. 없으면 안 되는 것** — 구조적 결함·보안 구멍. 파생 프로젝트 전부에 복제되므로 여기서 막는다
 - **B. 있으면 크게 좋은 것** — 없어도 돌아가지만 매 프로젝트마다 다시 만들게 되는 것
 - **C. 정리할 것** — 죽은 코드·중복
+- **D. zero-to-one** — 기획 → 개발 → 검증 → 배포 자동화. A·B·C 다음 단계이고 **지금 진행 중** ([아래](#d-zero-to-one--기획--개발--검증--배포))
 
 각 항목의 `측정` 블록은 실제로 돌려서 얻은 결과다. 다시 확인할 필요 없다.
 
@@ -40,13 +41,100 @@
 | 구조 | 요청·응답 양쪽에 타입. `/docs` 가 실제 계약과 일치 |
 | 보안 | IP·계정 2층 레이트리밋 / 세션 무효화 + 로테이션 + 재사용 탐지 / `SameSite=Lax` |
 | 인프라 | compose(개발) · Dockerfile(배포) · CI(검증) |
-| 품질 | ruff · pytest 84 · vitest 8 · 에러코드 상수 |
+| 품질 | ruff · pytest 142 · vitest 37 · E2E 10 · 에러코드 상수 · 디자인 린트 (D 이후 수치) |
 | 기능 기반 | 페이지네이션 · 파일 업로드 · TimestampMixin |
 
 **남은 선택 항목** (`need.md` 안에 표시):
 - A4 의 Origin 검증 미들웨어 — `cookie_samesite=none` 을 써야 하는 배포가 생기면
 - `ruff format` 적용 — 27개 파일이 재포맷된다. 별도 커밋으로 하는 게 리뷰하기 좋다
 - 앱 Dockerfile 의 프론트 버전(nginx 이미지), 배포 스크립트
+
+---
+
+# D. zero-to-one — 기획 → 개발 → 검증 → 배포
+
+> 2026-10-01 시작, 브랜치 `zero-to-one` → main. **다른 PC 에서 이어서 하려면 이 절부터 읽는다.**
+
+**목표** — 아이디어 한 줄을 주면 사람 없이 기획 → 개발 → 검증까지 간다. 사람이 붙는 건 `/plan` 의 처음
+인터뷰와, 아침에 `DECISIONS.md`(돈·법·범위 결정)를 보는 것뿐이다. 무인으로 넘지 않는 선은
+실제 결제 키 · 운영 배포 · main merge. 원칙은 루트 `CLAUDE.md` 의 "phase 관리".
+
+**나누는 기준** — 주제 지식(CSRF·AWS 등)은 스킬 `references/` 에, 에이전트는 역할·권한·시점이 다를 때만 나눈다.
+그래서 보안은 에이전트 하나(sec-reviewer) + 스킬 하나(`skills/security/`)이고, 배포는 에이전트 없이 스킬만 둔다.
+
+| # | 단계 | 상태 | 커밋 |
+| --- | --- | --- | --- |
+| 1 | 에이전트 정리 — 단계별 폴더, `tools:` 로 실제 제한, opus/sonnet | ✅ | `7f516ee` |
+| 2 | `/plan` — 인터뷰 → 리서치 5갈래 → PRD → 페이지 맵 · 고객 화면 테마 → `PROJECT.md` · `DECISIONS.md` | ✅ | `3ecf395` `7d93824` |
+| 3 | 프론트 정리 — 고정색 → 토큰, 다크모드를 실제로 연결, 모바일 드로어 | ✅ | `ff9f05b` |
+| 4 | 외부 API — `be-external-api`, `request_json` 연결 실패/타임아웃 분리·재시도·업체 본문 | ✅ | `a698564` |
+| 5 | 검증 — `/verify`, sec-reviewer · spec-checker, 디자인 린트 | ✅ | `ae9e1e0` |
+| 6 | 보안 수정 — 5 가 찾은 것 (OAuth state, 이메일 검증, 빈 jwt_secret, nginx 헤더, WebSocket 등) | ✅ | `e5ee584` |
+| 7 | 브라우저 E2E(Playwright) + 마이그레이션 CI | ✅ | `1d99d6a` |
+| — | 정리 — clone 체크리스트, 고객 첫 화면 · 테마 토글 · 확인 모달 | ✅ | `44fb586` `8434972` |
+| 8 | **무인 실행 (autopilot)** | ⬜ **다음** | |
+| 9 | 배포 롤백 | ⬜ | |
+| 10 | 배포 스킬 | ⬜ | |
+
+순서는 "사람이 안 보는 동안 지켜줄 장치부터" — 고칠 것·만들 것(3·4)을 먼저 하고, 검증(5)이 그 전부를 덮게 했다.
+8 은 1~7 의 통합 검증을 겸한다 — 샘플 아이디어로 끝까지 돌리면 앞 단계가 전부 한 번에 검증된다.
+
+## D8. 무인 실행 — 다음에 할 것
+
+- [ ] 처리
+
+`/plan` 이 만든 `PROJECT.md` 의 phase 를 사람 없이 끝까지 돈다.
+
+- **Stop hook 으로 순회** — [`gnaak/prd`](https://github.com/gnaak/prd) 의 `.claude/hooks/autopilot-gate.ps1` 패턴.
+  마커 파일(`.claude/_autopilot`)이 있을 때만 동작하고, 남은 phase 가 있으면 턴 종료를 막고 다음 지시를 준다.
+  거기서 배운 것 두 가지를 그대로 가져온다:
+  - **완료 판정은 파일 개수가 아니라 내용으로** — 빈 스텁이 게이트를 통과한 적이 있다.
+    여기서는 `PROGRESS.md` 상태 + `/verify` 결과 + E2E 통과가 기준
+  - **같은 단계에서 진전 없이 막힌 횟수에 상한** — 상한에 닿으면 ❌ 로 기록하고 다음 phase 로 (무한 루프 방지).
+    단계가 바뀌면 카운터는 0
+- phase 하나 = `/feature`·`/fullstack` → `/test` → `/verify` → `PROGRESS.md` → 커밋.
+  막힌 것·사람이 정해야 할 것은 `DECISIONS.md` 로
+- **03_PAGE.md 의 흐름을 phase 별 E2E 스펙으로** (`frontend/e2e/`) — spec-checker 가 이 결과를 완료 기준의 증거로 센다.
+  "사람이 안 보는데 E2E 를 왜 하나" 의 답이 이것 — 사람 대신 화면을 눌러 보는 게 E2E 다
+- `DECISIONS.md` → 휴대폰으로 보는 비공개 페이지 (아침에 확인)
+- **완료 기준**: 샘플 아이디어로 `/plan` → autopilot 이 phase 를 끝까지 돈다. 일부러 실패하게 만든 phase 가
+  상한 뒤 ❌ 로 기록되고 다음으로 넘어간다. `DECISIONS.md` 와 페이지가 생긴다
+
+## D9. 배포 롤백
+
+- [ ] 처리
+
+지금 `infra/server/deploy.sh` 는 rsync 로 제자리에 덮어써서, 헬스체크가 실패하면 사이트가 죽은 채로 남는다.
+
+- 서버 구조: `/srv/app/releases/<sha>/` · `/srv/app/shared/{.env,logs,media}` · `/srv/app/current` → 심볼릭 링크.
+  venv 는 릴리스마다(uv 캐시라 빠르다), 최근 3개만 남긴다 (디스크 20GB)
+- `deploy.sh`: 새 릴리스 준비 → migrate → `current` 전환 → restart → 헬스체크.
+  **실패하면 이전 릴리스로 되돌리고 restart → 다시 확인 → `exit 1`** — CI 는 빨갛게, 사이트는 살아 있게
+- `render` 의 `/srv/example` → `/srv/app/current` 치환 하나로 `fastapi.service`·`site.conf` 경로가 같이 바뀐다.
+  `ReadWritePaths` 는 shared 로. 기존 평평한 구조는 1회 자동 전환 (멱등)
+- `infra/server/rollback.sh` — S3 에서 다시 받지 않고 이전 릴리스로. SSM 명령 예시는 `infra/README.md`
+- **DB 는 되돌리지 않는다** → 마이그레이션은 이전 코드와 호환(expand/contract): 추가는 nullable·기본값,
+  삭제·이름 변경은 다음 릴리스. 마이그레이션 커밋은 revert 하지 말고 forward-fix
+  (revert 하면 리비전 파일이 사라져 `alembic upgrade` 가 멈춘다). `backend/CLAUDE.md` · be-db-modeler 에 넣는다
+- 테스트: 경로를 환경변수로, systemctl·nginx·curl 을 PATH 심으로 바꾼 `infra/tests/deploy_smoke.sh` 를 CI 에서
+- **완료 기준**: 정상 배포면 `current` 가 새 릴리스 / 헬스체크 실패면 이전으로 복귀 + exit 1 /
+  첫 전환에서 데이터 보존 / 3개 초과분 정리 / `bash -n` · terraform test 통과
+
+## D10. 배포 스킬
+
+- [ ] 처리
+
+- `skills/deploy/SKILL.md` + `references/` — `cloudflare.md` · `aws.md`(edge 별 DNS·TLS·real IP·비용·전환),
+  `troubleshoot.md`(526·52x·APP_ENV·세션 안 잡힘·429 → 원인), `rollback.md`
+- 원문(`infra/README.md`, `deploy/README.md`)을 복사하지 말고 요약 + 위치 링크 — 복사본은 어긋난다
+- **완료 기준**: "배포 실패 526" 같은 질문에 이 스킬이 걸린다
+
+## 확인 못 한 것 · 범위 밖
+
+- `nginx -t` 를 못 돌렸다 (로컬 Docker 가 꺼져 있었다) — 6 에서 `deploy/site.conf` · `nginx.conf` 를 고쳤다
+- CI 의 e2e 잡은 로컬에서만 같은 순서로 돌려 봤다 — 첫 실행 결과는 GitHub Actions 에서 확인
+- npm dev 의존성 moderate 3건 (운영 번들엔 없다), eslint 경고 1 (`googleCallback` 의 1회 실행 useEffect — 의도)
+- 나중에: fe-test-writer, Playwright MCP, 배포 승인 게이트(GitHub environments), 모니터링·알림
 
 ---
 
