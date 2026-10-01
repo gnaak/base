@@ -1,8 +1,8 @@
 ---
 name: be-db-modeler
 description: DB 모델 작성 전담. be-researcher 완료 후 호출.
-model: sonnet
-allowed-tools: Read, Write
+model: opus
+tools: Read, Grep, Glob, Write, Edit
 ---
 
 be-researcher 탐색 결과를 바탕으로:

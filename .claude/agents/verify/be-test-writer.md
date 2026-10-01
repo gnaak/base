@@ -1,7 +1,8 @@
 ---
 name: be-test-writer
 description: 백엔드 라우터 테스트 작성 전담. 라우터 구현이 끝난 뒤 호출.
-allowed-tools: Read, Grep, Glob, Write, Edit
+model: sonnet
+tools: Read, Grep, Glob, Write, Edit
 ---
 
 주어진 도메인의 라우터 통합 테스트를 `backend/tests/test_{도메인}_router.py`에 작성하세요.

@@ -2,7 +2,7 @@
 name: fe-ui-builder
 description: UI 컴포넌트, 컨테이너 작성 전담. fe-researcher 완료 후 호출.
 model: sonnet
-allowed-tools: Read, Write
+tools: Read, Grep, Glob, Write, Edit
 ---
 
 fe-researcher 결과를 바탕으로:

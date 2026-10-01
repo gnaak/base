@@ -660,7 +660,7 @@ async def test_내_정보를_반환한다(client, make_user):
 > 다음 요청까지 남습니다. `headers=auth_header(...)` 로 요청 단위로 통제합니다.
 
 **Claude Code로 돌릴 때** — `/test {도메인}` 커맨드가 `be-researcher` → `be-test-writer` 순으로
-돌린 뒤 pytest를 실행합니다. 덮어야 할 엣지 케이스 목록은 `.claude/agents/be-test-writer.md`에
+돌린 뒤 pytest를 실행합니다. 덮어야 할 엣지 케이스 목록은 `.claude/agents/verify/be-test-writer.md`에
 있습니다. 테스트가 앱 버그를 잡으면 에이전트는 **고치지 않고 멈춰서 보고**하도록 되어 있습니다 —
 기대값에 맞춰 테스트를 느슨하게 만드는 게 제일 흔한 실패 방식이라서.
 
@@ -923,7 +923,7 @@ Claude Code로 개발한다면 `CLAUDE.md`, `frontend/CLAUDE.md`, `backend/CLAUD
 | | |
 |---|---|
 | `commands/` | `/feature` `/design` `/fullstack` `/fix` `/test` — 에이전트 호출 순서를 묶은 슬래시 커맨드 |
-| `agents/` | 백엔드·프론트 탐색/작성 전담 서브에이전트 7종 |
+| `agents/` | 단계별 서브에이전트 — `dev/backend/` · `dev/frontend/`(탐색·작성) · `verify/`(테스트 작성) |
 | `commands/setup.md` | `/setup` — 템플릿을 새 프로젝트로 가져왔을 때 바꿀 것들 (clone 직후 1회, 위 9.2~9.4) |
 | `commands/seo_check.md` | `/seo_check` — 검색·AI 인용이 조용히 0이 되는 사고를 정적 점검 (푸시 전) |
 | `skills/seo/` | SEO·AEO·GEO·LLMO·NEO(네이버) 진단·구현 스킬 |

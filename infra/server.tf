@@ -41,7 +41,7 @@ resource "random_password" "jwt_secret" {
 
   # ⚠️ EC2 가 교체되면 같이 바뀐다. Redis(로그아웃·비번변경으로 끊은 세션 목록)가
   #    새 서버에서 비어 있으므로, 옛 토큰을 전부 무효로 만들어야 끊긴 세션이 안 살아난다.
-  #    대가는 전원 재로그인 한 번 (PROJECT.md "Redis")
+  #    대가는 전원 재로그인 한 번 (backend/CLAUDE.md "세션 무효화")
   keepers = {
     instance = aws_instance.app.id
   }

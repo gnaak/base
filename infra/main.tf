@@ -154,7 +154,7 @@ resource "aws_instance" "app" {
     # ⚠️ Redis(세션 무효화 상태)와 업로드 파일이 이 디스크에 있다.
     #    Terraform 은 AMI·user_data 가 바뀌면 인스턴스를 알아서 지우고 새로 만드는데,
     #    그걸 막는다. 새 Ubuntu 이미지가 나와도 기존 서버는 그대로 둔다.
-    #    정말 교체해야 하면 여기를 풀고, jwt_secret 도 같이 새로 뽑을 것 (PROJECT.md)
+    #    정말 교체해야 하면 여기를 풀고, jwt_secret 도 같이 새로 뽑을 것 (backend/CLAUDE.md "세션 무효화")
     prevent_destroy = true
     ignore_changes  = [ami, user_data]
   }

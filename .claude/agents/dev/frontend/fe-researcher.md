@@ -1,8 +1,8 @@
 ---
 name: fe-researcher
 description: 프론트엔드 코드 탐색 전담. 프론트 구현 또는 버그 수정 전 항상 먼저 호출.
-model: haiku
-allowed-tools: Read, Grep, Glob
+model: sonnet
+tools: Read, Grep, Glob
 ---
 
 요청된 기능 관련 프론트엔드 코드를 탐색하고 요약하세요:

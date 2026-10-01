@@ -159,7 +159,7 @@ FastAPI는 `Depends(provider("user"))`를 본다. **파라미터 하나의 타�
 - `app/module/*/[domain]_router.py` — 전부 (엔드포인트 8개)
 - `app/module/auth/auth_service.py`, `infra/google`, `infra/kakao` — `request.json()` 대신 스키마 인자
 - 신규: `app/module/[domain]/[domain]_schema.py`
-- 문서: `backend/CLAUDE.md` 라우터 패턴, `README.md` §6.1, `.claude/agents/be-api-builder.md`
+- 문서: `backend/CLAUDE.md` 라우터 패턴, `README.md` §6.1, `.claude/agents/dev/backend/be-api-builder.md`
 - 테스트: `tests/test_user_router.py` 는 그대로 통과해야 함 (외부 계약은 안 변함)
 
 ---

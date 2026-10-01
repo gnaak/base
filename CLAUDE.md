@@ -92,7 +92,13 @@ CI에서 다시 볼 일이 없다. (terraform 은 `./infra/tf.ps1` 을 한 번 �
 | | |
 | --- | --- |
 | `.claude/commands/` | `/feature` `/design` `/fullstack` `/fix` `/test` · `/setup`(clone 직후 1회) · `/seo_check`(푸시 전) |
-| `.claude/agents/` | 탐색·작성 전담 서브에이전트 7종 |
+| `.claude/agents/` | 단계별 서브에이전트 — `dev/backend/` · `dev/frontend/`(탐색·작성) · `verify/`(테스트 작성) |
+
+> **에이전트 파일 규칙** — 폴더는 사람이 보기 위한 정리일 뿐, Claude는 `description` 만 보고 고른다.
+> 도구 제한은 **`tools:`** 필드다. `allowed-tools:`(커맨드·스킬용)를 쓰면 조용히 무시되고 모든 도구가 열린다.
+> 탐색 전담은 `Read, Grep, Glob` 만 — "터미널 금지"를 프롬프트에 적는 것보다 도구를 빼는 게 확실하다.
+> 모델은 **판단·설계·검토 = `opus`**(DB 모델링, API 로직, 리뷰어), **탐색·대량 작성 = `sonnet`**. haiku 는 쓰지 않는다 —
+> 탐색이 틀리면 뒤 단계가 전부 틀린다. 별칭(`opus`/`sonnet`)은 그 계열의 최신 모델을 따라간다.
 | `.claude/skills/seo/` | SEO·AEO·GEO·LLMO·NEO 진단·구현 ([원본](https://github.com/leopard627/fire-your-seo-agency), MIT) |
 
 > **SEO 스킬 주의** — 이 템플릿의 프론트는 CSR이라 `curl`로 받은 HTML에 본문이 없다.

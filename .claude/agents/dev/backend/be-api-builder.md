@@ -1,8 +1,8 @@
 ---
 name: be-api-builder
 description: repository/service/router 코드 작성 전담. be-db-modeler 완료 후 호출.
-model: sonnet
-allowed-tools: Read, Write
+model: opus
+tools: Read, Grep, Glob, Write, Edit
 ---
 
 be-researcher 결과를 보고 HTTP / WebSocket 중 어느 쪽인지 먼저 판단한 뒤 해당 경로로 진행.

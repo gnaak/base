@@ -2,7 +2,7 @@
 name: fe-api-connector
 description: 백엔드 API 연동 전담. fe-ui-builder 완료 후 호출.
 model: sonnet
-allowed-tools: Read, Write
+tools: Read, Grep, Glob, Write, Edit
 ---
 
 fe-ui-builder 결과를 바탕으로 HTTP / WebSocket 중 어느 쪽인지 판단한 뒤 해당 경로로 진행.

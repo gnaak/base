@@ -418,7 +418,7 @@ uv run pytest tests/test_user_router.py -v     # 한 파일
 - 요청은 `client.get(url, headers=auth_header(id))`. `cookies=` 인자는 쓰지 말 것 —
   httpx에서 deprecated고 테스트 간에 쿠키가 샌다
 - 새 라우터 테스트는 `tests/test_user_router.py`를 본보기로. 정상 경로 하나로 끝내지 말고
-  인증·입력·상태·응답규약 엣지 케이스를 붙인다 (`.claude/agents/be-test-writer.md`에 목록)
+  인증·입력·상태·응답규약 엣지 케이스를 붙인다 (`.claude/agents/verify/be-test-writer.md`에 목록)
 - 테스트가 앱 버그를 잡으면 **테스트를 느슨하게 고치지 말고 앱을 고친다**
 
 ## 목록 응답 — `core/utils/pagination.py`
