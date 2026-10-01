@@ -46,10 +46,16 @@ Tailwind 클래스로 노출한다. **색을 직접 쓰지 말고 항상 토큰�
 
 > ⚠️ `bg-point`는 없다 — `point`에 DEFAULT를 두지 않았다. `point-red` 같은 하위 키만 쓴다.
 
-### 어드민 고정 색 (다크모드 전환 없음)
+### 고정색 — 브랜드 로그인 버튼뿐
 
-`main`(#1C1C1C) / `sub1`(#3A3A3A) / `sub2`(#F2F2F2), 각각 `-hover` `-active` 변형.
-**신규 작업에는 쓰지 않는다.** 로그인 배경처럼 테마와 무관하게 고정해야 하는 자리에만 남겨뒀다.
+| 클래스 | 용도 |
+|---|---|
+| `bg-kakao` `hover:bg-kakao-hover` `text-kakao-text` | 카카오 로그인 버튼 (카카오 가이드 색) |
+| `bg-google` `hover:bg-google-hover` `border-google-border` `text-google-text` | 구글 로그인 버튼 (구글 가이드 색) |
+
+이 둘 말고는 고정색을 쓰지 않는다 — `bg-white`·`gray-*`·`[#hex]` 는 다크모드·고객 화면 테마가 닿지 않는다.
+예전의 `main`/`sub1`/`sub2` 는 지웠다 (관리자 컴포넌트 14개에 고정색이 박혀 다크모드가 안 먹던 원인이다).
+흰 글자는 `text-text-inverse` — 다크모드에서 `primary` 가 거의 흰색이 된다.
 
 ---
 
@@ -152,10 +158,14 @@ const columns: Column<UserRow>[] = [
 
 ## 6. 레이아웃
 
-- 어드민은 **사이드바 단독** 구성이다 (상단 헤더 없음). 페이지 제목은 각 컨테이너가 그린다
+- 어드민은 **사이드바 단독** 구성이다 (md 이상에서 상단 헤더 없음). 페이지 제목은 각 컨테이너가 그린다
 - 본문 폭은 `max-w-6xl mx-auto px-6 py-8`
 - 높이는 `h-svh`를 쓴다 — 모바일 주소창이 접히고 펴질 때 `100vh`는 화면 밖으로 삐져나간다
-- 사이드바는 `w-60`, `md` 미만에서 숨긴다
+- 사이드바는 `w-60`. **md 미만에서는 숨는 대신 상단 바의 메뉴 버튼이 같은 사이드바를 드로어로 연다**
+  (`container/admin/layout.tsx`). 경로가 바뀌거나 ESC·바깥을 누르면 닫힌다 — 사장님이 휴대폰으로 열어도 이동할 수 있게
+- 다크모드는 `ThemeProvider`(`src/context/ThemeProvider.tsx`)가 `<html>` 에 `.dark` 를 붙여 켠다. 기본은 OS 설정을 따르고,
+  사이드바 하단 버튼으로 시스템 → 라이트 → 다크를 고른다(localStorage `theme`). 첫 페인트는 `index.html` 의 인라인 스크립트가 맡는다
+- 텍스트 선택을 막지 않는다 (전역 `user-select: none` 없음 — 버튼만 막는다). 판매자 정보·약관·표의 값은 복사돼야 한다
 
 ---
 

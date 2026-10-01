@@ -15,7 +15,7 @@ const Loading = () => {
   const INNER_OFFSET = 58; // 이 값이 '간격'에 가장 큰 영향 줌 (낮출수록 간격 커짐)
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 bg-overlay/50 flex items-center justify-center">
       <div className="relative" style={{ width: SIZE, height: SIZE }}>
         {Array.from({ length: NEEDLES }).map((_, i) => (
           <span
@@ -23,7 +23,7 @@ const Loading = () => {
             className="
               absolute left-1/2 top-1/2
               rounded-full origin-bottom
-              bg-gray-400
+              bg-primary
               animate-needle-fade
             "
             style={{
@@ -31,8 +31,9 @@ const Loading = () => {
               height: `${LEN}%`,
               transform: `rotate(${(360 / NEEDLES) * i}deg) translateY(-${INNER_OFFSET}%)`,
               animationDelay: `${(i * 1.2) / NEEDLES}s`,
+              // primary 는 라이트에서 거의 검정, 다크에서 거의 흰색 — 어느 쪽 스크림 위에서도 보인다
               background:
-                "linear-gradient(to bottom, rgba(255,255,255,0.9), #9ca3af)",
+                "linear-gradient(to bottom, rgb(var(--primary) / 0.25), rgb(var(--primary)))",
             }}
           />
         ))}

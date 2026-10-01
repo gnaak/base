@@ -192,13 +192,13 @@ const FormModal = ({
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-black/30"
+      className="fixed inset-0 z-40 flex items-center justify-center bg-overlay/30"
       onMouseDown={handleOverlayMouseDown}
       onClick={handleOverlayClick}
     >
       <div
         className={`
-          bg-white rounded-lg shadow-lg
+          bg-bg-card rounded-lg shadow-lg
           w-full ${sizeClass} mx-4
           max-h-[90vh] flex flex-col
           ${className}
@@ -210,7 +210,7 @@ const FormModal = ({
           <div
             className={`
               relative flex w-full
-              ${headerType === "none" ? "p-2" : "px-4 py-3 border-b"}
+              ${headerType === "none" ? "p-2" : "px-4 py-3 border-b border-line"}
               ${headerAlignClass}
             `}
           >
@@ -219,7 +219,7 @@ const FormModal = ({
               <div className="flex-1 pr-6">
                 {title && <div className="text-base font-medium">{title}</div>}
                 {description && (
-                  <div className="text-xs text-gray-600">{description}</div>
+                  <div className="text-xs text-text-sub">{description}</div>
                 )}
               </div>
             )}
@@ -231,7 +231,7 @@ const FormModal = ({
                 onClick={onClose}
                 className="
                   absolute top-2 right-2
-                  p-1 rounded hover:bg-gray-100
+                  p-1 rounded hover:bg-bg-hover
                 "
               >
                 <X className="w-4 h-4" />
@@ -254,7 +254,7 @@ const FormModal = ({
         {footerType !== 0 && (
           <div
             className={`
-              px-4 py-3 border-t flex gap-2 items-center
+              px-4 py-3 border-t border-line flex gap-2 items-center
               ${footerLeft ? "justify-between" : footerJustify}
             `}
           >

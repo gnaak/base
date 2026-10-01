@@ -41,6 +41,9 @@ export interface GroupProps {
 // 페이지 별 Props
 export interface AdminSidebarProps {
   adminMenu: AdminMenuItem[];
+  /** md 미만에서 드로어로 열 때. 없으면 md 이상에서만 보이는 고정 사이드바다 */
+  mobile?: boolean;
+  onClose?: () => void;
 }
 
 export interface AdminHeaderProps {

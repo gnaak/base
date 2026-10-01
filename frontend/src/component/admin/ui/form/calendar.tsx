@@ -331,17 +331,17 @@ const Calendar = ({
         onClick={handleToggleOpen}
         className={`
           ${sizeStyles.input}
-          border px-3 rounded-md bg-white flex items-center gap-2
-          text-sm text-gray-800
-          ${disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50"}
+          border border-input-border px-3 rounded-md bg-input-bg flex items-center gap-2
+          text-sm text-text-main
+          ${disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-bg-hover"}
         `}
       >
         {showIcon && (
-          <CalendarIcon className={`${sizeStyles.icon} text-gray-400`} />
+          <CalendarIcon className={`${sizeStyles.icon} text-text-disabled`} />
         )}
         <span
           className={`flex-1 text-center whitespace-nowrap
-          ${!start && !end && "text-gray-500"}
+          ${!start && !end && "text-text-placeholder"}
           `}
         >
           {displayText()}
@@ -352,7 +352,7 @@ const Calendar = ({
       {open && (
         <div
           className={`
-            absolute z-10 bg-white border rounded-lg shadow-lg
+            absolute z-10 bg-bg-card border border-line rounded-lg shadow-lg
             ${sizeStyles.calendar}
             ${popupPositionClass}
           `}
@@ -362,7 +362,7 @@ const Calendar = ({
             <button
               type="button"
               onClick={prevMonth}
-              className="p-1 rounded hover:bg-main/20"
+              className="p-1 rounded hover:bg-bg-hover"
             >
               <ChevronLeft className={sizeStyles.icon} />
             </button>
@@ -374,14 +374,14 @@ const Calendar = ({
             <button
               type="button"
               onClick={nextMonth}
-              className="p-1 rounded hover:bg-main/20"
+              className="p-1 rounded hover:bg-bg-hover"
             >
               <ChevronRight className={sizeStyles.icon} />
             </button>
           </div>
 
           {/* 요일 */}
-          <div className="grid grid-cols-7 text-center text-gray-600 mb-1">
+          <div className="grid grid-cols-7 text-center text-text-sub mb-1">
             {days.map((d) => (
               <div key={d}>{d}</div>
             ))}
@@ -401,15 +401,15 @@ const Calendar = ({
               let classes = `${sizeStyles.dayHeight} flex items-center justify-center`;
 
               if (selectedStart && selectedEnd) {
-                classes += " bg-main text-white rounded-md";
+                classes += " bg-primary text-text-inverse rounded-md";
               } else if (selectedStart) {
-                classes += " bg-main text-white rounded-l-md";
+                classes += " bg-primary text-text-inverse rounded-l-md";
               } else if (selectedEnd) {
-                classes += " bg-main text-white rounded-r-md";
+                classes += " bg-primary text-text-inverse rounded-r-md";
               } else if (inRange) {
-                classes += " bg-main/20";
+                classes += " bg-primary/20";
               } else {
-                classes += " hover:bg-main/10";
+                classes += " hover:bg-bg-hover";
               }
 
               return (
@@ -426,7 +426,7 @@ const Calendar = ({
           </div>
 
           {/* 취소 / 확인 */}
-          <div className="flex justify-end gap-2 mt-3 pt-2 border-t">
+          <div className="flex justify-end gap-2 mt-3 pt-2 border-t border-line">
             <Button variant="sub2" size="sm" onClick={handleCancel}>
               <span className={sizeStyles.textSize}>취소</span>
             </Button>

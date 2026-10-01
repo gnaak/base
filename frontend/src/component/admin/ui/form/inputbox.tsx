@@ -71,15 +71,15 @@ const InputBox = ({
   }[size];
 
   const borderColor = (() => {
-    if (error) return "border-errorColor";
-    if (success) return "border-green-500";
-    if (focused) return "border-gray-300";
-    return "border hover:border-gray-300";
+    if (error) return "border-point-red";
+    if (success) return "border-point-green";
+    if (focused) return "border-line-strong";
+    return "border-input-border hover:border-line-strong";
   })();
 
   const widthStyle = full ? "w-full" : width ? undefined : "inline-flex";
 
-  const baseBg = className.includes("bg-") ? "" : "bg-white";
+  const baseBg = className.includes("bg-") ? "" : "bg-input-bg";
 
   return (
     <>
@@ -121,7 +121,7 @@ const InputBox = ({
             onBlur?.();
           }}
           className={`
-          flex-1 min-w-0 outline-none bg-transparent
+          flex-1 min-w-0 outline-none bg-transparent placeholder:text-text-placeholder
           ${sizeStyles.input}
           `}
         />
@@ -135,7 +135,7 @@ const InputBox = ({
             `}
           >
             {error ? (
-              <div className="flex cursor-none rounded-full bg-[#CE3535] w-4 h-4 items-center justify-center text-white">
+              <div className="flex cursor-none rounded-full bg-point-red w-4 h-4 items-center justify-center text-text-inverse">
                 <span>!</span>
               </div>
             ) : (
@@ -145,7 +145,7 @@ const InputBox = ({
         )}
       </div>
       {error && (
-        <span className="text-[12px] text-errorColor">{errorMessage}</span>
+        <span className="text-[12px] text-point-red">{errorMessage}</span>
       )}
     </>
   );

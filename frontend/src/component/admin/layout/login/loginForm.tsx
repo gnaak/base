@@ -27,7 +27,7 @@ const LoginForm = ({
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-5">
       <div className="flex flex-col gap-1.5">
-        <label className="text-[12px] font-medium text-neutral-600">
+        <label className="text-[12px] font-medium text-text-sub">
           관리자 ID
         </label>
         <InputBox
@@ -35,13 +35,13 @@ const LoginForm = ({
           value={adminId}
           placeholder="admin"
           onChange={(val) => setAdminId(val)}
-          className="bg-neutral-50/60"
-          leftIcon={<User className="w-4 h-4 text-neutral-400" />}
+          className="bg-bg-sub/60"
+          leftIcon={<User className="w-4 h-4 text-text-disabled" />}
         />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="text-[12px] font-medium text-neutral-600">
+        <label className="text-[12px] font-medium text-text-sub">
           비밀번호
         </label>
         <InputBox
@@ -49,8 +49,8 @@ const LoginForm = ({
           value={password}
           placeholder="••••••••"
           onChange={(val) => setPassword(val)}
-          className="bg-neutral-50/60"
-          leftIcon={<Lock className="w-4 h-4 text-neutral-400" />}
+          className="bg-bg-sub/60"
+          leftIcon={<Lock className="w-4 h-4 text-text-disabled" />}
           onRightIconClick={() => setShowPw(!showPw)}
           rightIcon={
             <button
@@ -59,7 +59,7 @@ const LoginForm = ({
                 e.preventDefault();
                 setShowPw(!showPw);
               }}
-              className="flex items-center justify-center text-neutral-400 hover:text-neutral-600 transition-colors"
+              className="flex items-center justify-center text-text-disabled hover:text-text-sub transition-colors"
               aria-label={showPw ? "비밀번호 숨기기" : "비밀번호 표시"}
             >
               {showPw ? (
@@ -77,9 +77,9 @@ const LoginForm = ({
         disabled={disabled}
         className="
           mt-1 inline-flex items-center justify-center gap-1.5 h-10 rounded-xl
-          bg-neutral-900 text-white text-[13px] font-medium
-          hover:bg-neutral-800 active:scale-[0.99]
-          disabled:bg-neutral-300 disabled:cursor-not-allowed disabled:active:scale-100
+          bg-primary text-text-inverse text-[13px] font-medium
+          hover:bg-primary/90 active:scale-[0.99]
+          disabled:bg-bg-active disabled:text-text-disabled disabled:cursor-not-allowed disabled:active:scale-100
           transition-all
         "
       >

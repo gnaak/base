@@ -195,8 +195,11 @@ hover·focus에서 요소가 밀리지 않는다. 그 외 `shadow-subtle` `shado
 폰트 크기는 임의값(`text-[13px]`)을 쓴다 — 기본 스케일은 이 밀도에 비해 성기다.
 숫자가 세로로 정렬되는 곳(표·지표)에는 `tabular-nums`.
 
-**Admin 고정 색상** (다크모드 전환 없음): `main`(#1C1C1C) / `sub1`(#3A3A3A) / `sub2`(#F2F2F2) — 각각 `-hover` `-active` 변형 존재.
-레거시다. **신규 작업엔 쓰지 말 것** — 테마와 무관하게 고정해야 하는 자리에만 남겨뒀다.
+**고정색은 브랜드 로그인 버튼 두 묶음뿐이다** — `bg-kakao` `hover:bg-kakao-hover` `text-kakao-text` /
+`bg-google` `hover:bg-google-hover` `border-google-border` `text-google-text`. 각 사 가이드가 색을 정해 둬서 다크모드에서도 안 바뀐다.
+그 밖의 `bg-white`·`gray-*`·`[#hex]` 는 쓰지 않는다 (다크모드·고객 화면 테마가 닿지 않는다). 예전의 `main`/`sub1`/`sub2` 는 지웠다.
+흰 글자는 `text-white` 가 아니라 `text-text-inverse` — 다크모드에서 `primary` 가 거의 흰색이 되기 때문이다.
+색이 없는 맨 `border` 는 Tailwind 기본 gray-200 고정색이 나오므로 항상 `border-line` 같은 토큰을 같이 붙인다.
 
 새 클래스를 쓰기 전에 `tailwind.config.js`에 실제로 있는지 확인할 것. 없는 클래스는 에러 없이
 조용히 무시된다 — 실제로 어드민 레이아웃이 `bg-adminMain`(존재하지 않는 클래스)을 쓰고 있어서

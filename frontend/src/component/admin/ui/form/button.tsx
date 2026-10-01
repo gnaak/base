@@ -34,20 +34,20 @@ const Button = ({
 
   const variants = {
     main: disabled
-      ? "bg-main-active text-white/40 cursor-not-allowed"
-      : "bg-main hover:bg-main-hover active:bg-main-active text-white",
+      ? "bg-primary-dark text-text-inverse/40 cursor-not-allowed"
+      : "bg-primary hover:bg-primary/90 active:bg-primary-dark text-text-inverse",
 
     sub1: disabled
-      ? "bg-sub1-active text-white/40 cursor-not-allowed"
-      : "bg-sub1 hover:bg-sub1-hover active:bg-sub1-active text-white",
+      ? "bg-primary/90 text-text-inverse/40 cursor-not-allowed"
+      : "bg-primary/80 hover:bg-primary/70 active:bg-primary/90 text-text-inverse",
 
     sub2: disabled
-      ? "bg-sub2-active text-black/30 cursor-not-allowed"
-      : "bg-sub2 hover:bg-sub2-hover active:bg-sub2-active text-black",
+      ? "bg-bg-active text-text-main/30 cursor-not-allowed"
+      : "bg-bg-hover hover:bg-bg-active active:bg-line-strong text-text-main",
 
     danger: disabled
-      ? "bg-red-300 text-white/40 cursor-not-allowed"
-      : "bg-red-500 hover:bg-red-600 active:bg-red-700 text-white",
+      ? "bg-point-red/40 text-text-inverse/40 cursor-not-allowed"
+      : "bg-point-red hover:bg-point-red/90 active:bg-point-red text-text-inverse",
   };
 
   const sizes = {

@@ -72,10 +72,18 @@ const Alert = ({
   className = "",
 }: AlertProps) => {
   const colors = {
-    info: "bg-blue-50 border-blue-400 text-blue-800",
-    success: "bg-green-50 border-green-400 text-green-800",
-    warning: "bg-yellow-50 border-yellow-400 text-yellow-800",
-    error: "bg-red-50 border-red-400 text-red-800",
+    info: "bg-info-bg border-point-blue/40",
+    success: "bg-success-bg border-point-green/40",
+    warning: "bg-warning-bg border-point-amber/40",
+    error: "bg-error-bg border-point-red/40",
+  }[type];
+
+  // 상태색은 아이콘에만. 작은 글자를 point 색으로 칠하면 라이트에서 amber·green 이 옅은 면 대비 ~2:1 이라 안 읽힌다.
+  const iconColor = {
+    info: "text-point-blue",
+    success: "text-point-green",
+    warning: "text-point-amber",
+    error: "text-point-red",
   }[type];
 
   const sizeStyles = {
@@ -118,12 +126,12 @@ const Alert = ({
   return (
     <div
       className={`
-        border rounded-md flex ${containerAlignClass} relative
+        border rounded-md flex ${containerAlignClass} relative text-text-main
         ${colors} ${sizeStyles.wrapper} ${className}
       `}
     >
       {/* ICON */}
-      <span className={`flex-shrink-0 ${iconWrapperClass}`}>{icon}</span>
+      <span className={`flex-shrink-0 ${iconWrapperClass} ${iconColor}`}>{icon}</span>
 
       {/* TEXT */}
       <div className="flex-1">
@@ -140,7 +148,7 @@ const Alert = ({
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-2 right-2 p-1 hover:bg-black/10 rounded"
+          className="absolute top-2 right-2 p-1 hover:bg-text-main/10 rounded"
         >
           <X className="w-4 h-4" />
         </button>

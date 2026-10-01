@@ -160,13 +160,13 @@ const Modal = ({
 
   return (
     <div
-      className="fixed inset-0 z-10 flex items-center justify-center bg-black/40"
+      className="fixed inset-0 z-10 flex items-center justify-center bg-overlay/40"
       onMouseDown={handleOverlayMouseDown}
       onClick={handleOverlayClick}
     >
       <div
         className={`
-          bg-white rounded-lg shadow-lg
+          bg-bg-card rounded-lg shadow-lg
           ${sizeClass} p-4 py-2
           flex flex-col
           ${className}
@@ -183,11 +183,11 @@ const Modal = ({
         >
           {icon && <div>{icon}</div>}
           {/* Title */}
-          <div className="text-gray-900 font-medium">{title}</div>
+          <div className="text-text-main font-medium">{title}</div>
 
           {/* Description */}
           {description && (
-            <div className="text-sm text-gray-500 whitespace-pre-wrap w-full">
+            <div className="text-sm text-text-sub whitespace-pre-wrap w-full">
               {description}
             </div>
           )}

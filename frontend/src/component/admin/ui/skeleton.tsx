@@ -12,7 +12,7 @@ const Skeleton = ({ className = "" }: SkeletonProps) => (
   <div
     aria-hidden="true"
     className={[
-      "relative overflow-hidden bg-skeleton-base rounded-DEFAULT",
+      "relative overflow-hidden bg-skeleton-base rounded",
       className,
     ]
       .filter(Boolean)

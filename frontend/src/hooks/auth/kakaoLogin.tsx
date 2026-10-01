@@ -29,7 +29,7 @@ const redirect_uri_env = import.meta.env.VITE_APP_PUBLIC_KAKAO_REDIRECT_URI;
  *   client_id="카카오RESTAPI키"
  *   redirect_uri="http://localhost:3000/auth/kakao/callback"
  *   scopeParam="profile_nickname,account_email"
- *   className="bg-yellow-400 text-black px-4 py-2 rounded"
+ *   className="bg-kakao text-kakao-text px-4 py-2 rounded"
  * >
  *   카카오로 로그인
  * </KakaoLoginBtn>
@@ -47,11 +47,11 @@ const KakaoLoginBtn = ({
 
   return (
     <button
-      className="w-full py-3.5 rounded-xl flex items-center justify-center gap-3 active:scale-[0.98] transition-all bg-[#FEE500] hover:bg-[#FDD835]"
+      className="w-full py-3.5 rounded-xl flex items-center justify-center gap-3 active:scale-[0.98] transition-all bg-kakao hover:bg-kakao-hover"
       onClick={() => kakaoAuth()}
     >
       <img src={kakao} alt="kakao login" className="w-5 h-5" />
-      <span className="text-sm font-semibold text-[#191919]">카카오로 계속하기</span>
+      <span className="text-sm font-semibold text-kakao-text">카카오로 계속하기</span>
     </button>
   );
 };

@@ -106,8 +106,8 @@ const RadioButton = ({
         onChange={handleChange}
         className={`
           ${sizeStyles.radio}
-          accent-main
-          border-gray-400
+          accent-primary
+          border-line-strong
         `}
       />
 

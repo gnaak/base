@@ -26,21 +26,22 @@ const variantStyles: Record<
   }
 > = {
   default: {
-    iconWrap: "bg-neutral-100 text-neutral-700",
+    iconWrap: "bg-bg-sub text-text-sub",
     icon: <Info className="w-5 h-5" />,
     confirm:
-      "bg-neutral-900 text-white hover:bg-neutral-800 active:bg-neutral-950",
+      "bg-primary text-text-inverse hover:bg-primary/90 active:bg-primary-dark",
   },
   warning: {
-    iconWrap: "bg-amber-100 text-amber-700",
+    iconWrap: "bg-warning-bg text-point-amber",
     icon: <AlertTriangle className="w-5 h-5" />,
     confirm:
-      "bg-amber-600 text-white hover:bg-amber-500 active:bg-amber-700",
+      "bg-point-amber text-text-inverse hover:bg-point-amber/90 active:bg-point-amber",
   },
   danger: {
-    iconWrap: "bg-red-100 text-red-700",
+    iconWrap: "bg-error-bg text-point-red",
     icon: <AlertTriangle className="w-5 h-5" />,
-    confirm: "bg-red-600 text-white hover:bg-red-500 active:bg-red-700",
+    confirm:
+      "bg-point-red text-text-inverse hover:bg-point-red/90 active:bg-point-red",
   },
 };
 
@@ -78,12 +79,12 @@ const ConfirmModal = ({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4 animate-[fadeIn_120ms_ease-out]"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-overlay/40 backdrop-blur-sm px-4 animate-[fadeIn_120ms_ease-out]"
       onClick={onCancel}
     >
       <div
         className={[
-          "w-full rounded-2xl bg-white shadow-2xl ring-1 ring-neutral-200",
+          "w-full rounded-2xl bg-bg-card shadow-2xl ring-1 ring-line",
           "flex flex-col",
           "animate-[popIn_140ms_ease-out]",
           sizeMap[size],
@@ -101,7 +102,7 @@ const ConfirmModal = ({
             {style.icon}
           </div>
           <div className="flex-1 min-w-0 pt-0.5">
-            <h2 className="text-[15px] font-semibold tracking-tight text-neutral-900">
+            <h2 className="text-[15px] font-semibold tracking-tight text-text-main">
               {title}
             </h2>
           </div>
@@ -112,7 +113,7 @@ const ConfirmModal = ({
             className="
               shrink-0 -mr-1 -mt-1 w-7 h-7 rounded-lg
               flex items-center justify-center
-              text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100
+              text-text-disabled hover:text-text-sub hover:bg-bg-hover
               transition-colors
             "
           >
@@ -122,21 +123,21 @@ const ConfirmModal = ({
 
         {/* Body */}
         {description && (
-          <div className="px-5 pb-5 text-[13px] leading-relaxed text-neutral-600 flex flex-col gap-3">
+          <div className="px-5 pb-5 text-[13px] leading-relaxed text-text-sub flex flex-col gap-3">
             {description}
           </div>
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 px-5 py-3.5 border-t border-neutral-100 bg-neutral-50/60 rounded-b-2xl">
+        <div className="flex items-center justify-end gap-2 px-5 py-3.5 border-t border-line bg-bg-sub/60 rounded-b-2xl">
           {!hideCancel && (
             <button
               type="button"
               onClick={onCancel}
               className="
                 inline-flex items-center justify-center h-9 px-4 rounded-lg
-                text-[13px] font-medium text-neutral-700
-                hover:bg-neutral-200/70 active:bg-neutral-200
+                text-[13px] font-medium text-text-sub
+                hover:bg-bg-active/70 active:bg-bg-active
                 transition-colors
               "
             >

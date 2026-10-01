@@ -97,16 +97,16 @@ const TextareaBox = ({
    * border 색 상태 계산
    */
   const borderColor = (() => {
-    if (error) return "border-red-500";
-    if (success) return "border-green-500";
-    if (focused) return "border-main";
-    return "border-gray-300 hover:border-main";
+    if (error) return "border-point-red";
+    if (success) return "border-point-green";
+    if (focused) return "border-primary";
+    return "border-input-border hover:border-primary";
   })();
 
   return (
     <div
       className={`
-        rounded-md border bg-white w-full
+        rounded-md border bg-input-bg w-full
         transition-colors
         ${sizeStyles.wrapper}
         ${sizeStyles.minHeight}
@@ -125,7 +125,7 @@ const TextareaBox = ({
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         className={`
-          w-full bg-transparent outline-none resize-none
+          w-full bg-transparent outline-none resize-none placeholder:text-text-placeholder
           ${sizeStyles.text}
         `}
       />

@@ -104,10 +104,18 @@ const Toast = ({
 
   // Soft color tones
   const colors = {
-    info: "bg-blue-50 text-blue-800 border border-blue-200",
-    success: "bg-green-50 text-green-800 border border-green-200",
-    warning: "bg-yellow-50 text-yellow-800 border border-yellow-300",
-    error: "bg-red-50 text-red-800 border border-red-200",
+    info: "bg-info-bg text-text-main border border-point-blue/20",
+    success: "bg-success-bg text-text-main border border-point-green/20",
+    warning: "bg-warning-bg text-text-main border border-point-amber/30",
+    error: "bg-error-bg text-text-main border border-point-red/20",
+  }[type];
+
+  // 상태색은 아이콘에만. 작은 글자를 point 색으로 칠하면 라이트에서 amber·green 이 옅은 면 대비 ~2:1 이라 안 읽힌다.
+  const iconColor = {
+    info: "text-point-blue",
+    success: "text-point-green",
+    warning: "text-point-amber",
+    error: "text-point-red",
   }[type];
 
   // Icons
@@ -138,7 +146,7 @@ const Toast = ({
         `}
       >
         {/* ICON */}
-        <span className="flex-shrink-0 mt-[2px]">{icon}</span>
+        <span className={`flex-shrink-0 mt-[2px] ${iconColor}`}>{icon}</span>
 
         {/* TEXT */}
         <div className="flex-1">
@@ -155,7 +163,7 @@ const Toast = ({
           <button
             type="button"
             onClick={onClose}
-            className="ml-1 p-1 rounded hover:bg-black/10"
+            className="ml-1 p-1 rounded hover:bg-text-main/10"
           >
             <X className="w-3.5 h-3.5" />
           </button>

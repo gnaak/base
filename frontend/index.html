@@ -8,6 +8,18 @@
     />
     <link rel="icon" type="image/png" href="/image.png" />
 
+    <!-- 첫 페인트 전에 다크모드를 정한다. React 가 뜬 뒤에 .dark 를 붙이면 흰 화면이 한 번 번쩍인다.
+         규칙은 src/context/ThemeProvider.tsx 와 같다 (localStorage "theme": light | dark, 없으면 OS 설정) -->
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem("theme");
+          var dark = saved === "dark" || (saved !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          if (dark) document.documentElement.classList.add("dark");
+        } catch (e) {}
+      })();
+    </script>
+
     <!-- ══════════════════════════════════════════════════════════
          아래는 전부 프로젝트마다 바꾸는 값이다. `/setup` 이 채워준다.
          CSR 이라 크롤러는 이 파일만 본다 — 라우트별 메타가 필요하면

@@ -13,7 +13,7 @@ export const PublicRoute = ({
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
-    return <div className="w-full h-screen bg-white" />;
+    return <div className="w-full h-screen bg-bg" />;
   }
 
   if (user) {

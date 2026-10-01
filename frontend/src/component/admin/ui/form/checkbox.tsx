@@ -96,8 +96,8 @@ const Checkbox = ({
         onChange={handleChange}
         className={`
           ${sizeStyles.box}
-          accent-main
-          border-gray-400 rounded
+          accent-primary
+          border-line-strong rounded
         `}
       />
 

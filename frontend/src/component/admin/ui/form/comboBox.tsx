@@ -26,9 +26,9 @@ const ComboBox = ({ value, onChange, options, placeholder = "입력하거나 선
   return (
     <div ref={boxRef} className="relative w-full">
       <div
-        className={`flex items-center h-10 px-3 gap-2 rounded-md border bg-white transition-colors hover:border-gray-300 ${
+        className={`flex items-center h-10 px-3 gap-2 rounded-md border bg-input-bg transition-colors hover:border-line-strong ${
           disabled ? "opacity-40 cursor-not-allowed" : ""
-        } ${open ? "border-gray-300" : "border"}`}
+        } ${open ? "border-line-strong" : "border-input-border"}`}
       >
         <input
           type="text"
@@ -37,7 +37,7 @@ const ComboBox = ({ value, onChange, options, placeholder = "입력하거나 선
           onFocus={() => setOpen(true)}
           placeholder={placeholder}
           disabled={disabled}
-          className="flex-1 outline-none bg-transparent text-sm"
+          className="flex-1 outline-none bg-transparent text-sm placeholder:text-text-placeholder"
         />
         <button
           type="button"
@@ -45,13 +45,13 @@ const ComboBox = ({ value, onChange, options, placeholder = "입력하거나 선
           disabled={disabled}
           className="shrink-0"
         >
-          <ChevronDown className={`w-4 h-4 text-main/40 transition-transform ${open ? "rotate-180" : ""}`} />
+          <ChevronDown className={`w-4 h-4 text-text-disabled transition-transform ${open ? "rotate-180" : ""}`} />
         </button>
       </div>
 
       {open && filtered.length > 0 && (
         <div
-          className="absolute top-full mt-1 left-0 w-full bg-white border rounded-md shadow-lg z-50 py-1.5 overflow-y-auto"
+          className="absolute top-full mt-1 left-0 w-full bg-bg-card border border-line rounded-md shadow-lg z-50 py-1.5 overflow-y-auto"
           style={{ maxHeight: "148px" }}
         >
           {filtered.map((opt) => (
@@ -60,7 +60,7 @@ const ComboBox = ({ value, onChange, options, placeholder = "입력하거나 선
               type="button"
               onClick={() => { onChange(opt); setOpen(false); }}
               className={`w-full text-center h-9 text-sm px-3 ${
-                value === opt ? "bg-sub1 text-white" : "hover:bg-main/10"
+                value === opt ? "bg-primary/80 text-text-inverse" : "hover:bg-bg-hover"
               }`}
             >
               {opt}

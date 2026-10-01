@@ -115,7 +115,7 @@ const Toggle = ({
       className={`
         relative flex items-center rounded-full transition-colors
         ${sizes[size]}
-        ${isOn ? "bg-main" : "bg-gray-300"}
+        ${isOn ? "bg-primary" : "bg-line-strong"}
         ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
         ${className}
       `}
@@ -123,7 +123,7 @@ const Toggle = ({
     >
       <span
         className={`
-          absolute bg-white rounded-full transition-transform
+          absolute bg-bg-card rounded-full transition-transform
           ${circleSizes[size]}
           ${isOn ? "translate-x-full" : "translate-x-0"}
           ml-1

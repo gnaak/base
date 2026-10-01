@@ -52,9 +52,9 @@ const Pagination = ({
 
   const sizeClass = size === "sm" ? "h-7 min-w-7 px-1" : "h-8 min-w-8 px-2";
 
-  const normal = "border-gray-300 text-gray-700 bg-white hover:bg-gray-50";
+  const normal = "border-line text-text-sub bg-bg-card hover:bg-bg-hover";
 
-  const active = "!bg-main-active !text-white !border-main-active";
+  const active = "!bg-primary !text-text-inverse !border-primary";
 
   const disabled = "opacity-40 pointer-events-none cursor-default";
 

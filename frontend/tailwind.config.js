@@ -70,6 +70,11 @@ export default {
           "0%": { opacity: "0" },
           "100%": { opacity: "1" },
         },
+        // Loading 의 막대들이 차례로 옅어진다 (막대마다 animationDelay 가 다르다)
+        "needle-fade": {
+          "0%": { opacity: "1" },
+          "100%": { opacity: "0.15" },
+        },
       },
       animation: {
         "fade-slide": "fade-slide 150ms ease-out",
@@ -77,26 +82,11 @@ export default {
         shimmer: "shimmer 1.6s ease-in-out infinite",
         "drawer-in": "drawer-in 180ms ease-out",
         "fade-in": "fade-in 180ms ease-out",
+        "needle-fade": "needle-fade 1.2s linear infinite",
       },
       colors: {
-        // Admin 전용 고정 색상 (legacy — kept for existing admin pages)
-        main: {
-          DEFAULT: "#1C1C1C",
-          hover: "#262626",
-          active: "#141414",
-        },
-        sub1: {
-          DEFAULT: "#3A3A3A",
-          hover: "#4A4A4A",
-          active: "#2E2E2E",
-        },
-        sub2: {
-          DEFAULT: "#F2F2F2",
-          hover: "#EDEDED",
-          active: "#DCDCDC",
-        },
-
-        // CSS 변수 기반 시맨틱 토큰 (라이트/다크 자동 전환)
+        // CSS 변수 기반 시맨틱 토큰 (라이트/다크 자동 전환).
+        // 예전의 고정색 main/sub1/sub2 는 지웠다 — 남아 있으면 다시 쓰이고, 다크모드·테마가 닿지 않는다.
         primary: {
           DEFAULT: "rgb(var(--primary) / <alpha-value>)",
           light: "rgb(var(--primary-light) / <alpha-value>)",
@@ -158,6 +148,11 @@ export default {
         ship: "rgb(var(--ship) / <alpha-value>)",
         preview: "rgb(var(--preview) / <alpha-value>)",
         develop: "rgb(var(--develop) / <alpha-value>)",
+
+        // 브랜드가 정한 고정색 — 토큰이 아니라서 다크모드·테마에서도 바뀌지 않는다.
+        // 각 사 로그인 버튼 가이드가 색을 정해 두었기 때문이다. 이 두 묶음 말고는 고정색을 쓰지 않는다.
+        kakao: { DEFAULT: "#FEE500", hover: "#FDD835", text: "#191919" },
+        google: { DEFAULT: "#FFFFFF", hover: "#F8F9FA", border: "#747775", text: "#1F1F1F" },
       },
     },
   },

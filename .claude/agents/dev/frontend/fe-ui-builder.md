@@ -34,7 +34,8 @@ fe-researcher 결과를 바탕으로:
 - Tailwind CSS 사용. 쓰려는 클래스가 tailwind.config.js에 실제로 있는지 확인할 것
   (없는 클래스는 에러 없이 조용히 무시된다)
 - 색상은 반드시 시맨틱 토큰 — bg-bg-card, text-text-main, border-line 등.
-  하드코딩한 hex/rgb 금지 (다크모드가 안 따라온다). main/sub1/sub2 는 레거시라 신규 작업엔 쓰지 않는다
+  `bg-white`·`gray-*`·hex/rgb 금지 (다크모드·테마가 안 따라온다). 흰 글자는 `text-text-inverse`.
+  예외는 브랜드 로그인 버튼(`bg-kakao`·`bg-google` 묶음)뿐. 맨 `border` 에는 `border-line` 을 같이 붙인다
 - 관리자 화면: 깊이는 border 가 아니라 shadow-border (1px 링), 제목엔 tracking-title / tracking-heading,
   표·지표의 숫자엔 tabular-nums. 고객 화면은 `04_DESIGN.md` 의 원칙이 우선이다
 - 전체 규칙은 루트 DESIGN.md, 토큰 표는 frontend/CLAUDE.md "스타일 — Tailwind" 참고

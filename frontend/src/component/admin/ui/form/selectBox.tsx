@@ -97,17 +97,17 @@ const SelectBox = ({
         type="button"
         onClick={() => !disabled && setOpen(!open)}
         disabled={disabled}
-        className={`border rounded-md bg-white w-full flex items-center justify-between hover:bg-gray-50 whitespace-nowrap transition-colors
+        className={`border border-input-border rounded-md bg-input-bg w-full flex items-center justify-between hover:bg-bg-hover whitespace-nowrap transition-colors
           ${sizeStyles.input}
-          ${disabled ? "opacity-40 cursor-not-allowed" : "border-sub2"}
+          ${disabled ? "opacity-40 cursor-not-allowed" : ""}
         `}
       >
-        <span className={selectedOption ? "text-main" : "text-main/40"}>
+        <span className={selectedOption ? "text-text-main" : "text-text-placeholder"}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
 
         <ChevronDown
-          className={`${sizeStyles.arrow} text-main/40 transition-transform duration-200 ${open ? "rotate-180" : "rotate-0"
+          className={`${sizeStyles.arrow} text-text-disabled transition-transform duration-200 ${open ? "rotate-180" : "rotate-0"
             }`}
         />
       </button>
@@ -116,7 +116,7 @@ const SelectBox = ({
       {open && (
         <div
           className={`
-            absolute border border-sub2 bg-white shadow-lg rounded-md z-50
+            absolute border border-line bg-bg-card shadow-lg rounded-md z-50
             min-w-full overflow-y-auto scrollbar-hide
             ${sizeStyles.list}
             ${popupPosition}
@@ -132,14 +132,14 @@ const SelectBox = ({
                 className={[
                   sizeStyles.item,
                   "w-full text-center transition-colors",
-                  value === opt.value ? "bg-sub1 text-white font-semibold" : "hover:bg-main/5 text-main",
+                  value === opt.value ? "bg-primary/80 text-text-inverse font-semibold" : "hover:bg-bg-hover text-text-main",
                 ].join(" ")}
               >
                 {opt.label}
               </button>
             ))
           ) : (
-            <div className={`${sizeStyles.item} flex items-center justify-center text-main/30`}>
+            <div className={`${sizeStyles.item} flex items-center justify-center text-text-disabled`}>
               데이터가 없습니다
             </div>
           )}
