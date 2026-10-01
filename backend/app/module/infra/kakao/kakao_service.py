@@ -2,6 +2,7 @@
 
 from app.core.config.settings import settings
 from app.core.logging import get_logger
+from app.core.utils.error_code import ErrorCode
 from app.core.utils.http_client import request_json
 from app.core.utils.response import fail
 from app.module.user.user_repository import UserRepository
@@ -59,9 +60,14 @@ class KakaoService:
         if not email:
             raise fail("kakao email consent required", "OAUTH_EMAIL_REQUIRED", 400)
 
+        # 계정을 이메일로 찾으므로, 카카오가 검증하지 않은 이메일을 받으면 남의 계정에 붙는다.
+        # is_email_valid=false 는 그 이메일이 다른 카카오 계정으로 옮겨 갔다는 뜻이다
+        if not (kakao_account.get("is_email_verified") and kakao_account.get("is_email_valid")):
+            raise fail("kakao email not verified", ErrorCode.OAUTH_EMAIL_UNVERIFIED, 403)
+
         name = profile.get("nickname") or ""
         picture = (profile.get("profile_image_url") or "").replace("http://", "https://")
 
-        user = await self.user_repo.get_or_create_user(email, name, picture)
+        user = await self.user_repo.get_or_create_oauth_user(email, name, picture)
 
         return user

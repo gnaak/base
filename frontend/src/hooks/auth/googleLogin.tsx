@@ -1,4 +1,5 @@
 import google from "@/assets/client/login/google.svg";
+import { beginOAuth } from "./oauthState";
 
 interface GoogleLoginBtnProps {
   client_id?: string;
@@ -17,16 +18,18 @@ const GoogleLoginBtn = ({
   className = "",
 }: GoogleLoginBtnProps) => {
   const handleClick = () => {
-    const searchParams = new URLSearchParams(window.location.search);
-    const next = searchParams.get("next");
+    // 로그인 뒤 돌아갈 곳. state 에 싣지 않고 sessionStorage 에 둔다 (oauthState.ts)
+    const next = new URLSearchParams(window.location.search).get("next");
+    const params = new URLSearchParams({
+      client_id,
+      redirect_uri,
+      response_type: "code",
+      access_type: "offline",
+      state: beginOAuth("google", next),
+      ...(scopeParam ? { scope: scopeParam } : {}),
+    });
 
-    const stateObj = next ? { next, isPopup: true } : {};
-    const state = encodeURIComponent(JSON.stringify(stateObj));
-    const scopeQuery = scopeParam ? `&scope=${encodeURIComponent(scopeParam)}` : "";
-
-    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${client_id}&redirect_uri=${encodeURIComponent(
-      redirect_uri
-    )}&response_type=code&access_type=offline${scopeQuery}&state=${state}`;
+    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
   };
 
   return (

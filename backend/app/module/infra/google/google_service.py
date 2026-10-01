@@ -2,6 +2,7 @@
 
 from app.core.config.settings import settings
 from app.core.logging import get_logger
+from app.core.utils.error_code import ErrorCode
 from app.core.utils.http_client import request_json
 from app.core.utils.response import fail
 from app.module.user.user_repository import UserRepository
@@ -52,9 +53,13 @@ class GoogleService:
             # email 없이 유저를 만들면 email=NULL 행끼리 서로 매칭되는 사고가 난다
             raise fail("google account has no email", "OAUTH_EMAIL_REQUIRED", 400)
 
+        # 계정을 이메일로 찾으므로, 구글이 검증하지 않은 이메일을 받으면 남의 계정에 붙는다
+        if userinfo.get("verified_email") is not True:
+            raise fail("google email not verified", ErrorCode.OAUTH_EMAIL_UNVERIFIED, 403)
+
         name = userinfo.get("name") or ""
         picture = userinfo.get("picture", "")
 
-        user = await self.user_repo.get_or_create_user(email, name, picture)
+        user = await self.user_repo.get_or_create_oauth_user(email, name, picture)
 
         return user

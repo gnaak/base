@@ -17,13 +17,15 @@ class LoginIn(BaseModel):
     """이메일/비밀번호 로그인. `type` 으로 user/admin 세션을 고른다."""
 
     email: str = Field(min_length=1, max_length=100)
-    password: str = Field(min_length=1)
+    # 최대 길이는 argon2 에 거대한 입력을 넣어 CPU 를 태우는 걸 막는다.
+    # 최소는 1 — 정책이 바뀌기 전에 만든 기존 계정도 로그인할 수 있어야 한다 (최소 길이는 가입에서만)
+    password: str = Field(min_length=1, max_length=128)
     type: Literal["user", "admin"] = "user"
 
 
 class SignupIn(BaseModel):
     email: str = Field(min_length=1, max_length=100)
-    password: str = Field(min_length=1)
+    password: str = Field(min_length=8, max_length=128)
     nickname: str = Field(min_length=1, max_length=20)
 
 

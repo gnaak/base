@@ -1,7 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePost } from "../common/useAPI";
 import { useAuth } from "../common/useAuth";
+import { consumeOAuthState } from "./oauthState";
 
 interface KakaoProps {
   onSuccess?: (data) => void;
@@ -41,25 +42,37 @@ const KakaoCallBack = ({
 }: KakaoProps) => {
   const navigate = useNavigate();
   const { syncAuth } = useAuth();
-  const code = new URL(document.location.toString()).searchParams.get("code");
+  const searchParams = new URL(document.location.toString()).searchParams;
+  const code = searchParams.get("code");
   const device_info = navigator.userAgent;
 
   const kakaoLogin = usePost(apiURL);
   const kakaoLoginAction = async () => {
     if (!code) return;
+    // 로그인 버튼이 만든 state 와 같을 때만 code 를 보낸다 — 아니면 남이 만든 콜백 링크다 (로그인 CSRF)
+    const state = consumeOAuthState("kakao", searchParams.get("state"));
+    if (!state.ok) {
+      onError?.({ status: 400, message: "로그인을 다시 시작해 주세요 (state 불일치)" });
+      return;
+    }
     try {
       const data = await kakaoLogin.mutateAsync({ code, device_info });
       // 로그인 응답으로 내려온 쿠키를 Context에 반영
       syncAuth();
       onSuccess?.(data);
-      navigate(redirectURL, { replace: true });
+      navigate(state.next || redirectURL, { replace: true });
     } catch (err) {
       onError?.(err);
     }
   };
 
+  // state 는 한 번만 쓸 수 있다 — StrictMode 처럼 effect 가 두 번 돌면 두 번째가 "불일치"로 실패한다
+  const ran = useRef(false);
+
   useEffect(() => {
-    if (autoRun) kakaoLoginAction();
+    if (!autoRun || ran.current) return;
+    ran.current = true;
+    kakaoLoginAction();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code]);
 

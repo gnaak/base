@@ -140,6 +140,14 @@ loginMutation.mutate(body, {
 - effect 안에서 refresh를 호출할 땐 `useRef` 가드로 마운트당 1회로 제한할 것 (`container/admin/layout.tsx` 참고)
 - refresh 시도 전에 `refreshExp(type)`로 세션 마커를 먼저 확인할 것 — 없으면 시도 자체가 무의미하다
 
+**OAuth `state`** (`hooks/auth/oauthState.ts`) — 로그인 CSRF 를 막는다. state 가 없으면 공격자가 자기 code 로 만든
+`/kakao/login?code=…` 링크 하나로 피해자를 **공격자 계정으로 로그인**시킨다.
+- 로그인 버튼은 `beginOAuth(provider, next)` 의 값을 인가 URL 의 `state` 로 보낸다. 콜백은 `consumeOAuthState()` 가 ok 일 때만
+  code 를 백엔드로 보낸다 (한 번 쓰면 지워진다 — 콜백 effect 에 `useRef` 가드 필수)
+- 로그인 뒤 돌아갈 곳(`?next=`)은 state 에 싣지 않고 sessionStorage 에 같이 둔다. `safeNext()` 가 같은 오리진 경로만 남긴다
+  (`//evil.com` 같은 값은 버린다 — 오픈 리다이렉트)
+- 새 OAuth 업체를 붙이면 같은 두 함수를 쓴다
+
 ## 라우트 가드
 
 | 컴포넌트 | 용도 |

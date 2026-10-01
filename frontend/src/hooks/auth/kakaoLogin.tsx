@@ -1,5 +1,6 @@
 import React from "react";
 import kakao from "@/assets/client/login/kakao.svg";
+import { beginOAuth } from "./oauthState";
 
 interface KakaoLoginBtnProps {
   client_id?: string;
@@ -40,9 +41,17 @@ const KakaoLoginBtn = ({
   scopeParam,
 }: KakaoLoginBtnProps) => {
   const kakaoAuth = () => {
-    const scopeQuery = scopeParam ? `&scope=${scopeParam}` : "";
-    const url = `https://kauth.kakao.com/oauth/authorize?client_id=${client_id}&redirect_uri=${redirect_uri}&response_type=code${scopeQuery}&lang=ko`;
-    window.location.href = url;
+    // 로그인 뒤 돌아갈 곳. state 에 싣지 않고 sessionStorage 에 둔다 (oauthState.ts)
+    const next = new URLSearchParams(window.location.search).get("next");
+    const params = new URLSearchParams({
+      client_id,
+      redirect_uri,
+      response_type: "code",
+      lang: "ko",
+      state: beginOAuth("kakao", next),
+      ...(scopeParam ? { scope: scopeParam } : {}),
+    });
+    window.location.href = `https://kauth.kakao.com/oauth/authorize?${params}`;
   };
 
   return (

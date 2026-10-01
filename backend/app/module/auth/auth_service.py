@@ -45,22 +45,30 @@ class AuthService:
         (앞단의 nginx·Cloudflare도 마찬가지다).
         """
         # 비밀번호를 검사하기 전에 확인한다 — 잠긴 계정에 argon2 비용을 쓰지 않는다
-        await check_login_attempts(body.email)
+        await check_login_attempts(body.email, body.type)
 
         if body.type == "user":
             user_obj = await self.user_repo.get_user_by_email(body.email)
         else:
             user_obj = await self.admin_repo.get_admin_by_email(body.email)
 
-        if not user_obj or not verify_password(body.password, user_obj.password):
+        if user_obj and user_obj.password:
+            ok = verify_password(body.password, user_obj.password)
+        else:
+            # 계정이 없거나(또는 OAuth 전용이라 비밀번호가 없거나) 해도 argon2 를 한 번 돌린다 —
+            # 건너뛰면 응답이 눈에 띄게 빨라져서 시간 차로 이메일 존재 여부가 드러난다
+            pwd_context.dummy_verify()
+            ok = False
+
+        if not ok:
             # 계정이 없는 경우도 센다 — 안 그러면 이메일 존재 여부를 알아내는 통로가 된다
-            await record_login_failure(body.email)
+            await record_login_failure(body.email, body.type)
             fail("user does not exists", "USER_DOES_NOT_EXISTS", 404)
 
-        await clear_login_failures(body.email)
+        await clear_login_failures(body.email, body.type)
 
         # 로그인 시각 기록. tb_admins에는 last_login_at 컬럼이 없어서 user만 갱신한다.
-        # (OAuth 로그인은 user_repo.get_or_create_user가 알아서 갱신한다)
+        # (OAuth 로그인은 user_repo.get_or_create_oauth_user가 알아서 갱신한다)
         if body.type == "user":
             user_obj = await self.user_repo.update_last_login(user_obj)
 

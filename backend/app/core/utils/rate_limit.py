@@ -172,38 +172,51 @@ LOGIN_LIMIT = rate_limit("auth_login", limit=10, window=60)
 #: 회원가입. 한 사람이 1분에 다섯 번 넘게 가입할 이유가 없다.
 SIGNUP_LIMIT = rate_limit("auth_signup", limit=5, window=60)
 
+#: refresh. 프론트는 401 이 났을 때만, 탭 안에서 한 번으로 합쳐서 부른다 —
+#: 1분에 60번이면 탭 여러 개도 넉넉하다.
+#: 없으면 훔친 refresh 토큰으로 무한히 두드리거나, 쿠키 없이 연타해 Redis 를 태울 수 있다
+REFRESH_LIMIT = rate_limit("auth_refresh", limit=60, window=60)
+
 
 # ──────────────────────────────────────────────────────────────
 #  계정 단위 — IP를 바꿔가며 한 계정을 두드리는 공격용
 # ──────────────────────────────────────────────────────────────
-def _login_key(email: str) -> str:
-    return f"rl:login_fail:{email.strip().lower()}"
+def _login_key(email: str, auth_type: str) -> str:
+    # user 와 admin 을 나눈다 — 같이 세면 누구나 관리자 이메일로 사용자 로그인을 5번 틀려
+    # 관리자 로그인을 10분씩 잠글 수 있다
+    return f"rl:login_fail:{auth_type}:{email.strip().lower()}"
 
 
-async def check_login_attempts(email: str) -> None:
+def _mask_email(email: str) -> str:
+    """로그에는 이메일 원문을 남기지 않는다 (14일 보관). `me@example.com` → `m***@example.com`"""
+    local, _, domain = email.strip().partition("@")
+    return f"{local[:1]}***@{domain}" if domain else "***"
+
+
+async def check_login_attempts(email: str, auth_type: str = "user") -> None:
     """이 계정이 최근에 너무 많이 실패했으면 429로 끊는다.
 
     비밀번호를 **검사하기 전에** 부른다 — 잠긴 계정에 argon2 비용을 쓰지 않는다.
     """
     try:
-        count = await get_redis().get(_login_key(email))
+        count = await get_redis().get(_login_key(email, auth_type))
     except Exception:
         logger.warning("로그인 실패 카운터 조회 실패 — 통과시킨다", exc_info=True)
         return
 
     if count is not None and int(count) >= LOGIN_FAIL_LIMIT:
         try:
-            ttl = await get_redis().ttl(_login_key(email))
+            ttl = await get_redis().ttl(_login_key(email, auth_type))
         except Exception:
             ttl = LOGIN_FAIL_WINDOW
-        logger.info("계정 잠금: %s (실패 %s회)", email, count)
+        logger.info("계정 잠금: %s %s (실패 %s회)", auth_type, _mask_email(email), count)
         _too_many(max(ttl, 1))
 
 
-async def record_login_failure(email: str) -> None:
+async def record_login_failure(email: str, auth_type: str = "user") -> None:
     """비밀번호가 틀렸을 때 부른다."""
     try:
-        key = _login_key(email)
+        key = _login_key(email, auth_type)
         count = await get_redis().incr(key)
         if count == 1:
             await get_redis().expire(key, LOGIN_FAIL_WINDOW)
@@ -211,9 +224,9 @@ async def record_login_failure(email: str) -> None:
         logger.warning("로그인 실패 기록 실패", exc_info=True)
 
 
-async def clear_login_failures(email: str) -> None:
+async def clear_login_failures(email: str, auth_type: str = "user") -> None:
     """로그인에 성공하면 카운터를 비운다."""
     try:
-        await get_redis().delete(_login_key(email))
+        await get_redis().delete(_login_key(email, auth_type))
     except Exception:
         logger.warning("로그인 실패 카운터 삭제 실패", exc_info=True)

@@ -182,9 +182,15 @@ WebSocket은 `web_socket/deps.py`의 `WSProvider` / `UserWSProvider` / `AdminWSP
 
 ```python
 @router.websocket("/")
-async def stt_ws(websocket: WebSocket, p: WSProvider):
-    await p.web_socket_service.init_state(websocket)
+async def stt_ws(websocket: WebSocket, p: UserWSProvider):   # 기본은 로그인 필수
+    await p.web_socket_service.init_state(websocket, p.auth)
 ```
+
+`web_socket_service.init_state()` 가 연결을 받기 전에 세 가지를 막는다 — 소켓을 새로 만들면 같은 관문을 둘 것:
+- **Origin** — CORS 오리진 목록에 없는 브라우저 Origin 은 거부 (`origin_allowed`). 쿠키 소켓을 다른 사이트가 여는 것(CSWSH) 방지
+- **방 권한** — `can_join(room_id, auth)`. 기본은 `lobby` 와 자기 방 `user:{id}` 만. **프로젝트마다 "이 사용자가 이 방 참여자인가"로 바꾼다** —
+  쿼리의 room_id 를 그대로 믿으면 남의 방 메시지를 보고 보낸다
+- **메시지** — 4000자·10초에 20개 상한, 본문은 로그에 남기지 않는다. nginx 는 IP 당 동시 연결 10개 (`limit_conn ws_conn`)
 
 > `deps.py`의 `provider()`는 `AuthToken`을 **함수 안에서** import한다.
 > `app/module/__init__.py`가 라우터를 통해 이 모듈을 끌어오기 때문에, 최상단에 두면
@@ -202,8 +208,12 @@ from app.core.utils.rate_limit import LOGIN_LIMIT
 
 | 층 | 키 | 기본값 | 막는 것 |
 | -- | -- | ------ | ------- |
-| IP × 엔드포인트 (`rate_limit()`) | IP + 묶음 이름 | 로그인 10/분 | 한 IP의 폭주 |
-| 계정 × 실패 (`check_login_attempts()`) | 이메일 | 5회/10분 | **IP를 바꿔가며 한 계정을 두드리는 공격** |
+| IP × 엔드포인트 (`rate_limit()`) | IP + 묶음 이름 | 로그인 10/분 · 가입 5/분 · refresh 60/분 | 한 IP의 폭주 |
+| 계정 × 실패 (`check_login_attempts()`) | **user/admin** + 이메일 | 5회/10분 | **IP를 바꿔가며 한 계정을 두드리는 공격** |
+
+계정 실패 카운터는 user 와 admin 을 따로 센다 — 같이 세면 누구나 관리자 이메일로 사용자 로그인을 5번 틀려
+관리자를 10분씩 잠글 수 있다. 잠금 로그의 이메일은 가려서(`m***@example.com`) 남긴다.
+없는 계정·비밀번호 없는 OAuth 계정에도 argon2 를 한 번 돌린다(`dummy_verify`) — 응답 시간 차로 이메일 존재가 드러나지 않게.
 
 두 번째가 핵심이다 — nginx·Cloudflare가 **구조적으로 못 하는 것**이라 앱에서만 막을 수 있다.
 `auth_service.login()`이 비밀번호를 검사하기 **전에** 확인한다 (잠긴 계정에 argon2 비용을 쓰지 않는다).
@@ -251,8 +261,18 @@ from app.core.utils.rate_limit import LOGIN_LIMIT
 - 인증 실패는 전부 `fail()`로 나가므로 `errorCode`에 `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`,
   `INVALID_TOKEN_TYPE`, `REFRESH_TOKEN_MISSING` 같은 상수가 실린다
 - `last_login_at`은 **user만** 갱신한다 (`tb_admins`에는 컬럼이 없다).
-  일반 로그인은 `auth_service.login()`, OAuth는 `user_repo.get_or_create_user()`가 처리
+  일반 로그인은 `auth_service.login()`, OAuth는 `user_repo.get_or_create_oauth_user()`가 처리
 - JWT payload의 `user` 필드가 요청한 `auth_type`과 다르면 401 — user 토큰으로 admin API 접근 불가
+- `jwt_secret` 은 32자 미만(빈 값 포함)이면 기동을 거부한다 — 빈 키면 누구나 관리자 토큰을 만든다
+- 비밀번호는 가입 8~128자, 로그인은 최대 128자 (거대한 입력으로 argon2 CPU 를 태우지 못하게)
+
+**OAuth 계정 연결** — 계정을 **이메일로** 찾으므로 두 가지를 막는다 (`tests/test_oauth_router.py`):
+- 업체가 검증하지 않은 이메일은 거부 — Google `verified_email`, Kakao `is_email_verified` && `is_email_valid`.
+  아니면 공격자가 업체 계정 이메일을 피해자 주소로 바꿔 피해자 계정에 들어온다 (403 `OAUTH_EMAIL_UNVERIFIED`)
+- **비밀번호로 가입한 계정에는 OAuth 를 자동으로 붙이지 않는다** (409 `OAUTH_ACCOUNT_CONFLICT`). 이메일 가입은 이메일을
+  검증하지 않아서, 공격자가 피해자 이메일로 먼저 가입해 두면 피해자의 OAuth 로그인이 공격자 비밀번호가 걸린 계정에 붙는다.
+  이메일 가입에 인증 절차를 붙이면 이 제한을 풀 수 있다
+- 로그인 CSRF 는 프론트의 OAuth `state` 가 막는다 (`frontend/src/hooks/auth/oauthState.ts`)
 
 **`user_info`의 `session_info` 필드를 바꾸면 프론트 `types/user.ts`의 `UserInfo`도 같이 고칠 것.** 1:1로 맞춰져 있다.
 
@@ -445,9 +465,12 @@ return Page.of([UserOut.model_validate(r) for r in rows], total, page, size)
 url = await save_upload(file, "image", allowed=IMAGE_EXTENSIONS)   # → "/media/image/<uuid>.png"
 ```
 
-세 가지를 반드시 지킨다.
+네 가지를 반드시 지킨다.
 
 1. **확장자 화이트리스트** — 블랙리스트는 빠뜨린 게 곧 구멍이다
+   - **내용이 확장자와 맞는지도 본다** (`_SIGNATURES` — 파일 앞부분). 이름만 `.png` 로 바꾼 HTML 을 막는다.
+     허용 확장자를 늘리면 `_SIGNATURES` 에도 넣는다 (없으면 그 형식은 전부 거부된다). 빈 파일도 거부
+   - `/media` 는 **공개**다 — 신분증·영업신고증처럼 남이 보면 안 되는 파일은 다른 경로 + 인증된 다운로드로
 2. **용량은 스트리밍으로 센다** — `await file.read()` 로 통째로 읽으면 큰 파일이 메모리를 먹는다.
    한도를 넘은 **그 시점에** 끊고 반쯤 쓰인 파일을 지운다
 3. **파일명을 UUID로 새로 만든다** — 클라이언트 이름을 쓰면 `../../` 경로 조작과 충돌이 생긴다.

@@ -41,7 +41,7 @@ dependencies = [
     "pydantic-settings>=2.13.1",
     "python-dotenv>=1.2.2",
     # ── 인증 ──
-    "pyjwt>=2.12.1",
+    "pyjwt>=2.15.0",
     "passlib>=1.7.4",
     "argon2-cffi>=25.1.0",    # passlib 의 argon2 백엔드
     # ── 기타 ──

@@ -115,3 +115,60 @@ async def test_로그인하지_않으면_401(client, media_root):
     res = await client.post(URL, files=_file())
 
     assert res.status_code == 401
+
+
+# ──────────────────────────────────────────────────────────────
+#  내용 검사 — 이름만 바꾼 파일
+# ──────────────────────────────────────────────────────────────
+async def test_내용이_확장자와_다르면_거부하고_남기지_않는다(client, make_user, media_root):
+    """`evil.html` 을 `a.png` 로 이름만 바꿔 올리는 경우. `/media` 는 공개라 같은 오리진에서 열린다."""
+    user = await make_user()
+    html = b"<html><script>alert(document.cookie)</script></html>"
+
+    res = await client.post(URL, files=_file(name="a.png", content=html), headers=auth_header(user.id))
+
+    assert res.status_code == 400
+    assert res.json()["errorCode"] == "FILE_TYPE_NOT_ALLOWED"
+    assert not (media_root / "image").exists() or not list((media_root / "image").iterdir())
+
+
+async def test_빈_파일은_거부한다(client, make_user, media_root):
+    user = await make_user()
+
+    res = await client.post(URL, files=_file(content=b""), headers=auth_header(user.id))
+
+    assert res.status_code == 400
+    assert res.json()["errorCode"] == "FILE_REQUIRED"
+
+
+@pytest.mark.parametrize(
+    "name, head",
+    [
+        ("a.jpg", b"\xff\xd8\xff\xe0" + b"0" * 32),
+        ("a.gif", b"GIF89a" + b"0" * 32),
+        ("a.webp", b"RIFF\x00\x00\x00\x00WEBP" + b"0" * 32),
+        ("a.avif", b"\x00\x00\x00\x1cftypavif" + b"0" * 32),
+    ],
+)
+async def test_이미지_형식별_시그니처를_통과한다(client, make_user, media_root, name, head):
+    user = await make_user()
+
+    res = await client.post(URL, files=_file(name=name, content=head), headers=auth_header(user.id))
+
+    assert res.status_code == 200, name
+
+
+@pytest.mark.parametrize(
+    "suffix, head, ok",
+    [
+        (".pdf", b"%PDF-1.7\n", True),
+        (".pdf", b"<html>", False),
+        (".xlsx", b"PK\x03\x04rest", True),
+        (".docx", b"MZ\x90\x00", False),  # exe 를 docx 로
+        (".csv", b"name,age\n", True),
+        (".txt", b"abc\x00def", False),  # 텍스트에 NUL — 바이너리
+        (".exe", b"MZ", False),  # 모르는 확장자는 거부
+    ],
+)
+def test_문서_형식_시그니처(suffix, head, ok):
+    assert up._matches_signature(suffix, head) is ok

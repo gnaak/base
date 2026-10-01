@@ -107,8 +107,11 @@ async def test_type을_생략하면_user로_동작한다(client, make_user):
 SIGNUP = "/api/auth/signup"
 
 
+SIGNUP_PASSWORD = "pw123456"  # 가입은 8자 이상
+
+
 def _signup_body(email="new@example.com", nickname="새사람"):
-    return {"email": email, "password": "pw1234", "nickname": nickname}
+    return {"email": email, "password": SIGNUP_PASSWORD, "nickname": nickname}
 
 
 async def test_가입하면_201이_나간다(client):
@@ -122,10 +125,39 @@ async def test_가입한_계정으로_로그인할_수_있다(client):
     """비밀번호가 argon2로 저장되고 로그인 검증을 통과하는지 확인한다."""
     await client.post(SIGNUP, json=_signup_body(email="new@example.com"))
 
-    res = await client.post(LOGIN, json={"email": "new@example.com", "password": "pw1234"})
+    res = await client.post(LOGIN, json={"email": "new@example.com", "password": SIGNUP_PASSWORD})
 
     assert res.status_code == 200
     assert res.json()["data"]["user_nickname"] == "새사람"
+
+
+@pytest.mark.parametrize(
+    "label, password",
+    [("7자", "x" * 7), ("129자", "x" * 129)],
+)
+async def test_가입_비밀번호는_8자_이상_128자_이하(client, label, password):
+    res = await client.post(SIGNUP, json={**_signup_body(), "password": password})
+
+    assert res.status_code == 422, label
+    assert res.json()["errorCode"] == "VALIDATION_ERROR", label
+
+
+async def test_로그인_비밀번호가_128자를_넘으면_해싱_전에_422(client):
+    """argon2 에 거대한 입력을 넣어 CPU 를 태우는 걸 스키마에서 막는다."""
+    res = await client.post(LOGIN, json={"email": "me@example.com", "password": "x" * 129})
+
+    assert res.status_code == 422
+    assert res.json()["errorCode"] == "VALIDATION_ERROR"
+
+
+async def test_비밀번호_없는_OAuth_계정으로_비밀번호_로그인하면_404(client, make_user):
+    """OAuth 로 만든 계정은 password 가 비어 있다 — 아무 비밀번호로도 들어가면 안 된다."""
+    await make_user(email="oauth@example.com", password=None)
+
+    res = await client.post(LOGIN, json={"email": "oauth@example.com", "password": "anything"})
+
+    assert res.status_code == 404
+    assert res.json()["errorCode"] == "USER_DOES_NOT_EXISTS"
 
 
 async def test_이미_있는_이메일이면_409(client, make_user):

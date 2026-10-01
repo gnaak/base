@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Response
 
 from app.core.provider.http.deps import AdminProvider, Provider, UserProvider
-from app.core.utils.rate_limit import LOGIN_LIMIT, SIGNUP_LIMIT
+from app.core.utils.rate_limit import LOGIN_LIMIT, REFRESH_LIMIT, SIGNUP_LIMIT
 from app.core.utils.response import BaseResponse, fail, success
 from app.module.auth.auth_schema import LoginIn, OAuthCodeIn, SessionOut, SignupIn
 
@@ -54,7 +54,7 @@ async def logout_admin(response: Response, p: AdminProvider):
     return success(message="admin logout successful")
 
 
-@router.post("/refresh_token", response_model=BaseResponse[SessionOut])
+@router.post("/refresh_token", dependencies=[REFRESH_LIMIT], response_model=BaseResponse[SessionOut])
 async def refresh_token(response: Response, p: Provider):
     user_id, _ = await p.auth_service.token_util.verify_refresh_by_type(p.request, "user")
     user = await p.user_service.get_user_by_id(user_id)
@@ -67,7 +67,7 @@ async def refresh_token(response: Response, p: Provider):
     return success(session, message="user login successful")
 
 
-@router.post("/refresh_token_admin", response_model=BaseResponse[SessionOut])
+@router.post("/refresh_token_admin", dependencies=[REFRESH_LIMIT], response_model=BaseResponse[SessionOut])
 async def refresh_token_admin(response: Response, p: Provider):
     admin_id, _ = await p.auth_service.token_util.verify_refresh_by_type(p.request, "admin")
     admin = await p.admin_service.get_admin_by_id(admin_id)

@@ -50,6 +50,8 @@ class ErrorCode(StrEnum):
     OAUTH_TOKEN_MISSING = "OAUTH_TOKEN_MISSING"
     OAUTH_USERINFO_FAILED = "OAUTH_USERINFO_FAILED"
     OAUTH_EMAIL_REQUIRED = "OAUTH_EMAIL_REQUIRED"
+    OAUTH_EMAIL_UNVERIFIED = "OAUTH_EMAIL_UNVERIFIED"   # 업체가 검증하지 않은 이메일 (403)
+    OAUTH_ACCOUNT_CONFLICT = "OAUTH_ACCOUNT_CONFLICT"   # 같은 이메일로 비밀번호 가입한 계정이 있음 (409)
 
     # ── 외부 호출 ─────────────────────────────────────────
     UPSTREAM_UNREACHABLE = "UPSTREAM_UNREACHABLE"            # 요청이 안 나감 (502) — 다시 해도 된다

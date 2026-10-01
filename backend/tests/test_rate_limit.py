@@ -152,6 +152,42 @@ async def test_이메일_대소문자는_같은_계정으로_센다(client):
     assert res.status_code == 429
 
 
+async def test_사용자_로그인_실패가_같은_이메일의_관리자를_잠그지_않는다(client, make_admin):
+    """같이 세면 누구나 관리자 이메일로 사용자 로그인을 5번 틀려 관리자를 10분씩 잠글 수 있다."""
+    await make_admin(email="boss@example.com", password=hash_password("correct"))
+
+    for i in range(rl.LOGIN_FAIL_LIMIT + 1):
+        await client.post(
+            LOGIN, json=_body(email="boss@example.com", password="wrong"),
+            headers={"X-Forwarded-For": f"203.0.113.{i}"},
+        )
+
+    res = await client.post(
+        LOGIN, json={"email": "boss@example.com", "password": "correct", "type": "admin"},
+        headers={"X-Forwarded-For": "203.0.113.99"},
+    )
+
+    assert res.status_code == 200
+
+
+async def test_refresh_는_IP당_1분에_60번까지(client):
+    """쿠키 없이 연타하면 401 이 나다가 한도를 넘으면 429."""
+    for i in range(60):
+        res = await client.post("/api/auth/refresh_token")
+        assert res.status_code == 401, f"{i + 1}번째"
+
+    res = await client.post("/api/auth/refresh_token")
+
+    assert res.status_code == 429
+    assert res.json()["errorCode"] == "TOO_MANY_REQUESTS"
+
+
+def test_로그에는_이메일을_가려서_남긴다():
+    assert rl._mask_email("me@example.com") == "m***@example.com"
+    assert rl._mask_email("  Alice@Corp.kr ") == "A***@Corp.kr"
+    assert rl._mask_email("not-an-email") == "***"
+
+
 # ──────────────────────────────────────────────────────────────
 #  client_ip — 프록시 헤더 신뢰 규칙
 # ──────────────────────────────────────────────────────────────

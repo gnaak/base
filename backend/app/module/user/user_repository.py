@@ -4,6 +4,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database.base import now_kst
+from app.core.utils.error_code import ErrorCode
+from app.core.utils.response import fail
 from app.module.user.user import User
 
 
@@ -43,12 +45,27 @@ class UserRepository:
         await self.db.refresh(user)
         return user
 
-    async def get_or_create_user(self, email: str, name: str, picture: str) -> User | None:
+    async def get_or_create_oauth_user(self, email: str, name: str, picture: str) -> User:
+        """OAuth 로그인 — 업체가 검증한 이메일로 계정을 찾거나 만든다.
+
+        ⚠️ **비밀번호로 가입한 계정에는 붙지 않는다.** 이메일 가입은 이메일을 검증하지 않아서,
+        공격자가 피해자 이메일로 먼저 가입해 두면 피해자가 나중에 OAuth 로 로그인했을 때
+        공격자의 비밀번호가 걸린 계정에 붙는다(계정 선점).
+        이메일 가입에 인증 절차를 붙이면 이 제한을 풀 수 있다.
+        업체가 검증한 이메일인지는 호출부(google·kakao 서비스)가 먼저 확인한다.
+        """
         result = await self.db.execute(select(User).filter(User.email == email))
         user = result.unique().scalar_one_or_none()
 
+        if user and user.password:
+            raise fail(
+                "an email/password account already uses this email",
+                ErrorCode.OAUTH_ACCOUNT_CONFLICT,
+                409,
+            )
+
         if user:
-            user.last_login_at=now_kst()
+            user.last_login_at = now_kst()
         else:
             user = User(
                 email=email,

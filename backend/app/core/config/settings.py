@@ -5,6 +5,7 @@ import socket
 from pathlib import Path
 from urllib.parse import quote_plus
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -28,7 +29,9 @@ class RawEnv(BaseSettings):
     # 매 테스트 세션마다 테이블을 만들고 지우므로 반드시 전용 DB를 줄 것.
     test_mysql_db: str = "db_base_test"
 
-    jwt_secret: str
+    # 32자 미만이면 기동을 거부한다. 빈 값이면 누구나 `jwt.encode(…, "")` 로 관리자 토큰을 만든다
+    # (.env.example 을 그대로 복사하면 빈 값이다). 운영 값은 Terraform 이 64자로 만든다
+    jwt_secret: str = Field(min_length=32)
     hash_key: str
 
     # 토큰 수명. 프로젝트 성격에 맞게 .env에서 조정한다.
