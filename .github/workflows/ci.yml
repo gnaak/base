@@ -130,7 +130,7 @@ jobs:
 
       # 무인 실행 게이트(Stop · PreToolUse 훅). 임시 git 저장소로 판정·상한·막는 명령을 본다
       - name: autopilot 게이트
-        run: node --test .claude/hooks/autopilot-gate.test.mjs
+        run: node --test .claude/hooks/autopilot-gate.test.mjs scripts/dev.test.mjs
 
   # 진짜 브라우저로 백엔드·프론트를 함께 띄워 본다 (frontend/e2e, playwright.config.ts).
   # 단위 테스트로는 안 보이는 것 — 새로고침 루프, 쿠키, 모달이 눌리는지 — 을 잡는다.

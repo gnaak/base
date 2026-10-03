@@ -34,7 +34,7 @@
 cd backend  && uv run ruff check . && uv run pytest -q          # 158
 cd frontend && npm run check:types && npm run lint && npm test  # vitest 37
 cd frontend && npm run build && npm run e2e                     # E2E 10
-node --test .claude/hooks/autopilot-gate.test.mjs               # 28
+node --test .claude/hooks/autopilot-gate.test.mjs scripts/dev.test.mjs   # 35 + 2
 wsl bash infra/tests/deploy_smoke.sh                            # 16 (Windows 는 WSL — Git Bash 는 심볼릭 링크 불가)
 ./infra/.bin/1.16.4/terraform -chdir=infra test                 # 2
 ```

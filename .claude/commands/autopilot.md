@@ -45,7 +45,10 @@ $ARGUMENTS
    "시작 전부터 깨져 있음" 으로 적는다 — 나중에 phase 가 깬 것과 구분하려고
 5. `node .claude/hooks/autopilot-gate.mjs start` — 출력의 **run id** 를 기억한다 (마무리 요약에 쓴다).
    거부되면(브랜치·변경·PROJECT.md) 그 이유를 고치고 다시
-6. "이제부터 사람 없이 끝까지 돕니다. 멈추려면 `/autopilot stop`" 이라고 알리고 바로 phase 를 시작한다
+6. **화면 띄우기** — `node scripts/dev.mjs --open`. 3000 · 8000 이 쓰이고 있으면 +1 씩 빈 번호로 백엔드(--reload) · 프론트(HMR)를
+   띄우고 브라우저를 연다 — 코드가 바뀌면 화면도 바로 바뀐다. 실패해도 멈추지 않는다 (출력의 로그 끝을 `DECISIONS.md` 🔍 에).
+   **끝나도 끄지 않는다** — 아침에 바로 본다
+7. "이제부터 사람 없이 끝까지 돕니다. 화면은 {출력의 주소} 에서 볼 수 있어요. 멈추려면 `/autopilot stop`" 이라고 알리고 바로 phase 를 시작한다
 
 ## 3. phase 하나
 

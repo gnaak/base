@@ -81,7 +81,7 @@ cd frontend && npm run check:types && npm run lint
 cd frontend && npm test                              # vitest
 cd frontend && npm run build
 cd frontend && npm run e2e                           # 화면·세션 흐름을 바꿨다면 (전용 포트 3100/8100 · DB db_base_e2e)
-node --test .claude/hooks/autopilot-gate.test.mjs   # .claude/hooks 를 건드렸다면 (무인 실행 게이트)
+node --test .claude/hooks/autopilot-gate.test.mjs scripts/dev.test.mjs   # .claude/hooks · scripts 를 건드렸다면 (게이트 · 개발 서버)
 ./infra/.bin/<버전>/terraform -chdir=infra test     # infra/ 를 건드렸다면 (키 불필요, mock)
 bash infra/tests/deploy_smoke.sh                     # infra/server 를 건드렸다면 (Windows 는 wsl bash …)
 ```

@@ -55,8 +55,8 @@ cp backend/.env.example backend/.env       # 키마다 주석이 있다
 cp frontend/.env.example frontend/.env
 uv --directory backend run python -m scripts.prepare_local secrets   # jwt_secret · hash_key 생성
 
-cd backend && uv sync && uv run alembic upgrade head && sh run.sh   # :8000 (문서 /docs)
-cd frontend && npm install && npm run dev                          # :3000
+uv --directory backend run alembic upgrade head && npm --prefix frontend install
+node scripts/dev.mjs --open    # 백엔드 :8000 + 프론트 :3000 을 한 번에 (쓰이고 있으면 +1 씩) · 끄기: node scripts/dev.mjs stop
 ```
 
 - 프론트 · 백엔드 호스트를 섞지 말 것 (`localhost` ↔ `127.0.0.1`) — 쿠키가 안 실려 "로그인은 200인데 세션 없음"
@@ -76,6 +76,7 @@ deploy/       nginx · systemd 설정 (자동 배포가 자리표시만 바꿔 �
 infra/        Terraform · 서버 배포 스크립트 (deploy.sh · rollback.sh)
 docker/       로컬 MySQL 초기화
 docs/guides/  처음 쓰는 사람용 안내 페이지
+scripts/      dev.mjs — 백엔드 · 프론트를 빈 포트로 한 번에 (3000 · 8000 이 쓰이고 있으면 +1)
 .claude/      커맨드 · 에이전트 · 훅 · 스킬
 ```
 

@@ -256,7 +256,7 @@ git 은 0 에서 이미 새 기록으로 시작했다. 여기서는 브리프 ·
 | --- | --- |
 | 이름 | 표시명 · slug |
 | DB · Redis | `db_{slug}` · `_test` · `_e2e` — 이미 있던 MySQL 인지, Docker 로 띄웠는지 / Redis — 이미 있던 것(번호) 또는 메모리 |
-| 관리자 | `admin@example.com` — 비밀번호는 `backend/admin-password.local` (메모장으로 열어 준다). 화면: `cd frontend && npm run dev` 와 `cd backend && sh run.sh` 뒤 http://localhost:3000/admin |
+| 관리자 | `admin@example.com` — 비밀번호는 `backend/admin-password.local` (메모장으로 열어 준다). 화면: `node scripts/dev.mjs --open` 이 띄운 주소의 `/admin` (3000 이 쓰이고 있으면 3001 …) |
 | 확인 | pytest · 화면 테스트 · E2E 통과 여부 |
 | git | 새 기록 · 원격 |
 
