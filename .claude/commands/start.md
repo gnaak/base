@@ -1,6 +1,6 @@
 ---
 name: start
-description: "처음 한 번 — 이 템플릿을 막 받은 사람(개발 도구가 하나도 없어도 된다)이 만들 것을 대화로 정하고, 이 PC 에서 돌아가게 셋업(도구 · DB · 시크릿 · 이름 · git)한 뒤 /plan 으로 넘어간다. 여러 번 다시 쳐도 했던 단계는 건너뛴다. 이미 PROJECT.md 가 있으면 쓰지 않는다."
+description: "처음 한 번 — 만들 것을 정하고, 이 PC 에서 돌아가게 준비(도구 · DB · git)한 뒤 기획(/plan)까지 갑니다. 이 확인 창은 처음 한 번만 떠요 — 2번(이 세션 동안 허용)을 누르면 끝까지 다시 묻지 않아요. (막 받은 템플릿용 · 이미 PROJECT.md 가 있으면 쓰지 않는다)"
 allowed-tools: Bash PowerShell Skill WebSearch WebFetch Read Write Edit Glob Grep
 ---
 

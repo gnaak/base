@@ -19,7 +19,8 @@
 | `01-4.png` | 템플릿 받기 | 명령 팔레트에 "Git: Clone" |
 | `01-5.png` | 템플릿 받기 | 받기가 끝난 뒤 "열기(Open)" 알림 |
 | `01-6.png` | 템플릿 받기 | Code 메뉴의 "Download ZIP" |
-| `01-7.png` | 템플릿 받기 | Claude 입력창에 `/start …` 를 친 화면 |
+| `01-7.png` | 템플릿 받기 | Claude 입력창에 만들고 싶은 걸 친 화면 |
+| `01-8.png` | 템플릿 받기 | "Use skill /start?" 확인 창 — 2번(이 세션 동안 허용)에 표시 |
 | `02-1.png` | uv · Node 설치 | Windows 사용자 계정 컨트롤 창 — "예" |
 | `02-2.png` | uv · Node 설치 | nodejs.org 첫 화면 — LTS 다운로드 버튼 |
 | `03-1.png` | Docker Desktop | 다운로드 페이지 — Download for Windows |
