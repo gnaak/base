@@ -28,6 +28,8 @@ PRD/sources/
 
 # 무인 실행 상태 (.claude/hooks/autopilot-gate.mjs 가 쓴다 — run 마다 다르다)
 .claude/autopilot/
+# 하위 에이전트가 따로 일하는 git worktree (Agent isolation: worktree)
+.claude/worktrees/
 
 # Playwright (E2E 결과물)
 frontend/test-results/

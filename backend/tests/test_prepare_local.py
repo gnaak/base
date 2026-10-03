@@ -88,6 +88,30 @@ def test_이상한_DB_이름이면_접속하기_전에_멈춘다(monkeypatch, ca
     assert "DB 이름이 이상합니다" in capsys.readouterr().out
 
 
+def test_테이블이_있는_DB는_만들지도_지우지도_않고_알린다(monkeypatch, capsys):
+    """같은 이름의 DB 가 다른 프로젝트 것이면 — 테스트 DB 면 pytest 가 남의 테이블을 지운다."""
+    executed: list[str] = []
+    existing = {"db_haenuri": 43}
+
+    class _Cursor(_FakeMySQL):
+        def execute(self, sql, args=None):
+            executed.append(sql)
+            self._last = existing.get(args[0], 0) if args else None
+
+        def fetchone(self):
+            return (self._last,)
+
+    monkeypatch.setattr(prepare_local, "_mysql", _Cursor)
+
+    assert prepare_local.create_databases(["db_haenuri", "db_haenuri_test"]) == 2
+
+    out = capsys.readouterr().out
+    assert "DB 이미 있음 db_haenuri — 테이블 43개" in out
+    assert "DB OK db_haenuri_test" in out
+    assert not any("DROP" in s.upper() for s in executed)
+    assert not any("CREATE DATABASE IF NOT EXISTS `db_haenuri`" in s for s in executed)
+
+
 def test_빈_시크릿만_채우고_값은_출력하지_않는다(tmp_path, capsys):
     env = tmp_path / ".env"
     env.write_text("jwt_secret=\nhash_key=keep-this-value\nother=1\n", encoding="utf-8")
@@ -127,6 +151,29 @@ def test_비밀이_아닌_값은_바꾸고_비밀값은_받지_않는다(tmp_pat
     assert "redis_db=3" in text
     assert "local_redis_password=\n" in text
     assert "new-secret" not in capsys.readouterr().out
+
+
+def test_키를_지울_때_값은_출력하지_않고_다른_줄은_그대로_둔다(tmp_path, capsys):
+    env = tmp_path / ".env"
+    env.write_text("a=1\nvendor_client_secret=s3cret\nvendor_client_id_extra=keep\nb=2", encoding="utf-8")
+
+    assert prepare_local.unset_value("vendor_client_secret", env) == 0
+    assert prepare_local.unset_value("없는키", env) == 1  # 이상한 이름은 거부
+    assert prepare_local.unset_value("missing", env) == 0  # 없으면 그대로
+
+    # 이름 앞부분만 같은 키는 남긴다
+    assert env.read_text(encoding="utf-8") == "a=1\nvendor_client_id_extra=keep\nb=2"
+    out = capsys.readouterr().out
+    assert "지움: vendor_client_secret" in out
+    assert "s3cret" not in out
+
+
+def test_file_은_저장소_안의_env_만_받는다():
+    root = prepare_local.ENV_FILE.parents[1]
+    assert prepare_local._repo_env(None) == prepare_local.ENV_FILE
+    assert prepare_local._repo_env("frontend/.env") == (root / "frontend/.env").resolve()
+    assert prepare_local._repo_env("../other-project/backend/.env") is None  # 다른 프로젝트 폴더
+    assert prepare_local._repo_env("backend/app/main.py") is None  # .env 가 아닌 파일
 
 
 def test_관리자_비밀번호는_파일에만_적고_화면에_찍지_않는다(tmp_path, monkeypatch, capsys):

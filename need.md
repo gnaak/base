@@ -8,7 +8,9 @@
 | --- | --- | --- |
 | `/start` 처음부터 끝까지 | 🔌 진행 중 | 새 폴더 · 새 VS Code 창에서. 문제 나오면 바로 고친다 |
 | 로컬 메모리 Redis | ✅ | `local_redis_host=memory` — 로컬은 Redis 설치 없이, 운영은 기동 거부 · `/start` 는 Redis 가 없으면 이걸로 |
-| 모듈 레시피 | 🔄 | 스케줄러 넣기 · Docker · OAuth · WebSocket · GPT · 업로드 빼기 → `/plan` 이 고른다 |
+| 모듈 레시피 | ✅ | 넣기 스케줄러 · AI(Claude · OpenAI · Gemini) / 빼기 OAuth · WebSocket · 업로드 · Docker → `/plan` 이 고른다. 빼기 4개 · 스케줄러는 별도 작업 폴더에서 그대로 따라 해 검사 통과 (Docker 는 검토만) |
+| AI 레시피 실제 적용 | 🔌 | `assets/ai/` 를 막 받은 템플릿에 복사하는 한 바퀴 — 다음 커밋 뒤 시험 |
+| 레시피 assets 는 CI 밖 | ⬜ | 템플릿 공통 코드(rate_limit · useAPI · settings)를 바꾸면 레시피 시험을 다시 (CI 가 assets 를 안 돌린다) |
 
 ## 남은 것
 
@@ -17,9 +19,9 @@
 | `/autopilot` 실제 한 바퀴 | 🔌 | 아래 확인 순서 3 |
 | 배포 롤백 실제 서버 | 🔌 | AWS 를 붙인 뒤 첫 배포에서 |
 | 하위 에이전트 권한 | ⬜ | 신뢰 전 폴더면 `/plan` 리서치의 웹 검색에서 물을 수 있다 (커맨드 `allowed-tools` 가 안 넘어간다) |
-| 안내 페이지 사진 27장 | ⬜ | `docs/guides/img/README.md` 의 이름대로 넣기 |
+| 안내 페이지 사진 39장 | ⬜ | `docs/guides/img/README.md` 의 이름대로 넣기 |
 | sec-reviewer 반증 단계 | ⬜ | 찾은 것을 다른 에이전트가 반박해 오탐 거르기 (공식 claude-security 방식) |
-| `nginx -t` | ⬜ | `deploy/` 를 고친 뒤 못 돌렸다 (로컬 Docker 꺼짐) |
+| `nginx -t` | ⬜ | `deploy/` 를 고친 뒤 못 돌렸다 (로컬 Docker 꺼짐) — keepalive map(`0dd969b`)까지 첫 배포 로그로 |
 | 나중에 | ⬜ | fe-test-writer · Playwright MCP · 배포 승인 게이트 · 모니터링 · 알림 |
 | npm dev 의존성 moderate 3 · eslint 경고 1 | — | 운영 번들 무관 · `googleCallback` 1회 실행 의도 |
 

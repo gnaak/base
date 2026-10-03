@@ -228,7 +228,7 @@ async def stt_ws(websocket: WebSocket, p: UserWSProvider):   # 기본은 로그�
 
 ## 요청 빈도 제한 — `core/utils/rate_limit.py`
 
-두 층이다. 둘 다 Redis에 카운터를 둔다(워커를 늘려도 한도가 곱해지지 않는다).
+세 층이다. 전부 Redis에 카운터를 둔다(워커를 늘려도 한도가 곱해지지 않는다).
 
 ```python
 from app.core.utils.rate_limit import LOGIN_LIMIT
@@ -240,6 +240,7 @@ from app.core.utils.rate_limit import LOGIN_LIMIT
 | -- | -- | ------ | ------- |
 | IP × 엔드포인트 (`rate_limit()`) | IP + 묶음 이름 | 로그인 10/분 · 가입 5/분 · refresh 60/분 | 한 IP의 폭주 |
 | 계정 × 실패 (`check_login_attempts()`) | **user/admin** + 이메일 | 5회/10분 | **IP를 바꿔가며 한 계정을 두드리는 공격** |
+| 사용자 × 묶음 (`check_user_limit()`) | 로그인한 user_id + 묶음 이름 | 부르는 쪽이 정한다 | 돈이 나가는 호출(LLM · 문자)을 한 계정이 몰아 쓰기 — 서비스에서 `await` 로 부른다 |
 
 계정 실패 카운터는 user 와 admin 을 따로 센다 — 같이 세면 누구나 관리자 이메일로 사용자 로그인을 5번 틀려
 관리자를 10분씩 잠글 수 있다. 잠금 로그의 이메일은 가려서(`m***@example.com`) 남긴다.

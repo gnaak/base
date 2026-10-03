@@ -15,6 +15,24 @@ def _body(email="me@example.com", password="pw1234"):
 
 
 # ──────────────────────────────────────────────────────────────
+#  사용자 × 묶음 (check_user_limit — 서비스에서 부른다)
+# ──────────────────────────────────────────────────────────────
+async def test_사용자_한도는_사용자마다_묶음마다_따로_센다(fake_redis):
+    import pytest
+    from fastapi import HTTPException
+
+    await rl.check_user_limit("sms", 1, limit=2, window=60)
+    await rl.check_user_limit("sms", 1, limit=2, window=60)
+    with pytest.raises(HTTPException) as e:
+        await rl.check_user_limit("sms", 1, limit=2, window=60)
+    assert e.value.status_code == 429
+    assert int(e.value.headers["Retry-After"]) >= 1
+
+    await rl.check_user_limit("sms", 2, limit=2, window=60)  # 다른 사용자
+    await rl.check_user_limit("ai", 1, limit=2, window=60)   # 다른 묶음
+
+
+# ──────────────────────────────────────────────────────────────
 #  IP × 엔드포인트
 # ──────────────────────────────────────────────────────────────
 async def test_같은_IP에서_한도를_넘기면_429(client, make_user):

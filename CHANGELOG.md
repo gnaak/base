@@ -6,6 +6,11 @@
 
 | 날짜 | 커밋 | 영역 | 바뀐 것 | 왜 |
 | --- | --- | --- | --- | --- |
+| 10-03 | `9ec16fc` | 백엔드 | GPT 빈 껍데기 빼기 — AI 는 모듈 레시피로 | 쓰는 쪽엔 모자라고 안 쓰는 쪽엔 지울 것만 |
+| 10-03 | `055161f` | 문서 | 카카오 · 구글 로그인 키 발급 안내 페이지 | 카카오 콘솔 개편(2025-12) · 이메일엔 비즈 앱 |
+| 10-03 | `0dd969b` | 배포 | nginx 일반 요청의 `Connection: close` → 빈 값 | upstream keepalive 가 꺼져 있었음 |
+| 10-03 | `a806a02` | CI | `uv sync --frozen` → `--locked` | lock 어긋남을 못 잡고 있었음 (재현 확인) |
+| 10-03 | `6e81d56` | 로컬 | 메모리 Redis (`local_redis_host=memory`) · 운영은 기동 거부 | 비개발자 셋업에서 Redis 설치 없애기 |
 | 10-03 | `190bad1` | 문서 | README 를 요약 + 링크로 (1011 → 168줄) · 로깅 · E2E · 관리자 메뉴는 각 CLAUDE.md 로 | 같은 내용이 두 곳에서 어긋남 |
 | 10-03 | `9b2bdad` | /start | 추천이 분명하면 묻지 않고 진행 · 셋업 끝나면 바로 `/plan` · need.md 를 표로 | 확인 창 줄이기 |
 | 10-03 | `8fecc11` | /start | 비밀값은 메모장으로 (`prepare_local` — 값은 출력하지 않음) · CHANGELOG 를 표로 | 대화 기록에 비밀번호가 남음 |
@@ -93,6 +98,10 @@
 | 남의 verification 토큰 | 소유 확인 불가 | `/seo_check` |
 | 마이그레이션 커밋 revert | `alembic upgrade` 멈춤 | forward-fix |
 | 같은 PC 의 다른 MySQL · Redis | 포트 · 컨테이너 이름 충돌 | 같이 쓰기 (`prepare_local`) |
+| APScheduler 트리거에 시간대를 안 줌 | 스케줄러 설정이 아니라 PC 시간대 — 서버(UTC)에서 9시간 어긋남 | 트리거마다 `timezone="Asia/Seoul"` |
+| 빈 값으로 남은 `.env` 키 | 모르는 키인데 기동 거부가 안 나 놓침 | 레시피 확인에 `PP line <키>` |
+| 같은 이름 DB 가 다른 프로젝트 것 | `CREATE IF NOT EXISTS` 가 조용히 통과 → 남의 데이터 위 | `prepare_local databases` 가 테이블 수로 알림 · 새 이름 |
+| 도구를 많이 쓴 뒤 진행 보고 | 중간부터 영어로 바뀜 | 규칙: 처음부터 끝까지 사용자 언어 |
 | `uv sync --frozen` 을 lock 검사로 믿음 | pyproject 만 고친 커밋이 CI 통과 · 서버는 옛 lock 으로 설치 | CI 는 `--locked` (검사) · 서버는 `--frozen` (그대로) |
 | 같은 내용을 README · CLAUDE.md 둘 다에 | 한쪽만 고쳐져 어긋남 | README 는 요약 + 링크, 규칙은 CLAUDE.md 한 곳 |
 

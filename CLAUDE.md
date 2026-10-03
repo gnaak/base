@@ -28,7 +28,7 @@
 | 함수 / 변수 / 훅     | camelCase       | `handleSubmit`, `useAuth`        |
 | 이벤트 핸들러        | `handle` 접두사 | `handleClick`                    |
 | 폴더/파일 (Frontend) | camelCase       | `sideBar/`, `useAPI.ts`          |
-| 폴더/파일 (Backend)  | snake_case      | `web_socket/`, `user_service.py` |
+| 폴더/파일 (Backend)  | snake_case      | `order_item/`, `user_service.py` |
 
 ## 인증 계약 (프론트·백엔드 공통)
 
@@ -70,6 +70,7 @@ refresh 시점에만 하기 때문이고, 그게 "access는 15~30분" 권고의 
 6. **사람의 답이 필요하면 AskUserQuestion(선택지)으로 묻는다** — 글로 묻고 기다리지 않는다. Remote Control 로 휴대폰에서 볼 때
    선택지 창이어야 알림이 가고, 비개발자도 버튼이 쉽다. 자유 입력(아이디어)은 선택지의 직접 입력으로 받는다.
    **추천이 분명한 선택은 묻지 않고 그걸로 진행하고 한 줄로 알린다.** 비밀값은 대화로 묻지 않는다 — 파일을 메모장으로 열어 사람이 적게 한다.
+   **사람에게 하는 말은 처음부터 끝까지 사용자의 언어로** — 진행 보고도. 도구 · 에이전트 출력이 영어여도 따라가지 않는다.
 
 **검증 명령** (phase 완료 전 실행):
 
@@ -100,6 +101,7 @@ CI(`.github/workflows/ci.yml`)가 돌리는 것과 같다. terraform 은 `./infr
 | `.claude/hooks/` · `settings.json` | SessionStart(`session-start.sh`, sh) — 막 받은 템플릿이면 첫 메시지부터 `/start`. Stop · PreToolUse(`autopilot-gate.mjs`) — `/autopilot` 이 켜진 동안만: 남은 phase 지시 · 진전 없으면 ❌ · push · merge · 배포 차단 (Node 가 없으면 조용히 넘어간다). 위험 명령 deny |
 | `.claude/agents/` | 단계별 서브에이전트 — `plan/`(리서치·PRD·페이지 맵·디자인) · `dev/backend/`(탐색·모델·API·**외부 연동**) · `dev/frontend/`(탐색·작성) · `verify/`(테스트 작성·보안 검토·완료 기준 대조) |
 | `.claude/skills/security/` | 이 템플릿 기준 보안 체크리스트 — sec-reviewer·`/verify` 가 쓴다 |
+| `.claude/skills/modules/` | 기능 넣고 빼기 레시피 — 넣기: 스케줄러 · AI · 빼기: OAuth · WebSocket · 업로드 · Docker. `/plan` 이 고르고 phase 의 "모듈" 줄로 |
 | `.claude/skills/deploy/` | 배포 길 찾기·장애 진단 — 앞단(cloudflare·aws)·CI·526/52x·세션·429·롤백. 원문(`infra/README.md`·`deploy/README.md`)을 요약하고 가리킬 뿐 베끼지 않는다 |
 | `.claude/skills/seo/` | SEO·AEO·GEO·LLMO·NEO 진단·구현 ([원본](https://github.com/leopard627/fire-your-seo-agency), MIT) |
 
@@ -156,6 +158,7 @@ CI(`.github/workflows/ci.yml`)가 돌리는 것과 같다. terraform 은 `./infr
 **기능**: F1, F3 (`PRD/02_PRD.md`)
 **페이지**: P2, P5 (`PRD/03_PAGE.md`)
 **설정값**: U1(수수료 비율), U4(마감 시각) — 하드코딩 금지, 기본값을 가진 설정으로
+**모듈**: −websocket · +scheduler ← F12 — `.claude/skills/modules/` 레시피대로, 기능보다 먼저
 **수행 내용**: ...
 **완료 기준**: - [ ] F1-1 ... (PRD 5장 문장 그대로)
 **개발에서 다룰 것**: PRD 12장 항목 — 완료 기준이 아니라 `/test` 가 덮을 엣지 케이스

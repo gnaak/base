@@ -166,6 +166,19 @@ def rate_limit(name: str, *, limit: int, window: int = 60):
     return Depends(dep)
 
 
+async def check_user_limit(name: str, user_id: int, *, limit: int, window: int) -> None:
+    """로그인한 **사용자 × 묶음** 제한. 서비스에서 부른다 (AI 레시피의 `ai_service.chat` 참고).
+
+    IP 기준(`rate_limit()`)은 IP 를 바꾸면 풀리고 한 IP 뒤의 여러 사람을 한 카운터로 묶는다.
+    돈이 나가는 호출(LLM · 문자 발송 등)은 계정 단위로 센다.
+    넘으면 429 + `Retry-After` (fail-open 은 `_hit` 과 같다).
+    """
+    allowed, retry_after = await _hit(f"rl:{name}:user:{user_id}", limit, window)
+    if not allowed:
+        logger.info("rate limit 초과: %s user=%s", name, user_id)
+        _too_many(retry_after)
+
+
 #: 로그인·OAuth. 한 사람이 1분에 10번 넘게 로그인할 일은 없다.
 LOGIN_LIMIT = rate_limit("auth_login", limit=10, window=60)
 

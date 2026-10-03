@@ -14,6 +14,8 @@
     secrets                  빈 jwt_secret · hash_key 채우기
     set local_mysql_db db_x  비밀이 아닌 값 바꾸기 (비밀값은 비우기만)
     set local_redis_host memory   Redis 설치 없이 — 로컬 전용 메모리 Redis
+    unset vendor_client_id   그 키의 줄을 지운다 (값은 보지 않는다 — 모듈을 뺀 뒤 남은 키는 기동 거부)
+    line · unset 에 --file frontend/.env 를 주면 그 파일 (기본 backend/.env)
     admin                    로컬 관리자 — 비밀번호는 backend/admin-password.local 에만
     line local_mysql_password  그 키의 줄 번호
     check                    MySQL · Redis 에 붙는지
@@ -90,6 +92,37 @@ def set_value(key: str, value: str, env_file: Path = ENV_FILE) -> int:
         text = text.rstrip("\n") + f"\n{key}={value}\n"
     env_file.write_text(text, encoding="utf-8")
     print(f"설정: {key}" + (f"={value}" if not SECRET_HINT.search(key) else " (비움)"))
+    return 0
+
+
+def _repo_env(rel: str | None) -> Path | None:
+    """`--file` 값을 저장소 안의 `.env` 계열 파일로만 푼다 (기본 backend/.env). 밖이면 None."""
+    if not rel:
+        return ENV_FILE
+    root = ENV_FILE.parents[1]
+    path = (root / rel).resolve()
+    if not path.is_relative_to(root) or not path.name.startswith(".env"):
+        return None
+    return path
+
+
+def unset_value(key: str, env_file: Path = ENV_FILE) -> int:
+    """`key=` 줄을 지운다. 값은 읽어 출력하지 않는다 — 비밀값 키도 지울 수 있다.
+
+    모듈을 빼면서 `RawEnv` 필드를 지웠는데 `.env` 에 키가 남으면 모르는 키라 기동을 거부한다.
+    """
+    if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key):
+        print(f"키 이름이 이상합니다: {key!r}")
+        return 1
+    if not env_file.exists():
+        print(f"{env_file.name} 이 없습니다")
+        return 1
+    text = env_file.read_text(encoding="utf-8")
+    pattern = re.compile(rf"^{re.escape(key)}=.*(?:\n|$)", re.M)
+    text, n = pattern.subn("", text)
+    if n:
+        env_file.write_text(text, encoding="utf-8")
+    print(f"지움: {key}" if n else f"없음: {key}")
     return 0
 
 
@@ -186,13 +219,25 @@ def create_databases(names: list[str]) -> int:
         if not DB_NAME.match(name):
             print(f"DB 이름이 이상합니다: {name!r} (영문 · 숫자 · _ 만)")
             return 1
+    taken = []
     with _mysql() as conn, conn.cursor() as cur:
         for name in names:
+            # 이미 있고 테이블까지 있으면 다른 프로젝트 것일 수 있다 — 같이 쓰면 마이그레이션이
+            # 남의 기록에 걸리고(alembic "Can't locate revision"),
+            # 테스트 DB 면 pytest 가 남의 테이블을 지운다. 만들지도, 지우지도 않고 알린다
+            cur.execute(
+                "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = %s", (name,)
+            )
+            tables = cur.fetchone()[0]
+            if tables:
+                taken.append(name)
+                print(f"DB 이미 있음 {name} — 테이블 {tables}개 (다른 프로젝트일 수 있다 · 손대지 않음)")
+                continue
             cur.execute(
                 f"CREATE DATABASE IF NOT EXISTS `{name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
             )
             print(f"DB OK {name}")
-    return 0
+    return 2 if taken else 0
 
 
 def free_redis_db() -> int:
@@ -221,9 +266,13 @@ def main() -> None:
     setter = sub.add_parser("set", help="비밀이 아닌 값 바꾸기 (비밀값은 비우기만)")
     setter.add_argument("key")
     setter.add_argument("value")
+    unsetter = sub.add_parser("unset", help="그 키의 줄을 지운다 (값은 보지 않는다)")
+    unsetter.add_argument("key")
+    unsetter.add_argument("--file", help="저장소 안의 다른 .env (예: frontend/.env)")
     sub.add_parser("admin", help="로컬 관리자 — 비밀번호는 admin-password.local 에만")
     line = sub.add_parser("line", help="backend/.env 에서 그 키의 줄 번호")
     line.add_argument("key")
+    line.add_argument("--file", help="저장소 안의 다른 .env (예: frontend/.env)")
     sub.add_parser("check", help="MySQL · Redis 접속 확인")
     db = sub.add_parser("databases", help="DB 만들기 (이미 있으면 그대로)")
     db.add_argument("names", nargs="+")
@@ -234,10 +283,14 @@ def main() -> None:
         sys.exit(fill_secrets())
     if args.command == "set":
         sys.exit(set_value(args.key, args.value))
+    if args.command in ("line", "unset"):
+        env_file = _repo_env(args.file)
+        if env_file is None:
+            print(f"--file 은 저장소 안의 .env 파일만: {args.file!r}")
+            sys.exit(1)
+        sys.exit((env_line if args.command == "line" else unset_value)(args.key, env_file))
     if args.command == "admin":
         sys.exit(make_admin())
-    if args.command == "line":
-        sys.exit(env_line(args.key))
     if args.command == "check":
         sys.exit(check())
     if args.command == "databases":

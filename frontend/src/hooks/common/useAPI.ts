@@ -32,7 +32,7 @@ export class AuthExpiredError extends Error {
 export const AUTH_EXPIRED_EVENT = "auth:expired";
 
 /** 현재 경로 기준 refresh 대상. `/admin`으로 시작하면 admin. */
-const currentAuthType = (): AuthType =>
+export const currentAuthType = (): AuthType =>
   window.location.pathname.startsWith("/admin") ? "admin" : "user";
 
 // 진행 중인 refresh 요청. 동시에 401이 여러 개 떠도 네트워크 호출은 타입당 1회만 나간다.
@@ -88,7 +88,7 @@ const expireSession = (type: AuthType): AuthExpiredError => {
  * 401이면 refresh 후 딱 1회만 재시도한다.
  * refresh가 실패하거나 재시도도 401이면 세션을 만료 처리하고 AuthExpiredError를 던진다.
  */
-const fetchWithRefresh = async (
+export const fetchWithRefresh = async (
   makeRequest: () => Promise<Response>,
   type: AuthType,
 ): Promise<Response> => {
