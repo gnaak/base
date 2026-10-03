@@ -29,6 +29,9 @@ $ARGUMENTS
   2. AskUserQuestion 으로 기다린다 — "열린 안내대로 ○○를 해 주세요" + 선택지 [다 했어요 / 막혔어요]
   3. "다 했어요" 면 **다시 확인**하고 다음으로 간다. 확인이 안 되거나 "막혔어요" 면 무엇이 안 됐는지 보고 다시 묻는다
 - 숫자 범위는 `~` 로 쓰지 않는다 (화면에서 `20~40분, 30~60분` 의 `~` 두 개가 취소선이 된다) — "30분 안팎", "20–40분"
+- **비밀값(비밀번호 · API 키 · 토큰)은 대화로 묻지도, 화면에 찍지도 않는다** — 대화 기록에 남고 서버로 간다.
+  `.env` 는 읽지 않는다(`cat` · Read 금지). 바꿀 땐 `prepare_local` 명령으로, 사람이 적을 땐 메모장으로 열어 준다(5단계).
+  다른 프로젝트 폴더의 파일(옆의 `base/backend/.env` 등)은 읽지 않는다
 - **할 수 있는 건 묻지 않고 한다.** 있으면 건너뛰고, 없으면 설치한다 — 사람에게 넘기는 건 Claude 가 할 수 없는 것뿐이다
   (Windows 설치 확인 창의 "예" · 프로그램 첫 실행의 약관 동의 · 재부팅 · 사람만 아는 비밀번호). 설치 확인 창은 보안 장치다 — 우회하지 않는다
 - **명령은 저장소 루트에서, `cd` 를 섞지 않는다.** `cd … && …` 처럼 폴더를 옮기는 묶음 명령은 허용 설정이 있어도 확인 창이 뜬다 —
@@ -170,18 +173,26 @@ Windows 확인 창이 뜨면 '예' 만 눌러 주세요. (준비 30분 안팎, �
 `/setup` ①~④ 중 이 PC 에 필요한 것이다. **로컬 값이라 되돌리기 쉬워서 기본값으로 정한다** (`/setup` 은 하나씩 묻는다 —
 처음 쓰는 사람에게는 이게 맞다). 운영 값(`prod_*` · 도메인 · `infra/`)은 건드리지 않는다.
 
-1. **설정 파일** — `backend/.env` · `frontend/.env` 가 없으면 `.env.example` 에서 복사. `backend/.env` 에서:
-   - `jwt_secret` · `hash_key` 가 비었으면 새로 만든다 — `uv run --no-project python -c "import secrets; print(secrets.token_urlsafe(48))"`
-   - `local_mysql_db` · `test_mysql_db` 가 템플릿 기본값(`db_example` · `db_base_test`)이면 `db_{slug}` · `db_{slug}_test`
-   - 이미 사람이 바꾼 값은 덮어쓰지 않는다
+1. **설정 파일** — `backend/.env` · `frontend/.env` 가 없으면 `.env.example` 에서 복사(`cp`). **`.env` 는 읽지 않는다** — 아래 명령으로만 바꾼다
+   (`PP` = `uv --directory backend run python -m scripts.prepare_local`):
+   - `PP secrets` — 빈 `jwt_secret` · `hash_key` 를 채운다 (값은 화면에 안 찍힌다)
+   - `PP set local_mysql_db db_{slug}` · `PP set test_mysql_db db_{slug}_test` — 템플릿 기본값일 때만 (새로 복사한 `.env` 면 그렇다)
 2. **템플릿 이름 바꾸기** — `frontend/e2e/env.ts` 의 `db_base_e2e` → `db_{slug}_e2e`, `docker/mysql/init.sql` 의 DB 이름 3개,
    `docker-compose.yml` 의 `container_name`(`base-mysql` · `base-redis` → `{slug}-mysql` · `{slug}-redis`)과 `MYSQL_DATABASE`
 3. **파이썬 · 패키지** — `uv --directory backend sync` (파이썬이 없으면 uv 가 받아 온다. 처음엔 몇 분)
 4. **DB · Redis** — `uv --directory backend run python -m scripts.prepare_local check`
    - **둘 다 OK** (이미 이 PC 에 떠 있다 — 다른 프로젝트와 같이 써도 된다):
-     `… prepare_local databases db_{slug} db_{slug}_test db_{slug}_e2e`, `… prepare_local redis-db` 가 준 번호를 `.env` 의 `redis_db` 에
-   - **Redis 인증 실패** — "no password is set" 이면 `.env` 의 `local_redis_password` 를 비운다. 비밀번호가 틀렸다면 AskUserQuestion 으로 묻는다
-     [비밀번호를 알아요(직접 입력) / 모르겠어요 → Docker 로 새로 띄우기]. 고친 뒤 다시 check
+     `PP databases db_{slug} db_{slug}_test db_{slug}_e2e`, `PP redis-db` 가 준 번호로 `PP set redis_db <번호>`
+   - **Redis 인증 실패 "no password is set"** — `PP set local_redis_password ""` (비우기) → 다시 check
+   - **비밀번호가 필요하다**(MySQL "Access denied" · Redis 비밀번호 틀림) — **대화로 묻지 않는다** (답이 대화 기록에 남고 서버로 간다).
+     **다른 프로젝트 폴더의 `.env` 에서 가져오지도 않는다.** 사람이 메모장으로 직접 적게 한다:
+     1. `PP line local_mysql_password`(Redis 면 `local_redis_password`)로 줄 번호를 얻는다
+     2. 메모장으로 연다 — Windows `start "" notepad "backend\.env"`(Git Bash) / `Start-Process notepad "backend\.env"`(PowerShell) ·
+        macOS `open -t backend/.env` · Linux `xdg-open backend/.env`. 끝날 때까지 기다리는 형태로 열지 않는다
+     3. AskUserQuestion — "메모장의 ○번째 줄 `local_mysql_password=` 뒤에 MySQL 비밀번호를 적고 저장해 주세요 (사용자가 root 가 아니면 바로 위 `local_mysql_user` 도)"
+        [다 적었어요 / 모르겠어요 → 이 프로젝트 전용으로 Docker 에 새로 띄우기]
+     4. "다 적었어요" 면 다시 check (값은 보지 않는다). "모르겠어요" 면 아래 Docker — 이미 3306 · 6379 를 쓰고 있으니 저장소 루트 `.env` 에
+        `MYSQL_PORT=3307` · `REDIS_PORT=6380`, `PP set mysql_port 3307` · `PP set local_redis_port 6380`, 비밀번호 줄은 `PP set … ""` 로 비운다
    - **접속 안 됨** — Docker 로 띄운다. 할 수 있는 건 다 알아서:
      1. `docker` 가 없으면 설치 — Windows `winget install --id Docker.DockerDesktop -e --accept-package-agreements --accept-source-agreements`
         ("예" 한 번). WSL 이 없다고 나오면 `wsl --install --no-distribution`(PowerShell, "예" 한 번). 둘 다 **재부팅이 필요할 수 있다** —
@@ -193,9 +204,8 @@ Windows 확인 창이 뜨면 '예' 만 눌러 주세요. (준비 30분 안팎, �
      4. 켜지면 저장소 루트에서 `docker compose up -d` → `docker compose ps` 가 둘 다 healthy 가 될 때까지 기다림 → 다시 `check` →
         `databases` · `redis-db` (위와 같이)
 5. **테이블** — `uv --directory backend run alembic upgrade head`
-6. **로컬 관리자** — 비밀번호를 만들어(위 secrets 명령, 16자) 환경변수로 넘긴다:
-   `ADMIN_PASSWORD=<만든 값> uv --directory backend run python -m scripts.create_admin admin@example.com --password-env ADMIN_PASSWORD`.
-   이메일 · 비밀번호는 마지막 보고에 **한 번** 보여 준다 (파일에 적지 않는다)
+6. **로컬 관리자** — `PP admin`. 이메일은 `admin@example.com`, 비밀번호는 `backend/admin-password.local`(git 에 안 올라간다)에만 적힌다.
+   비밀번호를 화면이나 대화에 옮기지 않는다 — 마지막에 그 파일을 메모장으로 열어 준다
 7. **화면 쪽** — `npm --prefix frontend install`, 이어서 `npm --prefix frontend exec -- playwright install chromium`(자동 확인용 브라우저, 처음 한 번 · 수백 MB)
 8. **이름 입히기** — `frontend/index.html` 의 `BASE`(제목 · og:title · og:site_name · JSON-LD name) → 표시명,
    "프로젝트 한 줄 소개" 두 곳 → 한 줄 소개. `example.com`(도메인)은 그대로 — 운영 도메인을 정할 때 `/setup` ②
@@ -222,7 +232,7 @@ git 은 0 에서 이미 새 기록으로 시작했다. 여기서는 브리프 ·
 | --- | --- |
 | 이름 | 표시명 · slug |
 | DB · Redis | `db_{slug}` · `_test` · `_e2e` / Redis 번호 / 이미 있던 걸 썼는지, Docker 로 띄웠는지 |
-| 관리자 | `admin@example.com` / 만든 비밀번호 — 화면: `cd frontend && npm run dev` 와 `cd backend && sh run.sh` 뒤 http://localhost:3000/admin |
+| 관리자 | `admin@example.com` — 비밀번호는 `backend/admin-password.local` (메모장으로 열어 준다). 화면: `cd frontend && npm run dev` 와 `cd backend && sh run.sh` 뒤 http://localhost:3000/admin |
 | 확인 | pytest · 화면 테스트 · E2E 통과 여부 |
 | git | 새 기록 · 원격 |
 
@@ -237,3 +247,4 @@ git 사용자 이름을 임시(`me`)로 정했다면 여기서 한 줄 알린다
 - 다른 프로젝트의 DB · Redis 를 건드리지 않는다 — `CREATE DATABASE IF NOT EXISTS` 와 비어 있는 Redis 번호만 (`prepare_local` 이 그렇게 한다)
 - 설치 확인 창(UAC) · `sudo` 비밀번호를 우회하지 않는다 — 사람이 누르게 한다
 - 셋업 확인이 실패했다고 앱 코드를 고치지 않는다 — 설정을 본다
+- 비밀값을 대화로 묻거나 화면에 찍지 않는다 · `.env` 를 읽지 않는다 · 다른 프로젝트 폴더의 설정을 가져오지 않는다

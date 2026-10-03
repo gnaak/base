@@ -1,381 +1,100 @@
-# CHANGELOG — 왜 이렇게 바뀌었나
-
-"뭐가 바뀌었다"는 `git log`가 안다. 이 파일은 **왜 그렇게 바꿨고, 그 과정에서 뭘 배웠는지**를 남긴다.
-나중에 다시 봤을 때 "아 이거 왜 이렇게 해놨지"가 안 나오게.
-
-각 항목은 **기존 → 변경 → 왜** 순서다. 마지막에 그때 걸린 함정이 있으면 **함정** 으로 적는다.
-문제 목록과 우선순위 판단은 [`need.md`](need.md)에, 이 파일은 그 결과다.
-
----
-
-## 2026-10-03 — zero-to-one 8~10: 무인 실행 · 배포 롤백 · 배포 스킬
-
-연결까지만 했다 — 실제 무인 run 과 실제 서버 배포는 사람이 확인한다 ([`need.md`](need.md) D "아침 확인 순서").
-
-### 무인 실행 — `bca03df`
-
-**기존** `/plan` 이 `PROJECT.md` 를 만들면 phase 마다 사람이 `/fullstack` → `/verify` 를 불렀다.
-**변경** `/autopilot` 이 phase 1~끝을 돈다. 멈추지 않게 붙잡는 건 Stop 훅(`.claude/hooks/autopilot-gate.mjs`)이고,
-같은 파일의 PreToolUse 훅이 켜져 있는 동안 push · merge · main 전환 · PR · `terraform apply` · 배포 스크립트를 막는다.
-**왜** 무인으로 돌리면 "Claude 가 끝났다고 말하는 것" 말고 끝났다는 근거가 필요하다. 게이트는 표시가 아니라 근거로 본다 —
-✅ 라고 적어도 제목에 `phase N` 이 든 커밋과 `- 검증:` 줄이 없으면 안 넘어간다. 그리고 루프에는 반드시 출구가 있어야 한다 —
-진전 없이 3번 · phase 당 40턴 · 마무리 10턴 · 전체 400턴. phase 상한이면 게이트가 직접 ❌ 로 적고 다음 phase 를 지시한다.
-
-원형은 gnaak/prd 의 PowerShell 게이트. 이번엔 Node 하나로 — 프론트 때문에 어디에나 있고 Windows · Linux 에서 같은 파일이 돈다.
-판정은 임시 git 저장소 28개 테스트(CI)로, 훅 연결은 이 세션에서 실제로 켜고 `git push` 가 막히는 것으로 확인했다.
-
-**함정**
-- 게이트가 ❌ 로 넘긴 phase 의 변경을 `git stash -u` 로 치우라고 하면 **게이트가 써 둔 PROGRESS.md 의 ❌ 까지 같이 치워져**
-  같은 phase 로 돌아간다 → stash 에서 PROGRESS.md · DECISIONS.md 를 빼고(`:(exclude)`), 게이트도 ❌ 로 넘긴 phase 를 상태 파일에 기억한다
-- 커맨드 frontmatter 의 `description` 에 따옴표 없이 `인자: …` 가 들어가면 YAML 이 깨진다 — `/verify` 가 5 단계부터 그랬다
-  (목록에 설명 대신 `$ARGUMENTS`). `.claude` 전체 frontmatter 를 PyYAML 로 확인했다
-- Claude Code 기본 `/goal` · ralph-loop 같은 Stop 훅과 같이 켜면 지시가 섞이고, 외부 mod 는 PreToolUse 가 막은 명령도 승인할 수 있다 —
-  `/autopilot` "시작 전" 에 적었다 (claude.dev 에서 확인)
-
-### 배포 롤백 — `b1402fb`
-
-**기존** `deploy.sh` 가 `/srv/app` 에 `rsync --delete` 로 덮어썼다. 확인이 실패하면 사이트가 죽은 채로 남았다 (롤백 = `git revert` → 푸시).
-**변경** 릴리스마다 폴더(`releases/<시각>-<sha>`, 최근 3개) + `current` 링크. 확인에 실패하면 **이전 릴리스로 되돌리고 exit 1** —
-CI 는 빨갛게, 사이트는 살아 있게. 손으로는 `rollback.sh`(S3 에서 다시 받지 않는다). 예전 구조 서버는 첫 배포가 한 번 전환한다.
-**왜** 배포가 실패하는 순간이 사이트가 죽는 순간이면 안 된다. 그리고 DB 는 되돌리지 않으므로 마이그레이션 규칙(expand/contract)을 같이 정했다.
-
-**함정**
-- **`.env` 를 shared 에 두면 롤백이 안 된다.** 설정(`RawEnv`)은 모르는 키를 거부한다 — 새 릴리스가 키를 더한 뒤 그 `.env` 로
-  이전 릴리스를 띄우면 `Extra inputs are not permitted` 로 기동 실패. 그래서 배포 때 만든 `.env` 를 릴리스마다 둔다
-  (대가: 롤백한 릴리스는 그때의 SSM 값 — 그 뒤 비번을 바꿨다면 롤백 대신 재배포)
-- 예전 구조의 첫 전환이 실패해도 돌아갈 곳이 있어야 한다 — 로그 · 업로드를 shared 로 옮기되 옛 자리에 링크를 남기고,
-  옛 코드는 전환이 **성공한 뒤에** `legacy-*` 로 치운다
-- `if ! activate …` 처럼 조건 안에서 부른 함수는 `set -e` 가 꺼진다 — 실패할 수 있는 줄은 직접 `return 1`
-- Windows Git Bash 는 심볼릭 링크를 못 만든다(`Operation not permitted`) — 스모크는 WSL 에서. 그리고 Windows 체크아웃의
-  `deploy/*` 가 CRLF 였다 → `.gitattributes` 에 `deploy/* text eol=lf` (systemd 가 `User=ubuntu\r` 로 읽는 사고)
-- 스모크 16개는 서버 명령(aws · systemctl · nginx · curl · uv …)을 PATH 앞의 가짜로 바꾸고 `deploy/` 의 진짜 설정을 렌더링한다.
-  자동 복귀 · 정리를 일부러 끄면 해당 시나리오가 실패하는 것까지 확인했다. 진짜 서버는 아직이다
-
-### 처음 쓰는 사람의 입구 — `/start`
-
-**기존** clone → `/setup`(하나씩 묻는다) → `/plan`(인터뷰) 를 알아서 이어 불러야 했다. `/setup` 은 아이디어도 없는데 이름부터 물었다.
-**변경** `/start` 하나 — 아이디어 대화 → 도구 설치 → 로컬 셋업 → 로그인까지 확인 → git 새로 시작 → `/plan`. 사람이 직접 할 일은
-`docs/guides/` 안내 페이지를 브라우저로 띄운다(사진은 `img/` 에 이름대로 넣으면 자동으로 들어간다).
-**왜** 쓰는 사람이 개발자가 아닐 수 있다. 파이썬은 uv 가 받아 오니 설치시키지 않고, 로컬 값(DB 이름 · 시크릿)은 되돌리기 쉬우니 묻지 않는다.
-
-**함정**
-- 한 PC 에 다른 프로젝트의 MySQL · Redis 가 이미 떠 있으면 새 docker compose 는 포트 · 컨테이너 이름(`base-mysql`)이 부딪힌다 →
-  `prepare_local` 이 먼저 붙어 보고, 붙으면 같이 쓴다 (DB 는 `IF NOT EXISTS`, Redis 는 키가 없는 번호만)
-- 한글 Windows 의 기본 출력(cp949)은 `✓` · `—` 를 못 찍고 죽는다 → 스크립트 출력을 UTF-8 로
-- fakeredis 는 `INFO` 를 모른다 → 비어 있는 번호는 `DBSIZE` 로 센다 (옛 Redis 3.x 에서도 된다)
-- 클론한 사람의 원격이 base 를 가리키면 그대로 푸시하려 든다 → `/start` 가 원격을 떼고 `--orphan` 으로 새 기록 (`rm -rf .git` 은 안 쓴다)
-
-### 배포 스킬 — `89ca049`
-
-**변경** `skills/deploy/` — 구성 한 장 · 원칙 · 상황별 reference(cloudflare · aws · troubleshoot · rollback) · 함정 표 · 진단 보고 형식.
-**왜** 배포 문서는 `infra/README.md` · `deploy/README.md` 에 이미 있다. 스킬은 그걸 베끼지 않고 **증상에서 원문 위치로 가는 길**만 둔다 —
-복사본은 어긋난다. Anthropic 의 스킬 글이 "가장 값진 건 함정 절" 이라고 해서 함정 표를 본문에 뒀다.
-새 에이전트에게 "배포했는데 526 떠" 를 물으니 이 스킬 → reference → `deploy.sh` · `cloudflare.tf` 순으로 짚었다.
-
----
-
-## 2026-10-01 — zero-to-one: 기획 → 개발 → 검증
-
-base 는 "개발" 단계만 자동화돼 있었다. 아이디어 한 줄에서 기획 → 개발 → 검증까지 사람 없이 가도록 넓혔다.
-로드맵과 남은 단계(무인 실행 · 배포 롤백 · 배포 스킬)는 [`need.md`](need.md) 의 D.
-
-### 에이전트 정리 — `7f516ee`
-
-**기존** 에이전트 7개가 한 폴더에, 도구 제한은 `allowed-tools:` 로 적혀 있었다.
-**변경** `dev/backend` · `dev/frontend` · `verify/` 로 나누고 `tools:` 로 바꿨다. 탐색 전담은 `Read, Grep, Glob` 만.
-모델은 판단·설계 = opus, 탐색·대량 작성 = sonnet. haiku 제거.
-**왜** 서브에이전트는 `tools:` 만 읽는다. `allowed-tools:` 는 커맨드·스킬용이라 **조용히 무시되고 모든 도구가 열려 있었다.**
-"터미널 금지"라고 프롬프트에 적어 둔 탐색 에이전트도 실제로는 Bash 를 갖고 있었던 것.
-
-**함정** 에이전트 파일은 고친 뒤 반영까지 몇 분 걸린다(커맨드는 바로). 그 사이 부르면 옛 정의로 돈다 —
-확인은 "지금 가진 도구 목록만 답하라"로.
-
-### `/plan` — `3ecf395` `7d93824`
-
-**기존** `PROJECT.md` 를 사람이 손으로 썼다.
-**변경** `/plan {아이디어}` — 인터뷰 → 리서치 5갈래 병렬(경쟁·UX·디자인·연동·규제) → PRD → 검토·재작성(최대 2회)
-→ 페이지 맵(`03_PAGE.md`) · 고객 화면 테마(`04_DESIGN.md`) → `PROJECT.md` · `PROGRESS.md` · `DECISIONS.md`.
-**왜**
-- 기획이 비면 개발 에이전트가 빈칸을 추측으로 채운다. 그 추측이 돈·법이면 되돌리기 비싸다
-- **PRD 는 결정에만 깐깐하고, 구현 엣지 케이스는 개발로 보낸다.** 코드를 모르고 정한 타임아웃·재시도는 결국 다시 쓴다.
-  그래서 PRD 12장 → phase 의 "개발에서 다룰 것" → `/test`
-- 완료 기준은 PRD 문장을 ID 째로 옮긴다 — spec-checker 가 그 문장을 그대로 대조한다
-- **인터뷰 뒤로는 무인.** 되돌리기 쉬운 결정(디자인)은 후보를 전부 테마로 저장하고 기본값을 자동으로 고른다.
-  되돌리기 어려운 결정(돈·법·범위)은 더 안전한 기본값으로 가되 `DECISIONS.md` 에 올리고, 설정값(`RawEnv` → SSM)으로
-  구현해서 아침의 결정이 코드 수정이 아니라 값 하나가 되게 한다
-
-샘플 아이디어로 끝까지 돌려 봤다 — 리뷰어가 지어낸 출처, 테스트 불가 기준, 결제 타임아웃의 이중결제 위험,
-첫 로그인 동의 누락을 잡았다.
-
-**함정** plan-researcher 는 WebSearch 가 deferred 도구라 `tools:` 에 `ToolSearch` 가 같이 있어야 쓸 수 있다.
-
-### 프론트 정리 — `ff9f05b`
-
-**기존** 다크모드 토큰은 있는데 `<html>` 에 `.dark` 를 붙이는 코드가 **어디에도 없었다.** 관리자 컴포넌트엔
-`bg-white`·`gray-*` 같은 고정색이 135곳.
-**변경** 고정색 → 시맨틱 토큰, `main`/`sub1`/`sub2` 삭제. `ThemeProvider` + `index.html` 첫 페인트 스크립트.
-관리자 md 미만은 상단 바 메뉴 → 같은 사이드바를 드로어로. 전역 `user-select: none` 제거.
-**왜** 고객 화면 테마(`.theme-client[data-theme]`)가 토큰을 덮어쓰는 구조라, 고정색이 한 곳이라도 있으면 테마가 거기서 끊긴다.
-
-**함정** 없는 Tailwind 클래스가 또 나왔다 — `rounded-DEFAULT`(Tailwind 는 `rounded` 만 만든다), `errorColor`
-(InputBox 의 에러가 빨갛게 보인 적이 없었다), 키프레임 없는 `animate-needle-fade`. 그래서 5 에서 린트로 막았다.
-
-### 외부 API — `a698564`
-
-**기존** `request_json` 이 연결 실패와 응답 대기 중 타임아웃을 같은 502 로 냈고, 업체 4xx 본문을 버렸다.
-**변경** 연결 실패 = 502 `UPSTREAM_UNREACHABLE`(요청이 안 나감, 재시도 가능) / 타임아웃 = 504 `UPSTREAM_TIMEOUT`(결과 불명, 재시도 금지).
-429·503 은 `Retry-After` 를 따라 재시도(최대 10초). `upstream_errors=True` 면 업체 본문을 `UpstreamError` 로.
-`be-external-api` 에이전트 — 키는 `RawEnv`(없으면 로컬 mock), 웹훅은 서명 검증 + 멱등.
-**왜** 결제를 타임아웃에서 "실패"로 보고 다시 보내면 **이중결제**가 난다. 요청이 닿았는지 모르는 상태는 따로 있어야 한다.
-PG 거절 사유 같은 업무 오류는 본문에 있다.
-
-### 검증 — `ae9e1e0`
-
-**변경** `/verify` = 기계 검사 + sec-reviewer(보안, 읽기 전용) + 의존성(pip-audit · npm audit) + spec-checker(완료 기준 대조).
-`skills/security/` 는 일반론이 아니라 **이 코드의 위험 지점**을 가리키는 체크리스트.
-디자인 린트 — 고정색, `tailwind.config.js` 에 없는 클래스, `-DEFAULT` 클래스.
-**왜** 사람이 안 보는 동안 지켜줄 장치가 먼저다. 디자인 쪽 실수는 빌드 에러 없이 조용히 틀리므로 린트가 아니면 못 잡는다.
-
-**함정**
-- `eslint-plugin-tailwindcss` 는 config 를 **절대 경로**로 줘야 한다 (상대 경로면 "Could not resolve tailwindcss")
-- 플러그인이 `rounded-DEFAULT` 를 못 잡는다 — 별도 규칙. esquery 정규식 안에서는 `/` 를 못 써서 `/`
-
-### 보안 수정 — `e5ee584`
-
-5 의 sec-reviewer 가 찾은 것. ❌ 는 전부, ⚠️ 는 대부분.
-- OAuth `state` 없음(로그인 CSRF) → sessionStorage 1회용 state, `next` 는 같은 오리진 경로만
-- 업체가 검증 안 한 이메일로 계정 연결, 비밀번호 계정에 OAuth 자동 연결(계정 선점) → 403 / 409
-- 빈 `jwt_secret` 허용 → 32자 미만이면 기동 거부. 빈 키면 누구나 관리자 토큰을 만든다
-- **nginx `add_header` 상속 함정** — `location` 안에 `add_header` 가 하나라도 있으면 서버 레벨 헤더가 통째로 안 내려온다.
-  모든 HTML 이 X-Frame-Options·HSTS 없이 나가고 있었다
-- WebSocket 무인증·Origin 미확인·아무 방이나 입장 → 기본 로그인 필수, CSWSH 방지, `can_join`, 크기·빈도 상한
-- 업로드 매직 바이트, 관리자 잠금 키 분리(잠금 DoS), 없는 계정에도 argon2(시간 차 이메일 열거), 비밀번호 최대 128
-
-제외: 운영 `/docs` — nginx 가 `/api` 만 프록시해서 밖에서 안 닿는다.
-
-### E2E + 마이그레이션 CI — `1d99d6a`
-
-**변경** Playwright. 백엔드·프론트를 **전용 포트(8100/3100)·전용 DB(`db_base_e2e`)·Redis 15번**으로 직접 띄운다.
-CI 에 `alembic upgrade head` → `alembic check`(모델 ↔ 리비전) → playwright. 배포가 이 잡을 기다린다.
-`scripts/create_admin.py` — 첫 관리자를 만들 방법이 손 SQL 뿐이었다.
-**왜** 무한 새로고침처럼 이 템플릿에서 반복해서 터진 버그는 브라우저에서만 보인다. 그리고 CI 가 마이그레이션을
-**한 번도** 돌리지 않고 있었다.
-
-**함정**
-- 처음엔 이미 떠 있는 3000/8000 을 재사용해서 **다른 프로젝트 서버를 테스트했다** → 전용 포트 + 재사용 끔
-- 새로고침 판정을 `framenavigated` 로 했더니 SPA 라우트 이동까지 셌다 → `load` 이벤트 + window 표식.
-  일부러 `reload()` 를 심어서 실패하는지 확인했다
-- **E2E 가 앱 버그를 찾았다** — 로그아웃 확인 모달이 안 눌렸다. sticky 사이드바 안에서 그려져 쌓임 맥락에 갇히고
-  `<main>` 이 위를 덮었다 → 모달 3종을 `document.body` 로 portal
-- redis-py 8 의 기본 RESP3(`HELLO`)를 옛 Redis 3.x 가 몰라서 연결이 안 됐다 → `protocol=2`
-- pytest DB 를 같이 쓰지 않는 이유: pytest 는 `drop_all` 을 하는데 `alembic_version` 은 남아서, 다음 `upgrade head` 가 아무것도 안 만든다
-
-### 정리 — `44fb586` `8434972`
-
-- clone 뒤 고칠 것에 DB 이름 3개(개발·pytest·E2E)와 `redis_db`·Redis 비밀번호. 비밀번호 없는 Redis 에 값을 넣으면 AUTH 에러로 기동 실패
-- 고객 첫 화면 — 구글·카카오 버튼만 있던 화면을 소개 + 로그인 카드로. 템플릿 상태로도 볼 만하게 (phase 1 이 서비스 화면으로 바꾼다)
-- 테마 토글을 사이드바 하단 3단(시스템→라이트→다크)에서 **상단 바 우측의 라이트/다크 두 칸**으로. 처음엔 OS 설정을 따른다.
-  화면에 보이는 건 둘뿐이라 "시스템" 이라는 세 번째 상태가 헷갈렸다
-- 확인 모달 — 가운데 아이콘 → 제목 → 설명, 버튼 반반, 로그아웃은 빨강. 두 문장 설명은 `<br />` 로 직접 끊는다
-- `body { word-break: keep-all }` — 한글이 음절에서 끊겨 "있습니 / 다" 가 나던 것
-
----
-
-## 2026-09-21
-
-### 문서 진입점 + 이 파일 — `071ea6e`
-
-루트 `CLAUDE.md`에 uv·디자인 시스템 진입점 추가. "새 프로젝트로 가져갈 때 교체할 것"에
-빠져 있던 `index.css`(브랜드 색) · `index.html`(플레이스홀더) · `main.tsx`(샘플 대시보드) 보강.
-그리고 이 `CHANGELOG.md` — `need.md`가 "뭐가 문제였나"라면 여기는 "그래서 왜 이렇게 했나".
-
----
-
-## 2026-09-20
-
-### uv 전환 — `a7cd5f0`
-
-**기존** `requirements.txt` freeze + `python -m venv` + `pip install`.
-**변경** `pyproject.toml`(선언) + `uv.lock`(해석 결과) + `.python-version`(3.12). `uv sync` 하나로 끝.
-**왜**
-- freeze는 "내 윈도우에서 풀린 결과"라 리눅스 서버에서 같은 트리가 나온다는 보장이 없었다. `uv.lock`은 플랫폼별 해시까지 든다
-- 파이썬 인터프리터 버전이 아예 관리 대상이 아니었다. 이제 없으면 uv가 받아온다
-- ruff·pytest·의존성이 한 파일에 모인다
-
-그룹 3개: 기본(운영) / `dev`(pytest·fakeredis·ruff) / `prod`(gunicorn). 서버·CI·Docker는 전부 `--frozen` — lock을 다시 풀지 않으니 배포 때 조용히 버전이 오르지 않는다.
-
-**함정**
-- `deploy/fastapi.service`가 gunicorn을 실행하는데 **gunicorn이 어디에도 선언돼 있지 않았다.** requirements.txt에도 없었으니 그 유닛 그대로 쓰면 기동 실패. `prod` 그룹으로 편입
-- `>=` 하한으로 선언하니 `uv lock`이 전부 최신을 물었다 — redis 7.3→8.1, starlette 1.0→1.6, uvicorn 0.42→0.53, pydantic 2.12→2.13. 테스트 84개 + CI로 검증됐지만 의도한 것보다 큰 점프. 문제 생기면 `uv.lock`만 되돌리면 된다
-- ruff `target-version`을 py312로 올리니 UP046이 `BaseResponse(BaseModel, Generic[T])`를 PEP 695로 바꾸라 함. uv와 무관한 리팩터라 py311 유지
-
-### 어드민 디자인 시스템 — `521bbbe`
-
-**기존** 어드민 레이아웃이 `bg-adminMain` `text-textMain`을 쓰고 있었는데 **둘 다 tailwind.config.js에 없는 클래스**였다. 배경색이 통째로 안 먹고 있었던 것. 상단 헤더 + 사이드바 구성.
-**변경** chatbase.kr에서 다듬은 Vercel 계열 토큰을 통째로 이식. `index.css` CSS 변수(라이트 + `.dark`) → `tailwind.config.js`가 노출. Geist/Geist Mono 가변 폰트 동봉. 헤더 제거하고 사이드바 단독.
-**왜** 기존 화면이 낡았고, 파생 프로젝트에서 매번 디자인을 다시 잡고 있었다. 한 번 제대로 만들어서 복사하자는 템플릿 취지 그대로.
-
-핵심 규칙 ([`DESIGN.md`](DESIGN.md)):
-- 깊이는 `border`가 아니라 `shadow-border`(1px 링) — 레이아웃 크기를 안 바꿔서 hover에 요소가 안 밀린다
-- 색은 정보일 때만. 회색조 기본
-- 제목은 음수 트래킹, 숫자는 `tabular-nums`, 로딩은 스켈레톤 (0을 먼저 그리면 숫자가 튄다)
-
-신규 컴포넌트: `StatCard` `Skeleton` `ConfirmModal`. `Table`은 `Row` 제네릭 복원 (chatbase 복사본이 `any`로 되돌려놨었다).
-
-**함정** 없는 Tailwind 클래스는 **에러 없이 조용히 무시된다.** 이번에 발견한 `bg-adminMain`이 그 예. 새 클래스 쓰기 전에 config에 있는지 확인.
-
----
-
-## 2026-09-19 — 템플릿 감사 (need.md A→B→C)
-
-1년 9개월차가 5~6개월차 때 만든 템플릿을 냉정하게 다시 봤다. 결과가 [`need.md`](need.md).
-A(없으면 안 됨) 6개, B(있으면 좋음) 10개, C(정리) 전부 처리. 테스트 14 → 84개.
-
-### A1. 데코레이터 → Annotated 의존성 — `a0634f2`
-
-**기존** `@with_provider` `@with_login` 데코레이터가 엔드포인트를 `(p)` 하나짜리 래퍼로 감쌌다.
-**변경** `Provider` / `UserProvider` / `AdminProvider` 타입 별칭 (`Annotated[ServiceProvider, Depends(...)]`). 파라미터 타입 하나에 DI + 인증을 싣는다.
-**왜** 래퍼 때문에 FastAPI가 path·query·body 파라미터를 못 봤다. 그 결과:
-- `/docs`가 비어 있었다 (operationId 전부 `wrapper_*`)
-- 입력 검증이 없어서 깨진 JSON·빈 바디·배열 바디가 전부 **500** — 이제 전부 422
-
-같이 바뀐 것: 로그인 정보가 `p.request.user_id`(Request monkey-patch)에서 `p.auth.user_id`(dataclass)로. 서비스가 Request 대신 값을 받는다 — 검증은 라우터 경계에서 한 번, 서비스는 HTTP를 모른다.
-
-**함정** 이 구조를 처음 만들 땐 코틀린 템플릿을 옮긴 거였다. 데코레이터가 코틀린 어노테이션의 직역이었는데, 파이썬에선 `functools.wraps`가 시그니처를 복원하지 않으면 프레임워크가 함수 안을 못 본다. 파생 프로젝트(xerovatar·soulie·chatbase)는 "잘 동작"했는데, 동작한 게 아니라 **검증 없이 통과**하고 있었던 것.
-
-### A2. 응답도 스키마로 — `0d770f2`
-
-**기존** `success()`가 `JSONResponse`를 직접 만들었다.
-**변경** `success()`가 `BaseResponse[T]` 모델을 반환. 라우터에 `response_model=BaseResponse[XxxOut]`.
-**왜** 두 가지가 막혀 있었다:
-1. `json.dumps`를 그대로 타서 datetime·Decimal이 있으면 TypeError → 500. `get_me()`가 `.isoformat()`을 손으로 부른 이유가 이것이고, 파생 프로젝트엔 `_serialize` / `kst_iso()` 헬퍼로 번져 있었다
-2. `JSONResponse`를 반환하면 FastAPI가 손대지 않으므로 `response_model`이 **`/docs`에 뜨기만 하고 검사하지 않는다.** 측정하니 스키마에 없는 `password`가 그대로 새어나갔다
-
-`SessionOut`을 `create_jwt_token()`이 만들어 쿠키에 싣고 그대로 반환 → 쿠키와 응답 `data`가 같은 객체에서 나온다. 어긋날 수가 없다.
-
-**함정** 처음엔 "`response_model`이 무시된다"고 했는데 틀렸다. `/docs`에는 나온다. **강제가 안 될 뿐.** 문서와 실제가 다른 게 없는 것보다 나쁘다.
-
-### A5. 로그인 빈도 제한 — `51fdb58`
-
-**기존** 없음. "앞단(nginx·Cloudflare)이 막는다"고 문서에 써놓고 앞단 설정도 없었다.
-**변경** `core/utils/rate_limit.py`. 두 층 — IP×엔드포인트(10회/분) + 계정×실패(5회/10분). 카운터는 Redis.
-**왜** 앞단은 IP 기준이라 IP를 바꿔가며 한 계정을 두드리는 크리덴셜 스터핑을 구조적으로 못 막는다.
-
-설계 결정:
-- **미들웨어가 아니라 의존성.** 미들웨어는 규칙에 경로 문자열을 적어야 해서 라우터 prefix를 바꾸면 제한이 조용히 풀린다
-- 비밀번호 검사 **전에** 계정 잠금을 확인 — 잠긴 계정에 argon2 비용을 안 쓴다. 없는 계정도 실패로 세어 "잠기는지"로 이메일 존재를 못 알아내게
-- `X-Forwarded-For`는 peer가 공인 IP가 아닐 때만 믿는다 — 앱 포트가 외부에 열리면 헤더 위조로 우회되니까
-- Redis가 죽으면 **통과**(fail-open). 제한이 잠시 풀리는 것보다 모든 로그인이 막히는 게 나쁘다
-
-**함정** chatbase.kr 구현을 참고했는데 4가지가 고장나 있었다: 429가 CORS 헤더 없이 나감 / preflight OPTIONS가 한도를 깎아 실질 한도 절반 / `BaseHTTPMiddleware` deadlock / 429가 `BaseResponse` 계약을 안 지킴. 전부 `fail()` + 의존성으로 바꾸니 자동 해결.
-
-### A6. 세션 무효화 — `8aa22e5`
-
-**기존** JWT는 stateless라 로그아웃·비번 변경·계정 정지를 해도 기존 세션이 만료까지 살아있었다. `active` 컬럼은 선언만 되고 아무도 검사 안 함.
-**변경** `module/auth/auth_revoke.py` (Redis).
-- 거부 목록(jti): 그 세션 하나 — 로그아웃
-- 버전 카운터(ver): 그 계정 전체 — 비번변경·정지
-- refresh 로테이션: 쓸 때마다 옛 토큰이 죽는다
-- 재사용 탐지: 죽은 토큰이 또 오면 유출로 보고 전체 종료 (`SESSION_REUSE_DETECTED`)
-
-**왜 refresh를 7일로 늘렸나** 로테이션이 있으면 refresh 토큰 하나가 오래 살아도 탈취 시 한 번 쓰면 끝이라 위험이 묶인다. 그래서 "access 15~30분 / refresh 1~2주" 권고가 성립한다. 무효화 확인은 refresh 시점에만 하므로 **무효화 지연 = access 수명** — 이게 access를 짧게 가져가는 진짜 이유.
-
-**함정**
-- **로테이션 유예 10초가 핵심.** 탭을 여러 개 열면 각자 refresh를 시도하는데, 유예가 없으면 이 정상 동작이 재사용으로 오판돼 사용자가 통째로 로그아웃된다. 유예 마커를 거부 목록보다 **먼저** 쓰는 순서도 같은 이유
-- fail 방향이 두 갈래다. 레이트리밋은 fail-open(가용성), 무효화는 fail-closed(보안). **단 발급 시 버전 조회만 fail-open** — 그건 보안 검사가 아니라 도장 찍기라 Redis 장애로 로그인을 막을 이유가 없다. 테스트 `Redis가_죽어도_로그인은_된다`가 503으로 깨지면서 발견
-
-### A4. SameSite None → Lax — `73d977f`
-
-**기존** prod에서 SameSite를 무조건 `None`으로 덮어썼다.
-**변경** `.env`의 `cookie_samesite` (기본 `lax`). 모르는 값이면 Lax로 떨어지고 경고.
-**왜** `None`은 "cross-site 요청에도 쿠키를 붙여달라"는 뜻 — 브라우저가 공짜로 해주는 CSRF 방어를 스스로 끄는 값이다. 이 템플릿은 프론트 JS가 `user_info` 쿠키를 직접 읽는 구조라 원래 same-site를 전제한다. `None`은 자기 아키텍처와 모순이었다.
-
-**함정**
-- "CORS가 막지 않나?" — 못 막는다. Starlette `request.json()`은 Content-Type을 확인하지 않아서 `text/plain`으로 보내면 preflight 없는 simple request가 돼 통과한다
-- "임베드 위젯(chatbase)은 어떡하나?" — Lax면 된다. 위젯이 부르는 API는 `@without_login`이라 쿠키를 안 쓰고, 관리자는 chatbase.kr을 직접 방문하니 same-site. 오히려 `None`이면 관리자로 로그인한 사람이 위젯 달린 고객사 사이트를 볼 때 그 iframe에서 관리자 쿠키가 실려 나간다
-- SameSite는 iframe의 origin이 아니라 **최상위 문서의 사이트**를 본다. "iframe이니까 same-origin" 이라는 주석을 믿고 임베드에 인증을 붙이려 하면 헤맨다
-
-### C. 죽은 코드 정리 — `abe6049`
-
-- 프론트: dompurify / highlight.js / lowlight (사용처 0)
-- 백엔드: `parse_date()` `register_base()` (참조 0), `isort` (설정도 사용처도 없음)
-- `POST /api/auth/signup` 노출 — `SignupIn` 스키마와 `SIGNUP_LIMIT`이 있는데 아무도 안 쓰고 있었다. 지우는 대신 살림. 세션은 안 만든다 (자동 로그인은 프로젝트마다 다른 선택)
-- 라우트 가드 중복 제거 — `AdminLayout` 안의 인라인 가드를 걷어내고 `App.tsx`의 `<PrivateRoute authType="admin">` 하나로. 같은 로직이 두 곳에 있어서 고칠 때 양쪽을 봐야 했다
-
-### B7. docker-compose — `e0a33f4`
-
-**기존** README의 "clone 후 .env만 채우면 됨"이 거짓이었다. MySQL 8 + Redis 7을 직접 깔아야 했다.
-**변경** `docker-compose.yml` — MySQL·Redis만. 앱은 넣지 않았다.
-**왜** 앱을 컨테이너에 넣으면 Windows에서 `C:\`를 바인드 마운트해야 하는데 파일 I/O가 느리고 inotify가 안 넘어와 `--reload`가 안 먹는다. Docker는 **인프라(compose) + 배포(이미지)** 에만.
-
-**함정** healthcheck는 `mysqladmin ping -h 127.0.0.1` (TCP). 소켓 ping이면 초기화 중 임시 서버가 응답해서 `init.sql`이 끝나기 전에 healthy로 잡힌다. CI에서 `service_healthy`로 기다릴 때 중요.
-
-### B8. CI + Dockerfile — `452bc98`
-
-**기존** CLAUDE.md의 "검증 명령"이 사람 기억에 의존.
-**변경** `.github/workflows/ci.yml` — backend(pytest) / frontend(types·lint·test·build) / docker(이미지 빌드). push·PR마다.
-**왜** 사람이 기억해서 돌리는 것과, 못 돌리면 머지가 막히는 것은 다르다.
-
-Dockerfile은 "파이썬 버전 고정"을 개발 컨테이너가 아니라 배포 이미지에서 푼다. `APP_ENV=prod`를 이미지에 박은 이유 — 컨테이너 호스트명은 EC2 패턴이 아니라 조용히 `local`로 떨어져서 쿠키가 `secure=False`로 나간다.
-
-**함정** lint를 CI에 넣으려고 Table 컴포넌트의 `any` 6개를 제네릭으로 고쳤다. 템플릿의 `any`는 복사해 쓰는 프로젝트마다 그대로 번진다.
-
-### B9~B16 일괄 — `12358ac`
-
-| 항목 | 기존 → 변경 | 왜 |
-|---|---|---|
-| **ruff** | 린터 없음 → ruff (E W F I UP B C4 SIM, 110자) | 위반 98개 → 0. `B008`은 끈다 — FastAPI `Depends` 기본값은 관용구 |
-| **에러코드** | 문자열 리터럴 산재 → `error_code.py` ↔ `errorCode.ts` 1:1 | 오타가 조용히 통과하지 않게 |
-| **TimestampMixin** | 모델마다 손으로 → 상속 | `deleted_at`은 자동 필터 **안 한다** — 전역 필터는 통계·복구 쿼리를 막는다 |
-| **페이지네이션** | 없음 → `Page[T]` + `paginate()` | 개수 쿼리는 `order_by(None)` — MySQL이 헛정렬 안 하게. 0건이면 `total_pages=1` |
-| **업로드** | 없음 → `POST /api/upload/image` | 확장자 화이트리스트 + 스트리밍 용량 검사 + UUID. subdir은 호출부 상수 (클라이언트가 정하면 경로 조작) |
-| **프론트 테스트** | 0 → vitest 8개 | `useAPI.ts`의 401→refresh 경로 — "이 템플릿에서 반복적으로 터졌던" 그 지점 |
-
-**함정** 업로드 테스트가 실제 버그를 잡았다. `max_bytes: int = MAX_UPLOAD_BYTES`가 **import 시점에 묶여서** 상수를 바꿔도 반영이 안 됐다. `None`으로 받고 호출 시점에 읽는다. 파이썬 기본 인자는 정의 때 한 번 평가된다.
-
-### 문서·에이전트 정합 + SEO 스킬 이식 — `8377157`
-
-- 루트 CLAUDE.md 쿠키 표가 1h/6h로 굳어 있었다 → `.env`에서 온다는 것 + access 수명이 곧 무효화 지연이라는 것 반영
-- `.claude/agents/`, `/feature` `/fullstack` `/test`를 오늘 변경분에 맞춤
-- `fire-your-seo-agency`(MIT)를 `.claude/skills/seo/`로. SEO·AEO·GEO·LLMO·NEO 다섯 레인
-
-**함정** 이 템플릿은 CSR이라 `curl`로 받은 HTML에 h1도 본문도 없다. SEO 진단이 거의 다 ❌로 나오는 게 **정상**이고, 메타·JSON-LD만 손봐서는 효과가 없다. 그래서 스킬이 렌더링 전략(그대로 / 프리렌더 / SSR)을 먼저 묻게 했다. 로그인 뒤 관리자 도구면 손댈 필요 없음.
-
-### nginx · /setup · /seo_check · SEO 파일 — `58eba37`
-
-- `deploy/nginx.conf` — 프론트 정적 + `/api` 프록시 + WebSocket. `X-Forwarded-For` 세 줄이 레이트리밋의 전제
-- `/setup` — clone 직후 1회. 시크릿→도메인→브랜딩→정리
-- `/seo_check` — 조용히 0이 되는 사고만 보는 정적 검사. **CI 게이트 대신 사람이 부르는 방식**으로 정함 (푸시 전에 돌린다)
-- `robots.txt` `sitemap.xml` `llms.txt` 뼈대
-
-**함정** `/seo_check`이 `index.html`에서 **다른 프로젝트의 google-site-verification 토큰**을 찾아냈다. 그대로 배포되면 새 프로젝트가 자기 사이트를 소유 확인 못 한다. Apple 로그인 스크립트도 안 쓰는데 모든 페이지에 딸려가고 있었다.
-
-### deploy/ 재구성 — `82c76a9`
-
-**기존** `nginx.conf`에 server{} 블록 하나. TLS를 nginx가 끝내는 구성만 가정.
-**변경** `nginx.conf`(http) + `site.conf`(server, TLS 종단 4가지 스위치) + `fastapi.service` + `README.md`. 실제 운영 설정을 참고.
-**왜** 이번이 첫 Cloudflare 배포였고, 도메인을 AWS에서 할 수도 있다 — TLS를 누가 끝내느냐에 따라 nginx가 443을 듣는지가 갈린다. 어느 형태든 되게.
-
-운영 설정에서 고친 것:
-- `location /auth` → `/api/auth`. prefix는 긴 쪽이 이기므로 `/auth`로 적으면 실제 라우트에 매칭 안 되는 **죽은 블록** — 로그인에 빡센 한도가 안 걸린 채 조용히 지나간다
-- `--forwarded-allow-ips="*"` → `127.0.0.1`. bind를 바꾸는 순간 헤더 위조로 레이트리밋 우회
-- `--graceful-timeout 0` → `30`. 0이면 배포마다 진행 중 요청이 끊긴다
-- `After=network-online.target`. `network.target`만으론 DB보다 먼저 떠서 fail-fast로 죽는다
-- `Environment="APP_ENV=prod"` 추가
-
-**함정** soft 404 — 처음엔 "없는 페이지가 200이면 안 된다"고 절대적으로 썼는데, `path="*"`가 NotFound를 그리므로 사람에겐 문제가 없다. 관리자 도구면 200 그대로가 맞고, 공개 검색이 목표일 때만 프리렌더로. 프리렌더 없이 `=404`만 켜면 **모든 라우트가 404**가 된다.
-
-`deploy/`는 설정 원본이지 자동화가 아니다. AMI가 있으면 그대로 쓰고, 여기 값만 옮기면 된다.
-
----
-
-## 이 과정에서 반복해서 걸린 것
-
-한 줄씩. 다음에 또 걸릴 확률이 높은 순서.
-
-1. **없으면 조용히 지나가는 것들이 제일 위험하다** — 없는 Tailwind 클래스, 매칭 안 되는 nginx location, 강제 안 되는 `response_model`, 선언 안 된 gunicorn. 전부 에러 없이 "동작"했다
-2. **"잘 동작한다"와 "검증하고 있다"는 다르다** — 파생 프로젝트들이 잘 돌아간 건 입력 검증이 없어서 뭐든 통과했기 때문
-3. **fail-open / fail-closed는 항목마다 따로 정한다** — 가용성이 우선인 것(레이트리밋, 발급 시 버전 조회)과 보안이 우선인 것(무효화 검사)
-4. **동시성은 "탭 여러 개"에서 터진다** — refresh 로테이션 유예, 프론트 `pendingRefresh`가 탭 안에서만 중복을 막는다는 것
-5. **파이썬 기본 인자는 import 시점에 한 번** — `= MAX_UPLOAD_BYTES`가 상수 변경을 못 따라간다
-6. **템플릿의 결함은 복사한 프로젝트 수만큼 번진다** — `any`, `_serialize` 헬퍼, 남의 verification 토큰
+# CHANGELOG
+
+무엇을 왜 바꿨는지 한 줄씩. 자세한 내용은 커밋 메시지 — `git show <커밋>`. 할 일 · 남은 것은 [`need.md`](need.md).
+
+## 변경 (2026, 최신순)
+
+| 날짜 | 커밋 | 영역 | 바뀐 것 | 왜 |
+| --- | --- | --- | --- | --- |
+| 10-03 | `0c434d4` | /start | 요약은 질문 본문에 · PDF 는 쪽 지정 | 요약을 못 보고 "맞아요" |
+| 10-03 | `062ef76` | /start | 첫 확인 창 안내 (설명문 · 안내 페이지) | 옵션 이름은 못 바꿈 |
+| 10-03 | `c7260bb` | /start | 커맨드에 `allowed-tools` | 신뢰 전 폴더는 settings 허용 무시 |
+| 10-03 | `b91baf1` | 권한 | 허용 규칙 → `settings.json` | 커밋된 settings.local 은 보류 |
+| 10-03 | `ba73250` | /start | 질문은 전부 선택지 · `.env` 없으면 바로 새 프로젝트 | 휴대폰 알림 · 확인 단계 줄이기 |
+| 10-03 | `5c2a46e` | /start | `cd` 없는 명령 · 편집 자동 허용 | `cd` 묶음 명령은 확인 창 |
+| 10-03 | `ab88a3c` | /start | 시작 훅 · 고객 대화 · 계약서 입력 | `/start` 몰라도 시작 · 자료 기반 기획 |
+| 10-03 | `b4b4677` | /start | 템플릿 원본 보호 확인 | 원본에서 실수 방지 |
+| 10-03 | `ed07df6` | /start | 도구 자동 설치 · 재시작 없이 이어 가기 | 있으면 건너뛰고 없으면 설치 |
+| 10-03 | `46e1c21` | /start | 처음 쓰는 사람의 입구 · 안내 페이지 | 비개발자 기준 셋업 |
+| 10-03 | `89ca049` | 배포 | 배포 스킬 | 증상 → 원인 → 원문 위치 |
+| 10-03 | `b1402fb` | 배포 | 릴리스 폴더 · 자동 롤백 · `rollback.sh` | 배포 실패가 사이트 다운이 되지 않게 |
+| 10-03 | `bca03df` | 무인 | `/autopilot` · Stop · PreToolUse 게이트 | 근거로 완료 판정 · push · 배포 차단 |
+| 10-01 | `8434972` | 프론트 | 고객 첫 화면 · 테마 토글 · 확인 모달 | |
+| 10-01 | `44fb586` | 문서 | clone 뒤 고칠 것 (DB 3개 · Redis) | |
+| 10-01 | `1d99d6a` | 검증 | 브라우저 E2E · 마이그레이션 CI | 새로고침 루프 · 리비전 누락 |
+| 10-01 | `e5ee584` | 보안 | OAuth state · 이메일 검증 · `jwt_secret` · nginx 헤더 · WebSocket | 검증이 찾은 것 |
+| 10-01 | `ae9e1e0` | 검증 | `/verify` · 보안 검토 · 완료 기준 대조 · 디자인 린트 | |
+| 10-01 | `a698564` | 외부 API | `be-external-api` · `request_json` 보강 | 타임아웃 = 결과 불명 (이중결제) |
+| 10-01 | `ff9f05b` | 프론트 | 고정색 → 토큰 · 다크모드 연결 | 다크모드가 붙어 있지 않았음 |
+| 10-01 | `7d93824` | 기획 | 페이지 맵 · 디자인 테마 · 인터뷰 뒤 무인 | |
+| 10-01 | `3ecf395` | 기획 | `/plan` — 아이디어 → PRD → `PROJECT.md` | |
+| 10-01 | `7f516ee` | 에이전트 | 단계별 폴더 · `tools` 제한 | `allowed-tools` 는 무시됐음 |
+| 09-28 | `e258fdf` | 인프라 | 앞단 선택 — cloudflare · aws | |
+| 09-28 | `4ca7841` | 문서 | 새 프로젝트로 가져갈 때 | |
+| 09-27 | `67a6212` 외 4 | 인프라 | Terraform (EC2 · RDS · S3) · cloud-init · `deploy.sh` · Actions 배포 · Cloudflare | 푸시하면 배포 |
+| 09-27 | `8711200` | 백엔드 | MySQL 8 인증에 `cryptography` | 첫 접속 실패 |
+| 09-21 | `7d9fbee` | 문서 | CHANGELOG 시작 · CLAUDE.md 진입점 | |
+| 09-20 | `a7cd5f0` | 도구 | uv 전환 | lock 재현성 · 파이썬 버전 관리 |
+| 09-20 | `521bbbe` | 프론트 | 어드민 디자인 시스템 (Vercel 토큰) | 없는 클래스로 배경이 안 먹음 |
+| 09-19 | `82c76a9` | 배포 | `deploy/` nginx · systemd 재구성 | |
+| 09-19 | `58eba37` | 배포 | nginx · `/setup` · `/seo_check` · SEO 파일 | |
+| 09-19 | `12358ac` | 백엔드 | ruff · vitest · 페이지네이션 · 업로드 · TimestampMixin · 에러코드 | 감사 B 항목 |
+| 09-19 | `452bc98` | 인프라 | CI · Dockerfile | |
+| 09-19 | `e0a33f4` | 도구 | docker-compose (MySQL · Redis) | |
+| 09-19 | `abe6049` | 정리 | 죽은 코드 · 회원가입 라우트 · 가드 중복 | |
+| 09-19 | `73d977f` | 보안 | SameSite None → Lax | CSRF 기본 방어 |
+| 09-19 | `8aa22e5` | 인증 | 세션 무효화 · 로테이션 · 재사용 탐지 | 로그아웃해도 토큰이 살아 있었음 |
+| 09-19 | `51fdb58` | 보안 | 로그인 빈도 제한 (IP · 계정) | |
+| 09-19 | `0d770f2` | 백엔드 | 응답 스키마 강제 | `/docs` 와 실제 일치 |
+| 09-19 | `a0634f2` | 백엔드 | 데코레이터 → Annotated 의존성 | 요청 검증 · 문서 복구 |
+| 09-17 | `d27b729` 외 | 정리 | 라우터 테스트 · 로그 채널 분리 · `.env` 차단 · README | |
+| 08-10 | `503d651` 외 | 백엔드 | 마이그레이션 흐름 (로컬 생성 · 서버 적용) · 로깅 · OAuth 에러 | |
+| 08-02 | `e942daa` | 인증 | CORS · 쿠키 도메인 → `{env}_domain` 하나 | |
+| 08-02 | `ec68087` | 프론트 | 에러 바운더리 · 라우트 가드 · 환경 판별 근거 | |
+| 07-27 | `7b461b0` | 프론트 | `useAPI` 401 · 쿠키 세션 동기화 | 무한 새로고침 |
+| 07-25 | `24891b3` | 인증 | `AuthProvider` 통합 | |
+| 07-13 | `8b6ab3e` 외 | 정리 | CLAUDE.md 간소화 · 권한 정리 · 로그인 카드 | |
+| 06-26 | `3e52095` | 백엔드 | 운영 판별 = EC2 호스트명 | |
+| 06-16 | `818faa5` | 에이전트 | 서브에이전트 프론트 · 백엔드 분리 | |
+| 05-08 | `4867780` | 백엔드 | PostgreSQL → MySQL | |
+| 04-26 | `06175bb` | 시작 | 풀스택 베이스 템플릿 | |
+
+## 함정
+
+다시 걸리기 쉬운 것.
+
+| 함정 | 결과 | 대응 |
+| --- | --- | --- |
+| 없는 Tailwind 클래스 | 에러 없이 무시 | 디자인 린트 |
+| 에이전트 `allowed-tools` | 무시 → 모든 도구 열림 | `tools:` |
+| 커밋된 `settings.local.json` | 허용 규칙 보류 | `settings.json` |
+| 신뢰 전 폴더 | `settings.json` 허용 무시 | 커맨드 `allowed-tools` |
+| `cd` 섞인 묶음 명령 | 허용돼도 확인 창 | `uv --directory` · `npm --prefix` |
+| 요약을 생각 안에만 | 못 보고 확인 | 질문 본문에 |
+| 범위에 `~` 두 개 | 취소선 | `–` · "안팎" |
+| description 에 따옴표 없는 `인자: ` | YAML 깨짐 · 설명 사라짐 | 따옴표 |
+| `git stash -u` | 게이트의 ❌ 표시까지 치움 | 제외 경로 · 상태에 기억 |
+| `.env` 를 릴리스끼리 공유 | 롤백 때 기동 거부 | 릴리스마다 |
+| `if ! 함수` | 함수 안 `set -e` 꺼짐 | 직접 `return 1` |
+| Windows CRLF | bash `$'\r'` · systemd `User=ubuntu\r` | `.gitattributes` LF |
+| Git Bash | 심볼릭 링크 불가 | WSL |
+| 한글 Windows 콘솔(cp949) | `✓` · `—` 출력에서 죽음 | UTF-8 로 |
+| nginx `add_header` | location 하나면 상속 끊김 | location 마다 다시 |
+| 타임아웃을 실패로 처리 | 이중결제 | 504 결과 불명 |
+| sticky 안의 모달 | 클릭 안 됨 | portal |
+| redis-py 8 · 옛 Redis | 연결 실패 (HELLO) | `protocol=2` |
+| E2E 서버 재사용 | 다른 프로젝트를 테스트 | 전용 포트 |
+| pytest `drop_all` | `alembic_version` 남음 | DB 분리 |
+| refresh 로테이션 유예 없음 | 탭 여러 개 → 전체 로그아웃 | 10초 유예 |
+| 파이썬 기본 인자 | import 시점에 고정 | 호출 때 읽기 |
+| 남의 verification 토큰 | 소유 확인 불가 | `/seo_check` |
+| 마이그레이션 커밋 revert | `alembic upgrade` 멈춤 | forward-fix |
+| 같은 PC 의 다른 MySQL · Redis | 포트 · 컨테이너 이름 충돌 | 같이 쓰기 (`prepare_local`) |
+
+## 반복해서 걸린 것
+
+1. **없으면 조용히 지나가는 것이 제일 위험하다** — 없는 클래스, 안 맞는 nginx location, 강제 안 되는 `response_model`, 무시되는 설정 파일
+2. **"잘 동작한다"와 "검증하고 있다"는 다르다**
+3. **fail-open · fail-closed 는 항목마다 정한다** — 가용성 우선(레이트리밋) · 보안 우선(무효화 검사)
+4. **동시성은 "탭 여러 개"에서 터진다**
+5. **템플릿의 결함은 복사한 프로젝트 수만큼 번진다**

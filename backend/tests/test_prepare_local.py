@@ -36,3 +36,62 @@ def test_이상한_DB_이름이면_접속하기_전에_멈춘다(monkeypatch, ca
     assert prepare_local.create_databases(["db_ok", "db`; DROP DATABASE db_ok; --"]) == 1
     assert connected == []
     assert "DB 이름이 이상합니다" in capsys.readouterr().out
+
+
+def test_빈_시크릿만_채우고_값은_출력하지_않는다(tmp_path, capsys):
+    env = tmp_path / ".env"
+    env.write_text("jwt_secret=\nhash_key=keep-this-value\nother=1\n", encoding="utf-8")
+
+    assert prepare_local.fill_secrets(env) == 0
+
+    text = env.read_text(encoding="utf-8")
+    secret = text.splitlines()[0].split("=", 1)[1]
+    assert len(secret) >= 32
+    assert "hash_key=keep-this-value" in text  # 이미 있는 값은 그대로
+    out = capsys.readouterr().out
+    assert "채움: jwt_secret" in out
+    assert secret not in out  # 대화 기록에 남지 않게
+
+
+def test_줄_번호만_알려주고_값은_출력하지_않는다(tmp_path, capsys):
+    env = tmp_path / ".env"
+    env.write_text("a=1\nlocal_mysql_password=s3cret\n", encoding="utf-8")
+
+    assert prepare_local.env_line("local_mysql_password", env) == 0
+    out = capsys.readouterr().out
+    assert out.strip() == "2"
+    assert "s3cret" not in out
+
+
+def test_비밀이_아닌_값은_바꾸고_비밀값은_받지_않는다(tmp_path, capsys):
+    env = tmp_path / ".env"
+    env.write_text("local_mysql_db=db_example\nlocal_redis_password=old\n", encoding="utf-8")
+
+    assert prepare_local.set_value("local_mysql_db", "db_dongne", env) == 0
+    assert prepare_local.set_value("redis_db", "3", env) == 0  # 없으면 끝에 더한다
+    assert prepare_local.set_value("local_redis_password", "new-secret", env) == 1  # 비밀값은 편집기로
+    assert prepare_local.set_value("local_redis_password", "", env) == 0  # 비우기는 된다
+
+    text = env.read_text(encoding="utf-8")
+    assert "local_mysql_db=db_dongne" in text
+    assert "redis_db=3" in text
+    assert "local_redis_password=\n" in text
+    assert "new-secret" not in capsys.readouterr().out
+
+
+def test_관리자_비밀번호는_파일에만_적고_화면에_찍지_않는다(tmp_path, monkeypatch, capsys):
+    import scripts.create_admin as create_admin_module
+
+    made = {}
+
+    async def fake_create_admin(email, password, *, reset):
+        made["password"] = password
+        return "created"
+
+    monkeypatch.setattr(create_admin_module, "create_admin", fake_create_admin)
+    out_file = tmp_path / "admin-password.local"
+
+    assert prepare_local.make_admin("admin@example.com", out_file) == 0
+
+    assert made["password"] in out_file.read_text(encoding="utf-8")
+    assert made["password"] not in capsys.readouterr().out
