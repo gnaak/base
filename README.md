@@ -111,7 +111,7 @@ docs/guides/  처음 쓰는 사람용 안내 페이지
 
 ## 7. 새 프로젝트로 가져갈 때
 
-**Claude Code** — Use this template → `/start` → `/plan` → `/autopilot`
+**Claude Code** — Use this template → `/start` → `/plan` → `/autopilot` (한 줄 말하면 셋이 묻지 않고 이어진다 — 자는 동안 기획에서 개발까지)
 
 - `/start` — 아래 체크리스트의 로컬 부분을 기본값으로 처리한다
 - `/plan` — 인터뷰 → 리서치(경쟁 · UX · 디자인 · 연동 · 규제) → PRD → 페이지 맵 · 테마 → `PROJECT.md`(phase 계획) · `DECISIONS.md`.

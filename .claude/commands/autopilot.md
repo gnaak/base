@@ -1,6 +1,6 @@
 ---
 name: autopilot
-description: "PROJECT.md 의 phase 를 사람 없이 끝까지 돈다 — phase 마다 구현 → E2E → 테스트 → /verify → 커밋, 막히면 ❌ 로 적고 다음 phase, 끝나면 DECISIONS.md 요약 + 휴대폰 페이지. /plan 다음에 사용. 인자: 없음(시작·이어서) · status · stop."
+description: "PROJECT.md 의 phase 를 사람 없이 끝까지 돈다 — phase 마다 구현 → E2E → 테스트 → /verify → 커밋, 막히면 ❌ 로 적고 다음 phase, 끝나면 DECISIONS.md 요약 + 휴대폰 페이지. /plan 이 끝나면 자동으로 이어진다 (손으로도 부를 수 있다). 인자: 없음(시작·이어서) · status · stop."
 allowed-tools: Bash PowerShell Skill WebSearch WebFetch Read Write Edit Glob Grep
 ---
 
@@ -25,6 +25,7 @@ $ARGUMENTS
 ## 1. 시작 전 — 사람이 있을 때 한 번 보는 것
 
 이것들이 안 맞으면 밤새 한 칸도 못 가고 멈춰 있다. 사람이 이 커맨드를 불렀다면 짧게 확인시키고 시작한다.
+`/plan` 이 이어서 불렀으면(사람이 없다) 묻지 않는다 — 아래를 스스로 확인하고, 안 되는 것은 `DECISIONS.md` ⛔ 에 적은 뒤 할 수 있는 만큼 간다.
 
 - **권한 창이 뜨면 거기서 멈춘다.** 편집 자동 승인(`acceptEdits` — Shift+Tab 또는 VS Code 의 모드 선택)과
   `Bash`·`PowerShell`·`Skill` 허용(`.claude/settings.json` — 폴더를 신뢰해야 적용된다)이 있어야 한다
