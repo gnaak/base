@@ -8,6 +8,58 @@
 
 ---
 
+## 2026-10-03 — zero-to-one 8~10: 무인 실행 · 배포 롤백 · 배포 스킬
+
+연결까지만 했다 — 실제 무인 run 과 실제 서버 배포는 사람이 확인한다 ([`need.md`](need.md) D "아침 확인 순서").
+
+### 무인 실행 — `bca03df`
+
+**기존** `/plan` 이 `PROJECT.md` 를 만들면 phase 마다 사람이 `/fullstack` → `/verify` 를 불렀다.
+**변경** `/autopilot` 이 phase 1~끝을 돈다. 멈추지 않게 붙잡는 건 Stop 훅(`.claude/hooks/autopilot-gate.mjs`)이고,
+같은 파일의 PreToolUse 훅이 켜져 있는 동안 push · merge · main 전환 · PR · `terraform apply` · 배포 스크립트를 막는다.
+**왜** 무인으로 돌리면 "Claude 가 끝났다고 말하는 것" 말고 끝났다는 근거가 필요하다. 게이트는 표시가 아니라 근거로 본다 —
+✅ 라고 적어도 제목에 `phase N` 이 든 커밋과 `- 검증:` 줄이 없으면 안 넘어간다. 그리고 루프에는 반드시 출구가 있어야 한다 —
+진전 없이 3번 · phase 당 40턴 · 마무리 10턴 · 전체 400턴. phase 상한이면 게이트가 직접 ❌ 로 적고 다음 phase 를 지시한다.
+
+원형은 gnaak/prd 의 PowerShell 게이트. 이번엔 Node 하나로 — 프론트 때문에 어디에나 있고 Windows · Linux 에서 같은 파일이 돈다.
+판정은 임시 git 저장소 28개 테스트(CI)로, 훅 연결은 이 세션에서 실제로 켜고 `git push` 가 막히는 것으로 확인했다.
+
+**함정**
+- 게이트가 ❌ 로 넘긴 phase 의 변경을 `git stash -u` 로 치우라고 하면 **게이트가 써 둔 PROGRESS.md 의 ❌ 까지 같이 치워져**
+  같은 phase 로 돌아간다 → stash 에서 PROGRESS.md · DECISIONS.md 를 빼고(`:(exclude)`), 게이트도 ❌ 로 넘긴 phase 를 상태 파일에 기억한다
+- 커맨드 frontmatter 의 `description` 에 따옴표 없이 `인자: …` 가 들어가면 YAML 이 깨진다 — `/verify` 가 5 단계부터 그랬다
+  (목록에 설명 대신 `$ARGUMENTS`). `.claude` 전체 frontmatter 를 PyYAML 로 확인했다
+- Claude Code 기본 `/goal` · ralph-loop 같은 Stop 훅과 같이 켜면 지시가 섞이고, 외부 mod 는 PreToolUse 가 막은 명령도 승인할 수 있다 —
+  `/autopilot` "시작 전" 에 적었다 (claude.dev 에서 확인)
+
+### 배포 롤백 — `b1402fb`
+
+**기존** `deploy.sh` 가 `/srv/app` 에 `rsync --delete` 로 덮어썼다. 확인이 실패하면 사이트가 죽은 채로 남았다 (롤백 = `git revert` → 푸시).
+**변경** 릴리스마다 폴더(`releases/<시각>-<sha>`, 최근 3개) + `current` 링크. 확인에 실패하면 **이전 릴리스로 되돌리고 exit 1** —
+CI 는 빨갛게, 사이트는 살아 있게. 손으로는 `rollback.sh`(S3 에서 다시 받지 않는다). 예전 구조 서버는 첫 배포가 한 번 전환한다.
+**왜** 배포가 실패하는 순간이 사이트가 죽는 순간이면 안 된다. 그리고 DB 는 되돌리지 않으므로 마이그레이션 규칙(expand/contract)을 같이 정했다.
+
+**함정**
+- **`.env` 를 shared 에 두면 롤백이 안 된다.** 설정(`RawEnv`)은 모르는 키를 거부한다 — 새 릴리스가 키를 더한 뒤 그 `.env` 로
+  이전 릴리스를 띄우면 `Extra inputs are not permitted` 로 기동 실패. 그래서 배포 때 만든 `.env` 를 릴리스마다 둔다
+  (대가: 롤백한 릴리스는 그때의 SSM 값 — 그 뒤 비번을 바꿨다면 롤백 대신 재배포)
+- 예전 구조의 첫 전환이 실패해도 돌아갈 곳이 있어야 한다 — 로그 · 업로드를 shared 로 옮기되 옛 자리에 링크를 남기고,
+  옛 코드는 전환이 **성공한 뒤에** `legacy-*` 로 치운다
+- `if ! activate …` 처럼 조건 안에서 부른 함수는 `set -e` 가 꺼진다 — 실패할 수 있는 줄은 직접 `return 1`
+- Windows Git Bash 는 심볼릭 링크를 못 만든다(`Operation not permitted`) — 스모크는 WSL 에서. 그리고 Windows 체크아웃의
+  `deploy/*` 가 CRLF 였다 → `.gitattributes` 에 `deploy/* text eol=lf` (systemd 가 `User=ubuntu\r` 로 읽는 사고)
+- 스모크 16개는 서버 명령(aws · systemctl · nginx · curl · uv …)을 PATH 앞의 가짜로 바꾸고 `deploy/` 의 진짜 설정을 렌더링한다.
+  자동 복귀 · 정리를 일부러 끄면 해당 시나리오가 실패하는 것까지 확인했다. 진짜 서버는 아직이다
+
+### 배포 스킬 — `89ca049`
+
+**변경** `skills/deploy/` — 구성 한 장 · 원칙 · 상황별 reference(cloudflare · aws · troubleshoot · rollback) · 함정 표 · 진단 보고 형식.
+**왜** 배포 문서는 `infra/README.md` · `deploy/README.md` 에 이미 있다. 스킬은 그걸 베끼지 않고 **증상에서 원문 위치로 가는 길**만 둔다 —
+복사본은 어긋난다. Anthropic 의 스킬 글이 "가장 값진 건 함정 절" 이라고 해서 함정 표를 본문에 뒀다.
+새 에이전트에게 "배포했는데 526 떠" 를 물으니 이 스킬 → reference → `deploy.sh` · `cloudflare.tf` 순으로 짚었다.
+
+---
+
 ## 2026-10-01 — zero-to-one: 기획 → 개발 → 검증
 
 base 는 "개발" 단계만 자동화돼 있었다. 아이디어 한 줄에서 기획 → 개발 → 검증까지 사람 없이 가도록 넓혔다.

@@ -72,9 +72,9 @@
 | 6 | 보안 수정 — 5 가 찾은 것 (OAuth state, 이메일 검증, 빈 jwt_secret, nginx 헤더, WebSocket 등) | ✅ | `e5ee584` |
 | 7 | 브라우저 E2E(Playwright) + 마이그레이션 CI | ✅ | `1d99d6a` |
 | — | 정리 — clone 체크리스트, 고객 첫 화면 · 테마 토글 · 확인 모달 | ✅ | `44fb586` `8434972` |
-| 8 | 무인 실행 — `/autopilot` + Stop·PreToolUse 훅(근거로 판정, 상한, push·배포 차단) | 🔌 연결 | 아래 커밋 |
-| 9 | 배포 롤백 — 릴리스 폴더 + `current` 링크, 확인 실패 시 자동 복귀, `rollback.sh` | 🔌 연결 | 아래 커밋 |
-| 10 | 배포 스킬 — `skills/deploy/` (앞단별 · 증상 → 원인 · 롤백) | ✅ | 아래 커밋 |
+| 8 | 무인 실행 — `/autopilot` + Stop·PreToolUse 훅(근거로 판정, 상한, push·배포 차단) | 🔌 연결 | `bca03df` |
+| 9 | 배포 롤백 — 릴리스 폴더 + `current` 링크, 확인 실패 시 자동 복귀, `rollback.sh` | 🔌 연결 | `b1402fb` |
+| 10 | 배포 스킬 — `skills/deploy/` (앞단별 · 증상 → 원인 · 롤백) | ✅ | `89ca049` |
 
 순서는 "사람이 안 보는 동안 지켜줄 장치부터" — 고칠 것·만들 것(3·4)을 먼저 하고, 검증(5)이 그 전부를 덮게 했다.
 8 은 1~7 의 통합 검증을 겸한다 — 샘플 아이디어로 끝까지 돌리면 앞 단계가 전부 한 번에 검증된다.
@@ -142,11 +142,80 @@
 - 원문(`infra/README.md`, `deploy/README.md`)을 복사하지 말고 요약 + 위치 링크 — 복사본은 어긋난다
 - **완료 기준**: "배포 실패 526" 같은 질문에 이 스킬이 걸린다
 
+## 아침 확인 순서
+
+8~10 은 **연결만** 했다 (2026-10-03, 브랜치 `zero-to-one`, 푸시 안 함). 실제 무인 run · 실제 서버 배포는 아직 안 했다.
+위에서부터 하나씩 확인하고, 다 되면 푸시한다. 막히면 그 단계에서 멈추고 Claude 에게 그 출력을 보여 준다.
+
+**0. 무엇이 올라가나** — `git log --oneline origin/zero-to-one..zero-to-one` → `bca03df`(8) · `b1402fb`(9) · `89ca049`(10) · 이 문서 커밋
+
+**1. 기계 검사 — CI 와 같은 것** (10분, 로컬 MySQL · Redis 켜고)
+
+```bash
+cd backend  && uv run ruff check . && uv run pytest -q          # pytest 142
+cd frontend && npm run check:types && npm run lint && npm test  # vitest 37 (lint 경고 1 은 원래 있던 것)
+cd frontend && npm run build && npm run e2e                     # E2E 10
+node --test .claude/hooks/autopilot-gate.test.mjs               # 무인 게이트 28
+wsl bash infra/tests/deploy_smoke.sh                            # 배포 스모크 16 (PowerShell 에서, 저장소 루트)
+./infra/.bin/1.16.4/terraform -chdir=infra test                 # 2
+```
+
+**2. 무인 실행 — 게이트만** (2분)
+
+- [ ] `node .claude/hooks/autopilot-gate.mjs status` → "돌린 적이 없다" 또는 "꺼짐" — 꺼져 있으면 훅은 아무것도 안 한다
+- [ ] 커맨드 목록(`/`)에 `/autopilot` 과 `/verify` 의 **설명**이 보인다 (어제까지 `/verify` 는 YAML 이 깨져 `$ARGUMENTS` 로 보였다)
+
+**3. 무인 실행 — 장난감 프로젝트로 한 바퀴** (30~60분, 옆 폴더에서)
+
+```bash
+git clone . ../base-autopilot-try && cd ../base-autopilot-try && git switch -c auto/try
+cp ../base/backend/.env backend/ && cp ../base/frontend/.env frontend/   # .env 는 clone 에 안 따라온다
+```
+
+그 폴더에 `PROJECT.md` 를 아래처럼 만들고 `PROGRESS.md` 에 `## phase 1: 공지` · `## phase 2: 공지 화면` (각각 `- 상태: ⬜ 대기`),
+`DECISIONS.md` 에 `# 결정 필요` + `## ⛔ 막힌 곳` 을 두고 커밋한다.
+
+```markdown
+## phase 1: 공지
+**완료 기준**: - [ ] F1-1 관리자는 제목·본문으로 공지를 만든다 (201) - [ ] F1-2 로그인 없이 공지 목록을 본다 - [ ] F1-3 일반 사용자는 공지를 못 만든다 (403)
+## phase 2: 공지 화면
+**완료 기준**: - [ ] F2-1 첫 화면 아래에 최신 공지 3개가 보인다
+```
+
+VS Code 새 창으로 그 폴더를 열고 **편집 자동 승인 모드**로 `/autopilot`. 볼 것:
+
+- [ ] Claude 가 턴을 끝내려 할 때 `[autopilot run … · phase-1 …]` 지시가 붙어 계속 간다 (Stop 훅)
+- [ ] phase 마다 커밋 제목에 `phase N`, `PROGRESS.md` 에 `- 검증:` 줄, `frontend/e2e/phase-N.spec.ts` 의 테스트 이름이 `F1-…` 로 시작
+- [ ] 끝나면 `DECISIONS.md` 맨 위에 `## 🌙 무인 실행 결과 — run …` (최종 검증 · 페이지 줄), 휴대폰 페이지 링크
+- [ ] `node .claude/hooks/autopilot-gate.mjs status` → 꺼짐 · 단계 done
+- (선택) 도중에 `git push` 를 시켜 보면 PreToolUse 훅이 막는다 — 어제 이 세션에서 한 번 확인했다
+- ❌ 처리(진전 없이 3번 → ❌ · stash · 다음 phase)는 게이트 테스트 28개가 덮는다. 실제로 보고 싶으면 phase 하나를 불가능하게 적는다
+
+**4. 배포 롤백** (10분 — 실제 서버엔 안 올린다)
+
+- [ ] 1의 `deploy_smoke.sh` 16개 통과 = 정상 배포 · 확인 실패 시 이전 릴리스로 · nginx -t 실패 · 마이그레이션 실패 · 3개 정리 · `rollback.sh` · 예전 구조 첫 전환
+- [ ] `infra/server/deploy.sh` · `lib.sh` · `rollback.sh` 를 훑는다 — 특히 `.env` 를 릴리스마다 두는 이유(D9)
+- [ ] `backend/CLAUDE.md` "되돌릴 수 있게 — expand / contract" 표가 앞으로의 마이그레이션 규칙으로 괜찮은지
+- 진짜 서버 확인은 AWS 를 붙인 뒤 첫 배포에서 — `infra/README.md` "롤백" (예전 구조 서버면 그 배포가 한 번 전환한다)
+
+**5. 배포 스킬** (2분)
+
+- [ ] 새 대화에서 "배포했는데 526 떠" → `deploy` 스킬을 쓰고 원인 후보(SSM Origin 인증서 · 첫 배포 전 정상)를 짚는다
+
+**6. 푸시**
+
+- [ ] `/seo_check` (푸시 전 규칙)
+- [ ] 커밋 시각을 바꾸고 싶으면 푸시 **전에** 말한다 (지금은 실제 시각 10-03 10:43~)
+- [ ] `git push origin zero-to-one` → CI 초록(이번부터 게이트 테스트 · 배포 스모크가 같이 돈다) → main fast-forward
+
 ## 확인 못 한 것 · 범위 밖
 
 - `nginx -t` 를 못 돌렸다 (로컬 Docker 가 꺼져 있었다) — 6 에서 `deploy/site.conf` · `nginx.conf` 를 고쳤다
 - npm dev 의존성 moderate 3건 (운영 번들엔 없다), eslint 경고 1 (`googleCallback` 의 1회 실행 useEffect — 의도)
 - 나중에: fe-test-writer, Playwright MCP, 배포 승인 게이트(GitHub environments), 모니터링·알림
+- 나중에 (claude.dev 에서 본 것, 2026-10-03): sec-reviewer 에 **반증 단계** — 찾은 것을 다른 에이전트가 반박해 오탐을 거른다
+  (공식 `claude-security` 플러그인 방식). 무인 실행 중엔 `/goal` · `security-guidance` 같은 Stop 훅 플러그인과 외부 mod 를 끄라고
+  `/autopilot` 에 적어 두었다 — mod 는 PreToolUse 가 막은 명령도 승인할 수 있다
 
 ---
 
