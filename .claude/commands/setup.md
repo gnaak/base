@@ -62,7 +62,6 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 | 위치 | 템플릿 기본값 | 할 일 |
 | ---- | ------------- | ---- |
 | `frontend/index.html` | `<title>BASE</title>` | 프로젝트명으로 |
-| `frontend/index.html` | Apple 로그인 스크립트 | **안 쓰면 지운다** (외부 스크립트가 매 페이지 로드됨) |
 | `frontend/index.html` | `google-site-verification` | **다른 프로젝트의 값이다. 지우거나 교체** |
 | `frontend/index.html` | favicon `/image.png` | 교체 |
 | `frontend/src/container/admin/layout.tsx` | `adminMenu` 샘플 | 실제 메뉴로 |

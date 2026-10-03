@@ -6,7 +6,7 @@
 
 프론트 `hooks/auth/googleLogin.tsx`·`kakaoLogin.tsx` 가 인가 URL 로 보냄 → 업체가 `/{google|kakao}/login?code=…` 로 돌려보냄 →
 `hooks/auth/googleCallback.tsx`·`kakaoCallback.tsx` 가 code 를 `POST /api/auth/{google|kakao}` 로 → 백엔드
-`module/infra/{google|kakao}/*_service.py` 가 토큰 교환·사용자 정보 → `user_repository.get_or_create_user` 가 **이메일로** 계정을 찾거나 만든다
+`module/infra/{google|kakao}/*_service.py` 가 토큰 교환·사용자 정보 → `user_repository.get_or_create_oauth_user` 가 **이메일로** 계정을 찾거나 만든다
 
 ## 체크리스트
 

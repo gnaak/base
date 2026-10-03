@@ -51,7 +51,7 @@ app/
 │                                   #   pagination · upload · http_client
 └── module/
     ├── __init__.py                  # 모델 import + setup_routers()
-    ├── auth/ user/ admin/ web_socket/
+    ├── auth/ user/ admin/ upload/ web_socket/
     └── infra/ (google/ kakao/ redis/ gpt/)
 ```
 

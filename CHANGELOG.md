@@ -93,6 +93,7 @@
 | 남의 verification 토큰 | 소유 확인 불가 | `/seo_check` |
 | 마이그레이션 커밋 revert | `alembic upgrade` 멈춤 | forward-fix |
 | 같은 PC 의 다른 MySQL · Redis | 포트 · 컨테이너 이름 충돌 | 같이 쓰기 (`prepare_local`) |
+| `uv sync --frozen` 을 lock 검사로 믿음 | pyproject 만 고친 커밋이 CI 통과 · 서버는 옛 lock 으로 설치 | CI 는 `--locked` (검사) · 서버는 `--frozen` (그대로) |
 | 같은 내용을 README · CLAUDE.md 둘 다에 | 한쪽만 고쳐져 어긋남 | README 는 요약 + 링크, 규칙은 CLAUDE.md 한 곳 |
 
 ## 반복해서 걸린 것

@@ -190,7 +190,7 @@ export const useGet = <T>(
  *
  * @example
  * // FormData 요청 (파일 업로드)
- * const uploadFile = usePost<FormData, { url: string }>("api/upload");
+ * const uploadFile = usePost<FormData, { url: string }>("api/upload/image");
  * const fd = new FormData();
  * fd.append("file", fileInput.files[0]);
  * uploadFile.mutate(fd);
