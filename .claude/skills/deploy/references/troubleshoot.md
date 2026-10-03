@@ -1,6 +1,6 @@
 # 증상 → 원인
 
-원문 표: `infra/README.md` 6절(인프라 · CI) · `deploy/README.md` 3절(nginx · systemd 지뢰) · 루트 `README.md` 10절.
+원문 표: `infra/README.md` 6절(인프라 · CI) · `deploy/README.md` 3절(nginx · systemd 지뢰) · 루트 `README.md` "트러블슈팅".
 여기서는 **어디서 보이는 증상인지**로 나눠 순서를 정한다. 근거부터 얻고, 표에서 맞는 줄을 고른다.
 
 ## 1. CI 의 deploy 잡
@@ -52,7 +52,7 @@
 | 로그인 한도가 안 걸림 | `location /auth` (실제는 `/api/auth`) | `deploy/site.conf` |
 | 배포했는데 옛 화면 | `index.html` 캐시 — `no-store` 가 빠졌다 | `site.conf` 의 `location = /index.html` |
 | WebSocket 이 5분마다 끊김 | `/api/ws` 의 `proxy_read_timeout` 이 기본값 | `site.conf` |
-| CORS 차단 | `prod_domain` 에 스킴을 적었거나 포트가 다르다 | 루트 `README.md` 10절 |
+| CORS 차단 | `prod_domain` 에 스킴을 적었거나 포트가 다르다 | 루트 `README.md` "트러블슈팅" |
 | 재부팅 뒤 앱이 죽어 있음 | 유닛이 네트워크보다 먼저 떠서 DB 연결 fail-fast | `fastapi.service` 의 `After=network-online.target` |
 | 업로드 · 로그가 배포마다 사라짐 | 앱이 쓰는 새 폴더를 `shared_dirs` 에 안 넣었다 | `infra/server/lib.sh` + `ReadWritePaths` |
 

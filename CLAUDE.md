@@ -45,18 +45,16 @@
 **`access_token_minutes`는 무효화가 적용되기까지의 최대 지연**이기도 하다 — 무효화 확인을
 refresh 시점에만 하기 때문이고, 그게 "access는 15~30분" 권고의 근거다.
 
-- `user_info`의 필드는 `auth_token.create_jwt_token()`이 반환하는 `SessionOut`과 프론트
-  `types/user.ts`의 `UserInfo`가 **1:1로 일치**해야 한다. 쿠키와 응답 `data`가 **같은 객체**에서
-  나오므로 어긋날 수가 없다 (`create_jwt_token`이 하나를 만들어 쿠키에 싣고 그대로 반환)
-- `user_`와 `admin_`은 완전히 독립된 세션이다. 동시에 둘 다 살아있을 수 있다.
-- 백엔드가 필드를 추가하면 `UserInfo`도 같이 고칠 것.
+- `user_info` 필드 = 백엔드 `SessionOut`(`auth_token.create_jwt_token()` 이 하나 만들어 쿠키에 싣고 그대로 반환) =
+  프론트 `types/user.ts` 의 `UserInfo`, **1:1**. 백엔드에 필드를 더하면 `UserInfo` 도 같이 고친다
+- `user_`와 `admin_`은 독립된 세션이다. 동시에 둘 다 살아 있을 수 있다
 - **refresh는 쓸 때마다 로테이션된다.** 갱신하면 옛 토큰이 죽고, 죽은 토큰이 다시 오면
   유출로 보고 그 계정의 모든 세션을 끊는다(`SESSION_REUSE_DETECTED`). 자세한 건
   `backend/CLAUDE.md`의 "세션 무효화".
 - **`errorCode`는 상수로 비교한다** — 백엔드 `core/utils/error_code.py` ↔ 프론트
   `types/errorCode.ts`가 1:1이다. 문자열 리터럴을 쓰면 오타가 조용히 통과한다.
 
-**무한 새로고침 주의** — 이 템플릿에서 반복적으로 터졌던 버그다. `user_info` 쿠키가 남아있으면 프론트는 로그인 상태로 믿는데, 토큰이 무효라 API는 401을 준다. 이때 전체 새로고침(`location.reload()` / 같은 URL로 `location.href` 대입)을 하면 쿠키가 그대로라 루프가 돈다.
+**무한 새로고침 주의** — 반복해서 터진 버그다. `user_info` 쿠키가 남아 있으면 프론트는 로그인 상태로 믿는데 토큰이 무효라 API 는 401 을 준다. 이때 전체 새로고침(`location.reload()` · 같은 URL 로 `location.href` 대입)을 하면 쿠키가 그대로라 루프가 돈다.
 
 - 세션 실패 시 **절대 페이지를 새로고침하지 말 것.** `syncAuth()` / `refreshAuth()`로 상태만 갱신한다.
 - refresh가 실패하면 `user_info`·`refresh_exp` 쿠키를 지워서 로그인 상태를 확실히 해제한다.
@@ -87,9 +85,8 @@ node --test .claude/hooks/autopilot-gate.test.mjs   # .claude/hooks 를 건드�
 bash infra/tests/deploy_smoke.sh                     # infra/server 를 건드렸다면 (Windows 는 wsl bash …)
 ```
 
-이 줄들이 `.github/workflows/ci.yml`이 돌리는 것과 같다 — 푸시 전에 여기서 걸러내면
-CI에서 다시 볼 일이 없다. (terraform 은 `./infra/tf.ps1` 을 한 번 부르면 `infra/.bin/` 에 받아진다)
-`npm run lint` 에는 **디자인 린트**(고정색·없는 클래스·`-DEFAULT` 클래스)가 들어 있다 — 빌드 에러 없이 조용히 틀리는 것들이다.
+CI(`.github/workflows/ci.yml`)가 돌리는 것과 같다. terraform 은 `./infra/tf.ps1` 을 한 번 부르면 `infra/.bin/` 에 받아진다.
+`npm run lint` 에 **디자인 린트**(고정색 · 없는 클래스 · `-DEFAULT`)가 들어 있다 — 빌드 에러 없이 조용히 틀리는 것들.
 **`/verify`** 가 위 명령 + 보안 검토 + 의존성 취약점 + 완료 기준 대조를 한 번에 돌린다.
 
 도메인 라우터를 하나 끝낼 때마다 `/test {도메인}` 으로 엣지 케이스까지 테스트를 붙인다.
@@ -100,7 +97,7 @@ CI에서 다시 볼 일이 없다. (terraform 은 `./infra/tf.ps1` 을 한 번 �
 | | |
 | --- | --- |
 | `.claude/commands/` | **`/start`**(처음 1회 — 아이디어 대화 · 도구 · 로컬 셋업 · git) → `/plan`(기획 1회) → **`/autopilot`**(phase 전부 무인) 또는 `/feature` `/design` `/fullstack` `/fix` `/test` → `/verify`(phase 끝·푸시 전) · `/seo_check`(푸시 전) |
-| `.claude/hooks/` · `settings.json` | 무인 실행 게이트 — Stop 훅(남은 phase 가 있으면 다음 지시, 진전 없으면 ❌ 로 넘김) · PreToolUse 훅(무인 중 push·merge·배포 차단). `/autopilot` 이 켜 둔 동안만 동작한다. SessionStart 훅(`session-start.sh`) — 막 받은 템플릿이면 첫 메시지부터 `/start` 흐름으로 (Node 없이 sh). Node 가 없는 PC 에서는 node 훅이 조용히 넘어간다 |
+| `.claude/hooks/` · `settings.json` | SessionStart(`session-start.sh`, sh) — 막 받은 템플릿이면 첫 메시지부터 `/start`. Stop · PreToolUse(`autopilot-gate.mjs`) — `/autopilot` 이 켜진 동안만: 남은 phase 지시 · 진전 없으면 ❌ · push · merge · 배포 차단 (Node 가 없으면 조용히 넘어간다). 위험 명령 deny |
 | `.claude/agents/` | 단계별 서브에이전트 — `plan/`(리서치·PRD·페이지 맵·디자인) · `dev/backend/`(탐색·모델·API·**외부 연동**) · `dev/frontend/`(탐색·작성) · `verify/`(테스트 작성·보안 검토·완료 기준 대조) |
 | `.claude/skills/security/` | 이 템플릿 기준 보안 체크리스트 — sec-reviewer·`/verify` 가 쓴다 |
 | `.claude/skills/deploy/` | 배포 길 찾기·장애 진단 — 앞단(cloudflare·aws)·CI·526/52x·세션·429·롤백. 원문(`infra/README.md`·`deploy/README.md`)을 요약하고 가리킬 뿐 베끼지 않는다 |
@@ -114,13 +111,12 @@ CI에서 다시 볼 일이 없다. (terraform 은 `./infra/tf.ps1` 을 한 번 �
 > 에이전트 파일은 고친 뒤 **반영까지 몇 분 걸릴 수 있다** (커맨드는 바로 반영된다). 그 사이 호출하면 옛 정의로 돈다 —
 > 도구 제한을 확인하려면 에이전트에게 "지금 가진 도구 목록만 답하라"고 시켜 본다.
 
-> **SEO 스킬 주의** — 이 템플릿의 프론트는 CSR이라 `curl`로 받은 HTML에 본문이 없다.
-> 검색 노출이 목표면 렌더링 전략(프리렌더/SSR)부터 정해야 하고, 로그인 뒤에서만 쓰는
-> 관리자 도구라면 애초에 손댈 필요가 없다. 스킬이 그 선택지를 먼저 제시한다.
+> **SEO** — 프론트가 CSR 이라 `curl` 로 받은 HTML 에 본문이 없다. 검색 노출이 목표면 렌더링 전략(프리렌더 · SSR)부터,
+> 로그인 뒤 관리자 도구면 손댈 필요 없다. 스킬이 이 선택지를 먼저 묻는다.
 
 ## phase 관리
 
-**시작 순서**: `/plan {아이디어}` → 인터뷰(사람이 붙는 유일한 곳) → 외부 리서치 → `PRD/02_PRD.md` →
+**시작 순서**: `/start`(아이디어 대화 · 로컬 셋업) → `/plan` → 인터뷰(사람이 붙는 유일한 곳 — `/start` 가 했으면 건너뛴다) → 외부 리서치 → `PRD/02_PRD.md` →
 `03_PAGE.md`(페이지 맵) · `04_DESIGN.md`(고객 화면 테마) → `PROJECT.md`·`PROGRESS.md`·`DECISIONS.md` → **`/autopilot`**(phase 1부터 무인 개발)
 
 **무인으로 돈다 — 결정은 멈추지 않고 기록한다.**
@@ -211,8 +207,8 @@ nginx 가 443 을 듣는지가 갈린다.
 > 사용자에게 `Secure` 쿠키가 저장되지 않아 **"로그인은 200인데 세션이 안 잡힘"** 이 난다.
 > 앞단이 TLS 를 끝내면 nginx 는 이걸 모르므로 앞단에서 켠다 (CF: Always Use HTTPS / ALB: 리스너 규칙).
 
-- **`fastapi.service` 의 `APP_ENV=prod`** — 없으면 호스트명 추측으로 떨어져 쿠키가 통째로 어긋난다.
-  기동 로그의 `설정: env=prod (근거: APP_ENV)` 로 확인
+- **`fastapi.service` 의 `APP_ENV=prod`** — 없으면 호스트명으로 추측하는데 EC2 기본 호스트명에서만 맞는다.
+  Docker · Cloud Run 이면 조용히 `local` → 쿠키 `secure=False` → 세션이 안 잡힌다. 기동 로그 `설정: env=prod (근거: APP_ENV)` 로 확인
 - **`X-Forwarded-For` 프록시 헤더가 레이트리밋의 전제다.** 없으면 모든 방문자가
   `127.0.0.1` 하나로 뭉쳐서 서비스 전체가 한 한도로 묶인다
 - **`location /api/auth` 를 `/auth` 로 적지 말 것** — 실제 라우트는 `/api/auth/**` 라
@@ -225,7 +221,7 @@ nginx 가 443 을 듣는지가 갈린다.
 | 위치                                      | 내용                                                                                                               |
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `backend/.env` / `frontend/.env`          | DB·JWT·OAuth 키 전부. **`jwt_secret`·`hash_key`는 프로젝트마다 새로 생성할 것** (로컬용. 운영 값은 SSM — 자동 생성) |
-| DB 이름 3개 · Redis                        | 개발(`local_mysql_db`, **실제로 있어야 뜬다**) · pytest(`test_mysql_db`) · E2E(`frontend/e2e/env.ts`, `db_base_e2e`)를 프로젝트 이름으로, `docker/mysql/init.sql` 도 같이. 한 MySQL·Redis 를 여러 프로젝트가 같이 쓰면 이름과 `redis_db` 번호를 프로젝트마다 다르게. `local_redis_password` 는 실제 Redis 와 맞출 것 (비밀번호 없는 Redis 에 값을 넣으면 AUTH 에러로 기동 실패) |
+| DB 이름 3개 · Redis                        | 개발(`local_mysql_db` — **실제로 있어야 뜬다**) · pytest(`test_mysql_db`) · E2E(`frontend/e2e/env.ts`)를 프로젝트 이름으로, `docker/mysql/init.sql` 도. 한 MySQL · Redis 를 여러 프로젝트가 쓰면 이름 · `redis_db` 를 나눈다. `local_redis_password` 는 실제 Redis 와 맞춘다 (비밀번호 없는 Redis 에 값을 주면 AUTH 에러로 기동 실패) |
 | `infra/terraform.tfvars` / `infra/.env`   | 프로젝트명·계정 ID·도메인·저장소 / AWS 키·CF 토큰. `infra/README.md` 의 "1회 준비"                                  |
 | `backend/.env` → `prod_domain`            | 운영 도메인 (`gnaak.com`). CORS 오리진과 쿠키 도메인이 여기서 유도된다                                             |
 | `frontend/.env.production`                | `VITE_APP_PUBLIC_BASE_URL`이 비어 있음                                                                             |
@@ -234,14 +230,11 @@ nginx 가 443 을 듣는지가 갈린다.
 | `frontend/src/index.css`                  | 브랜드 색. **CSS 변수만 고치면 된다** — `tailwind.config.js`는 그 변수를 가리킬 뿐. 값은 공백 구분 RGB (`37 99 235`) |
 | `frontend/index.html`                     | `BASE` · `example.com` — title·description·OG·canonical·JSON-LD. `/setup`이 채워준다                               |
 
-**배포 시 `APP_ENV=prod`를 반드시 명시할 것.** 안 주면 호스트명으로 추측하는데, 이 추측은 EC2
-기본 호스트명에서만 맞는다. Docker·Cloud Run에 올리면 조용히 `local`로 떨어져서 쿠키가
-`secure=False` / `SameSite=Lax`로 나가고 세션이 안 잡힌다. 기동 로그에 인식된 env와 쿠키 설정이
-찍히니 배포 후 한 번 확인할 것.
+`/start` 가 이 표의 로컬 부분(시크릿 · DB 이름 · Redis 번호 · `index.html`)을 처리한다.
 
-**로컬 개발 시**: 프론트와 백엔드 호스트를 반드시 통일할 것 (`localhost`끼리 또는 `127.0.0.1`끼리). 섞으면 cross-site가 돼서 `SameSite=Lax` 쿠키가 안 실리고, 로그인은 성공하는데 세션이 안 잡히는 증상이 난다.
-
-MySQL·Redis는 `docker compose up -d` 로 띄운다 (루트 `docker-compose.yml`). DB 세 개(`db_example`, `db_base_test`, `db_base_e2e`)가 자동 생성되고 값은 `backend/.env.example`과 맞춰져 있다. 직접 설치한 것을 써도 되지만 `backend/.env`의 `local_*` 값과 맞아야 한다 — 서버가 기동 시 연결을 검증(fail-fast)하고, 실패하면 원인을 로그에 남기고 그대로 종료된다.
+**로컬**: 프론트 · 백엔드 호스트를 통일한다 (`localhost` 끼리 · `127.0.0.1` 끼리). 섞으면 cross-site 라 `SameSite=Lax` 쿠키가 안 실려 로그인은 되는데 세션이 안 잡힌다.
+MySQL · Redis 는 `docker compose up -d` (DB 3개 자동 생성, 값은 `backend/.env.example` 과 맞춰져 있다). 직접 설치한 것도 되지만
+`local_*` 를 맞출 것 — 기동 시 연결을 검증하고, 실패하면 원인을 로그에 남기고 종료한다.
 
 ## 트러블슈팅
 

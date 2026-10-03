@@ -58,8 +58,17 @@ npm run test:watch
 ## 테스트 — 브라우저 E2E (Playwright, `e2e/`)
 
 ```bash
-npm run e2e       # 백엔드 8100 · 프론트 3100 을 직접 띄운다 (E2E 전용 DB db_base_e2e — README "브라우저 E2E")
+npx playwright install chromium   # 처음 한 번 (+ DB: uv --directory ../backend run python -m scripts.prepare_local databases db_base_e2e — compose 면 이미 있다)
+npm run e2e       # 마이그레이션 · 관리자 생성(globalSetup) → 백엔드 8100 · 프론트 3100 → 테스트
 ```
+
+| 변수 | 기본값 | |
+|---|---|---|
+| `E2E_MYSQL_DB` | `db_base_e2e` | 백엔드 `LOCAL_MYSQL_DB` 로 넘어간다 (`.env` 는 그대로). 기본값은 `e2e/env.ts` |
+| `E2E_REDIS_DB` | `15` | 한 Redis 를 여러 프로젝트가 같이 써도 키가 섞이지 않게 |
+| `E2E_WEB_PORT` / `E2E_API_PORT` | `3100` / `8100` | 떠 있는 서버를 재사용하지 않는다 (다른 프로젝트 서버를 테스트하는 사고 방지) |
+
+CI 의 `e2e` 잡은 빈 DB 에 마이그레이션을 처음부터 적용하고 `alembic check` 로 모델 · 리비전 어긋남도 본다.
 
 - vitest(jsdom)로는 안 보이는 것을 본다 — 페이지 **재로드**가 일어나는지, 쿠키가 실제로 지워지는지,
   모달 버튼이 실제로 눌리는지(다른 요소가 가리면 클릭이 실패한다), 다크모드·모바일 드로어
@@ -181,6 +190,19 @@ loginMutation.mutate(body, {
 `/admin` 하위도 `App.tsx`에서 `<PrivateRoute authType="admin">`으로 감싼다.
 **`AdminLayout`은 레이아웃만 담당하고 인증을 알지 못한다** — 예전엔 같은 가드 로직이
 양쪽에 있어서 고칠 때 두 군데를 같이 봐야 했다.
+
+**관리자 메뉴** — `container/admin/layout.tsx` 의 `adminMenu` 한 곳. 라우트는 `App.tsx` 의 `AdminLayout` 아래에.
+페이지 제목은 각 컨테이너가 그린다 (상단 바는 테마 토글만).
+
+```tsx
+const adminMenu: AdminMenuItem[] = [
+  { type: "link", label: "대시보드", to: "/admin", icon: ChartColumnIcon },
+  {
+    type: "group", title: "회원 관리", icon: UsersIcon,   // 접히는 그룹
+    children: [{ label: "회원 목록", to: "/admin/users", icon: UsersIcon }],
+  },
+];
+```
 
 ## 에러 처리
 

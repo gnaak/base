@@ -398,7 +398,8 @@ prod_domain=gnaak.com
 
 **환경 판정** — `settings.env`는 `APP_ENV` 환경변수로 정해진다 (`prod`/`production` → prod,
 `local`/`development` → local). 없으면 호스트명(`ip-`, `ec2-`)으로 추측하고, 그것도 아니면 local.
-기동 시 `settings.describe()`가 인식된 env와 판단 근거를 로그로 남기고,
+**`.env` 에 적어도 먹지 않는다** — `os.getenv` 로 읽는데 pydantic-settings 는 `.env` 를 `os.environ` 에
+넣지 않는다. 실제 환경변수로 준다 (`fastapi.service` 의 `Environment=`). 기동 시 `settings.describe()`가 인식된 env와 판단 근거를 로그로 남기고,
 `settings.config_warnings()`가 위험한 조합(추측으로 잡힌 prod, 빈 CORS 등)을 경고한다.
 
 ## ServiceProvider — lazy-load 프로퍼티
@@ -452,9 +453,22 @@ uv run ruff format .         # 포매팅 — 선택. CI는 강제하지 않는�
 per-file-ignore 대상이다 — 그 import가 Base.metadata 등록이라는 목적을 갖고 있다.
 
 ```bash
-uv run pytest                                  # 전체 (142개)
+uv run pytest                                  # 전체
 uv run pytest tests/test_user_router.py -v     # 한 파일
 ```
+
+| 픽스처 · 도우미 (`tests/conftest.py`) | 용도 |
+|------|------|
+| `client` | httpx AsyncClient — 테스트 DB · fakeredis 가 물려 있다 |
+| `db` | AsyncSession. 끝나면 롤백 |
+| `make_user` / `make_admin` | 데이터 팩토리 |
+| `auth_header(id, auth_type="user", **kw)` | 로그인 상태 Cookie 헤더 |
+| `cookie_header(**cookies)` | 임의 쿠키 조립 |
+| `make_token(...)` | 만료 · refresh · 서명 불일치 같은 엣지 케이스용 JWT |
+
+본보기: `test_user_router.py`(인증 엣지 · 응답 규약 · 민감 필드) · `test_auth_router.py`(422 · 쿠키) ·
+`test_rate_limit.py`(429 · 프록시 헤더 · fail-open) · `test_auth_revoke.py`(로테이션 · 재사용 탐지) ·
+`test_settings_cookie.py`(SameSite · 기동 경고)
 
 **사전 준비 1회**: `CREATE DATABASE db_base_test;` — `.env`의 `test_mysql_db`와 같은 이름.
 
@@ -515,6 +529,40 @@ url = await save_upload(file, "image", allowed=IMAGE_EXTENSIONS)   # → "/media
 `fail()` 의 두 번째 인자는 `ErrorCode` 상수를 쓴다. 문자열 리터럴을 흩뿌리면 오타가 조용히 통과한다.
 **프론트 `src/types/errorCode.ts` 와 1:1** 이므로 한쪽에 추가하면 반대쪽도 고칠 것.
 
+## 로깅 — `core/logging/config.py`
+
+형식 `[시각] [레벨] [req:요청ID] [모듈] 메시지`. 요청 ID 는 미들웨어가 발급해 contextvar 로 전파한다.
+`backend/logs/` 에 채널별로 쌓인다 — 장애를 볼 땐 `tail -f backend/logs/error.log` 하나면 된다.
+
+| 파일 | 내용 |
+|------|------|
+| `app.log` | 전부 |
+| `access.log` | 2xx · 3xx 요청 (latency 포함. uvicorn 기본 액세스 로그는 꺼져 있다) |
+| `error.log` | 4xx · 5xx 요청 + `ERROR` 이상 |
+| `openai.log` | `app.module.infra.gpt` 하위 로거 (`app.log` 에도 같이) |
+
+- 자정 로테이션 · 14일 보관. `QueueHandler` → 리스너 스레드가 파일을 쓴다 (이벤트 루프를 막지 않는다)
+- 채널은 **로거가 아니라 핸들러의 필터**가 가른다. 로거에 핸들러를 직접 붙이지 말 것 — 쓰기가 루프 스레드로 돌아온다
+- 액세스 분기는 미들웨어가 `extra={"status_code": …}` 로 실은 값을 본다 (메시지를 파싱하지 않는다)
+- `/api/health` · `/media/*` 는 액세스 로그에서 뺀다. 쿼리의 `code` · `token` 같은 값은 `***`
+- `--workers N` 이면 로테이션이 충돌한다 — 그땐 파일 대신 stdout 수집으로
+
+**영역별 파일 추가** — `EXTRA_LOG_CHANNELS` 에 한 줄. 키가 파일 이름이 된다.
+
+```python
+EXTRA_LOG_CHANNELS: dict[str, str] = {
+    "openai": "app.module.infra.gpt",
+    "gemini": "app.module.infra.gemini",   # → logs/gemini.log
+}
+```
+
+- 값은 **로거 이름의 앞부분**이다. `get_logger(__name__)` 이면 로거 이름 = 모듈 경로라, 패키지
+  (`app.module.infra.gemini`)를 적으면 그 아래 파일이 전부 들어온다. 경로와 무관하게 묶으려면 `get_logger("llm.gemini")` + `"llm.gemini"`
+- 점 경계로만 맞춘다 — `app.module.infra.gpt` 는 `gpt_v2` 를 잡지 않는다
+- 전용 파일에 남는 로그는 `app.log` 에도 남는다 (복사지 이동이 아니다)
+- **오타는 에러 없이 빈 파일이 된다.** 0바이트면 앞부분을 의심할 것
+- 채널마다 파일 핸들이 하나씩 열린다. 수십 개가 필요하면 stdout + 외부 수집기(Loki 등)
+
 ## 기타
 
 - 새 모델은 `class Order(Base, TimestampMixin)` — `created_at`/`updated_at`/`deleted_at` 이 붙는다.
@@ -540,6 +588,4 @@ url = await save_upload(file, "image", allowed=IMAGE_EXTENSIONS)   # → "/media
   - 테스트는 `hc._build_client(httpx.MockTransport(handler))` 로 업체만 바꿔 끼운다 (`tests/test_http_client.py`)
 - 무인증 헬스체크는 `GET /api/health` — 도메인이 아니라서 `main.py`에 직접 선언되어 있다.
   경로 상수는 `middleware/request_id.py`의 `HEALTH_PATH` (액세스 로그 제외 대상과 공유)
-- 로그는 콘솔과 `backend/logs/app.log`(자정 로테이션, 14일 보관)에 함께 남는다 — `core/logging/config.py`.
-  액세스 로그(latency 포함)는 `middleware/request_id.py`가 남기고, uvicorn 기본 액세스 로그는 꺼져 있다
 - 보안 헤더는 `middleware/security.py`. HSTS는 prod에서만 붙는다

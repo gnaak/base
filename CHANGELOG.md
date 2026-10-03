@@ -6,6 +6,8 @@
 
 | 날짜 | 커밋 | 영역 | 바뀐 것 | 왜 |
 | --- | --- | --- | --- | --- |
+| 10-03 | `9b2bdad` | /start | 추천이 분명하면 묻지 않고 진행 · 셋업 끝나면 바로 `/plan` · need.md 를 표로 | 확인 창 줄이기 |
+| 10-03 | `8fecc11` | /start | 비밀값은 메모장으로 (`prepare_local` — 값은 출력하지 않음) · CHANGELOG 를 표로 | 대화 기록에 비밀번호가 남음 |
 | 10-03 | `0c434d4` | /start | 요약은 질문 본문에 · PDF 는 쪽 지정 | 요약을 못 보고 "맞아요" |
 | 10-03 | `062ef76` | /start | 첫 확인 창 안내 (설명문 · 안내 페이지) | 옵션 이름은 못 바꿈 |
 | 10-03 | `c7260bb` | /start | 커맨드에 `allowed-tools` | 신뢰 전 폴더는 settings 허용 무시 |
@@ -90,6 +92,7 @@
 | 남의 verification 토큰 | 소유 확인 불가 | `/seo_check` |
 | 마이그레이션 커밋 revert | `alembic upgrade` 멈춤 | forward-fix |
 | 같은 PC 의 다른 MySQL · Redis | 포트 · 컨테이너 이름 충돌 | 같이 쓰기 (`prepare_local`) |
+| 같은 내용을 README · CLAUDE.md 둘 다에 | 한쪽만 고쳐져 어긋남 | README 는 요약 + 링크, 규칙은 CLAUDE.md 한 곳 |
 
 ## 반복해서 걸린 것
 

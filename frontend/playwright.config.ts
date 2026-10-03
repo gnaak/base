@@ -10,7 +10,7 @@ import { API_PORT, API_URL, WEB_PORT, WEB_URL, backendEnv } from "./e2e/env";
  * | 변수 | 기본값 | 뜻 |
  * | --- | --- | --- |
  * | E2E_WEB_PORT / E2E_API_PORT | 3100 / 8100 | 띄울 포트 |
- * | E2E_MYSQL_DB | db_base_e2e | 백엔드 LOCAL_MYSQL_DB. 한 번 만들어 둘 것 (README "E2E") |
+ * | E2E_MYSQL_DB | db_base_e2e | 백엔드 LOCAL_MYSQL_DB. 한 번 만들어 둘 것 (frontend/CLAUDE.md "E2E") |
  * | E2E_REDIS_DB | 15 | 백엔드 REDIS_DB — 다른 프로젝트와 같은 Redis 를 쓰면 키가 섞이지 않게 |
  * | E2E_REDIS_PASSWORD | (비움) | 백엔드 LOCAL_REDIS_PASSWORD |
  * | E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD | e2e-admin@example.com / e2e-admin-pass-1234 | globalSetup 이 만든다 |
