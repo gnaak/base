@@ -98,7 +98,7 @@ CI(`.github/workflows/ci.yml`)가 돌리는 것과 같다. terraform 은 `./infr
 | | |
 | --- | --- |
 | `.claude/commands/` | **`/start`**(처음 1회 — 아이디어 대화 · 도구 · 로컬 셋업 · git) → `/plan`(기획 1회) → **`/autopilot`**(phase 전부 무인 — `/start` 부터 묻지 않고 이어진다) 또는 `/feature` `/design` `/fullstack` `/fix` `/test` → `/verify`(phase 끝·푸시 전) · `/seo_check`(푸시 전) |
-| `.claude/hooks/` · `settings.json` | SessionStart(`session-start.sh`, sh) — 막 받은 템플릿이면 첫 메시지부터 `/start`. Stop · PreToolUse(`autopilot-gate.mjs`) — `/autopilot` 이 켜진 동안만: 남은 phase 지시 · 진전 없으면 ❌ · push · merge · 배포 차단 (Node 가 없으면 조용히 넘어간다). 위험 명령 deny |
+| `.claude/hooks/` · `settings.json` | SessionStart(`session-start.sh`, sh) — 막 받은 템플릿이면 첫 메시지부터 `/start`. Stop · PreToolUse(`autopilot-gate.mjs`) — `/autopilot` 이 켜진 동안만: 남은 phase 지시 · 진전 없으면 ❌ · push · merge · 배포 차단 (Node 가 없으면 조용히 넘어간다). StopFailure — 사용 한도 · API 오류로 멈춘 시각 기록. **잠자기 막기**(`awake on/off`) — `/start` · `/plan` 이 켜고 autopilot 이 끝나거나 훅이 6시간 안 오면 풀린다. 위험 명령 deny |
 | `.claude/agents/` | 단계별 서브에이전트 — `plan/`(리서치·PRD·페이지 맵·디자인) · `dev/backend/`(탐색·모델·API·**외부 연동**) · `dev/frontend/`(탐색·작성) · `verify/`(테스트 작성·보안 검토·완료 기준 대조) |
 | `.claude/skills/security/` | 이 템플릿 기준 보안 체크리스트 — sec-reviewer·`/verify` 가 쓴다 |
 | `.claude/skills/modules/` | 기능 넣고 빼기 레시피 — 넣기: 스케줄러 · AI · 빼기: OAuth · WebSocket · 업로드 · Docker. `/plan` 이 고르고 phase 의 "모듈" 줄로 |

@@ -57,7 +57,10 @@ $ARGUMENTS
 3. **구현** — 커맨드의 단계를 그대로 따른다 (에이전트 호출 순서 · 보고 확인):
    백엔드 + 화면이면 `/fullstack`, 백엔드만 `/feature`, 화면만 `/design`.
    - **모듈** 줄(`+scheduler` · `−websocket`)이 있으면 **기능보다 먼저** `.claude/skills/modules/references/` 의 그 레시피를
-     끝까지 — 빼기는 레시피의 확인 grep 이 0건이어야 끝. 운영 Parameter Store 에서 지울 키는 `DECISIONS.md` 🧑 에
+     끝까지 — 빼기는 레시피의 확인 grep 이 0건이어야 끝. 운영 Parameter Store 에서 지울 키는 `DECISIONS.md` 🧑 에.
+     **`.claude/` 아래 파일은 고치지 않는다** — 편집 자동 승인에서도 파일마다 확인 창이 떠서 밤새 멈춘다 (modules `SKILL.md` 원칙 6)
+   - **하위 에이전트는 `run_in_background: false`** (병렬은 한 메시지에 여러 개). 백그라운드로 맡기고 턴을 끝내면 Stop 훅이
+     "진전 없음" 을 세서, 잘 돌고 있는 phase 가 3번 만에 ❌ 로 넘어간다 (시험에서 1/3 까지 올라가는 걸 봤다)
    - **설정값(U\*)** 은 하드코딩하지 않는다 — `RawEnv` 필드 + 기본값 + `backend/.env.example`
    - 모델이 바뀌면 `cd backend && sh migrate.sh "{설명}"` 으로 리비전을 만들고 읽어 본다.
      `DECISIONS.md` 🔍 에 "생성된 마이그레이션: {파일}" 한 줄 (사람이 운영 적용 전에 본다)

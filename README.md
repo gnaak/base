@@ -139,7 +139,7 @@ docs/guides/  처음 쓰는 사람용 안내 페이지
 |---|---|
 | `commands/` | `/start`(처음 한 번) → `/plan` → `/feature` `/design` `/fullstack` `/fix` `/test` → `/verify`(phase 끝 · 푸시 전) · `/autopilot`(무인) · `/setup` · `/seo_check` |
 | `agents/` | `plan/`(리서치 · PRD · 페이지 맵 · 디자인) · `dev/backend/`(외부 연동 포함) · `dev/frontend/` · `verify/`(테스트 · 보안 · 완료 기준) |
-| `hooks/` · `settings.json` | 시작 훅(처음 연 폴더 → `/start`) · 무인 게이트(근거로 다음 지시 · push · 배포 차단) · 위험 명령 거부 |
+| `hooks/` · `settings.json` | 시작 훅(처음 연 폴더 → `/start`) · 무인 게이트(근거로 다음 지시 · push · 배포 차단) · 잠자기 막기(`/start` 부터 끝날 때까지) · 한도에서 멈춘 기록 · 위험 명령 거부 |
 | `skills/` | `security/`(이 템플릿 기준 체크리스트) · `deploy/`(배포 길 찾기 · 장애 진단) · `modules/`(기능 넣고 빼기 — 스케줄러 · AI 넣기 · OAuth · WebSocket · 업로드 · Docker 빼기) · `seo/`([fire-your-seo-agency](https://github.com/leopard627/fire-your-seo-agency), MIT) |
 
 > 프론트는 CSR 이라 `curl` 로 받은 HTML 에 본문이 없다. 검색 노출이 목표면 렌더링 전략(프리렌더 · SSR)부터 정한다.

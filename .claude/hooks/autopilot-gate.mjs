@@ -6,6 +6,9 @@
 //   node .claude/hooks/autopilot-gate.mjs off        끄기 (/autopilot stop)
 //   node .claude/hooks/autopilot-gate.mjs stop-hook  Stop 훅 — 남은 phase 가 있으면 멈추지 못하게 하고 다음 지시를 준다
 //   node .claude/hooks/autopilot-gate.mjs pre-tool   PreToolUse 훅 — 무인 중 push · merge · 배포 명령을 막는다
+//   node .claude/hooks/autopilot-gate.mjs stop-failure  StopFailure 훅 — 사용 한도 · API 오류로 멈춘 시각을 남긴다
+//   node .claude/hooks/autopilot-gate.mjs awake on|off  잠자기 막기 — /start · /plan 이 켜고 autopilot 이 끝나면 꺼진다
+//   node .claude/hooks/autopilot-gate.mjs auto-continue 사용 한도가 풀리면 알아서 이어 가게 (사용자 설정 한 줄)
 //
 // 원형은 gnaak/prd 의 autopilot-gate.ps1. 거기서 배운 두 가지를 그대로 가져왔다:
 // - 완료 판정은 표시가 아니라 근거로 한다 — ✅ 라고 적었어도 그 phase 의 커밋과 검증 줄이 없으면 안 넘어간다
@@ -14,8 +17,9 @@
 // 의존성 없이 Node 만 쓴다 — 프론트 때문에 어느 환경에나 있고, Windows · Linux 에서 같은 파일이 돈다.
 
 import { createHash } from "node:crypto";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -262,11 +266,13 @@ const block = (reason) => {
 // ── Stop 훅 ────────────────────────────────────────────────
 
 export const stopHook = () => {
+  heartbeat();
   const state = loadState();
   if (!state?.active) return; // 꺼져 있으면 평소처럼 멈춘다
 
   const finishRun = (message) => {
     saveState({ ...state, active: false, finishedAt: now() });
+    awakeOff();
     block(message);
   };
 
@@ -285,6 +291,7 @@ export const stopHook = () => {
   let decision = decide(state);
   if (decision.kind === "done") {
     saveState({ ...state, active: false, finishedAt: now(), stage: "done" });
+    awakeOff();
     return; // 다 끝났다 — 멈추게 둔다
   }
 
@@ -316,6 +323,7 @@ export const stopHook = () => {
     decision = decide(state);
     if (decision.kind === "done") {
       saveState({ ...state, active: false, finishedAt: now(), stage: "done" });
+      awakeOff();
       return;
     }
     state.stage = decision.stage;
@@ -357,6 +365,7 @@ export const FORBIDDEN = [
 export const forbiddenReason = (command) => FORBIDDEN.find(([re]) => re.test(command ?? ""))?.[1] ?? null;
 
 export const preToolHook = (input) => {
+  heartbeat();
   if (!loadState()?.active) return;
   const hit = forbiddenReason(input?.tool_input?.command);
   if (!hit) return;
@@ -372,6 +381,163 @@ export const preToolHook = (input) => {
       },
     }),
   );
+};
+
+// ── 잠자기 막기 — /start · /plan · /autopilot 동안 ──────────
+//
+// 자는 동안 기획 → 개발이 도는데 PC 가 절전에 들어가면 거기서 멈춘다. `awake on` 이 작은 프로세스를 따로 띄워
+// "잠자지 마" 를 걸고, 그 프로세스는 1분마다 awake.json 을 보다가 아래 중 하나면 스스로 끝난다:
+//   - active 가 false (autopilot 끝 · stop · `/plan` 이 "기획만" 으로 끝남 → `awake off`)
+//   - 훅이 마지막으로 다녀간 지(seen) 6시간 — 세션이 죽었거나 사람이 창을 닫았다. 5시간 사용 한도를 기다리는 동안은
+//     깨어 있어야 "Continue automatically at usage limit" 가 이어 가므로 5시간보다 길게 잡았다
+//   - 띄운 지 48시간
+// 관리자 권한이 필요 없다. 화면은 꺼질 수 있다 (시스템만 깨어 있게). ⚠️ 노트북 덮개를 닫으면 덮개 설정이 이긴다.
+
+const AWAKE_FILE = join(STATE_DIR, "awake.json");
+const AWAKE_IDLE_HOURS = 6;
+const AWAKE_MAX_HOURS = 48;
+
+const epoch = () => Math.floor(Date.now() / 1000);
+
+export const loadAwake = () => {
+  try {
+    return JSON.parse(readFileSync(AWAKE_FILE, "utf8"));
+  } catch {
+    return null;
+  }
+};
+
+const saveAwake = (awake) => {
+  mkdirSync(STATE_DIR, { recursive: true });
+  writeFileSync(AWAKE_FILE, JSON.stringify(awake) + "\n", "utf8");
+};
+
+// Windows — SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED). PowerShell 5.1 의 16진 리터럴 0x8… 은
+// 음수 Int32 라 uint 로 못 바뀐다 — 10진수로 쓴다 (2147483648 = ES_CONTINUOUS, +1 = ES_SYSTEM_REQUIRED)
+const windowsScript = (file) => `
+$k = Add-Type -MemberDefinition '[DllImport("kernel32.dll")] public static extern uint SetThreadExecutionState(uint f);' -Name K -Namespace AutopilotKeepAwake -PassThru
+$end = (Get-Date).AddHours(${AWAKE_MAX_HOURS})
+while ((Get-Date) -lt $end) {
+  try { $s = Get-Content -Raw -LiteralPath '${file.replace(/'/g, "''")}' | ConvertFrom-Json } catch { break }
+  if (-not $s.active) { break }
+  if ([DateTimeOffset]::UtcNow.ToUnixTimeSeconds() - [int64]$s.seen -gt ${AWAKE_IDLE_HOURS * 3600}) { break }
+  [void]$k::SetThreadExecutionState([uint32]2147483649)
+  Start-Sleep -Seconds 60
+}
+[void]$k::SetThreadExecutionState([uint32]2147483648)
+`;
+
+const posixLoop = (file) => {
+  const f = `'${file.replace(/'/g, "'\''")}'`;
+  return (
+    `end=$(( $(date +%s) + ${AWAKE_MAX_HOURS * 3600} )); ` +
+    `while [ "$(date +%s)" -lt "$end" ]; do ` +
+    `grep -q '"active":true' ${f} 2>/dev/null || break; ` +
+    `seen=$(sed -n 's/.*"seen":\\([0-9]*\\).*/\\1/p' ${f}); ` +
+    `[ $(( $(date +%s) - \${seen:-0} )) -gt ${AWAKE_IDLE_HOURS * 3600} ] && break; ` +
+    `sleep 60; done`
+  );
+};
+
+/** 플랫폼별 [명령, 인자]. 막을 방법이 없으면 null. 테스트가 명령 모양을 본다. */
+export const keepAwakeCommand = (platform = process.platform, file = AWAKE_FILE) => {
+  if (platform === "win32") {
+    const encoded = Buffer.from(windowsScript(file), "utf16le").toString("base64");
+    // cmd 를 거친다 — 떼어 띄운(detached) powershell 은 콘솔이 없어 바로 종료(코드 0)된다. cmd 는 살아 있고,
+    // 그 아래 powershell 도 Claude Code 의 셸 명령이 끝난 뒤까지 산다 (둘 다 직접 확인)
+    return [
+      "cmd.exe",
+      ["/d", "/c", "powershell.exe", "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden", "-EncodedCommand", encoded],
+    ];
+  }
+  if (platform === "darwin") return ["caffeinate", ["-i", "sh", "-c", posixLoop(file)]];
+  if (platform === "linux") {
+    return ["systemd-inhibit", ["--what=sleep:idle", "--who=autopilot", "--why=무인 실행 중", "sh", "-c", posixLoop(file)]];
+  }
+  return null;
+};
+
+const alive = (pid) => {
+  if (!pid) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/** 잠자기 막기를 켠다. 이미 떠 있으면 표시만 새로. 못 띄우면 pid null — 그래도 일은 계속한다 (절전만 사람이 끈다). */
+export const awakeOn = (why = "") => {
+  const prev = loadAwake();
+  const awake = { active: true, since: prev?.active ? prev.since : epoch(), seen: epoch(), why, pid: prev?.pid ?? null };
+  saveAwake(awake); // 프로세스보다 먼저 — 첫 확인에서 active 를 봐야 한다
+  if (process.env.AUTOPILOT_NO_KEEP_AWAKE || alive(awake.pid)) return awake;
+  const cmd = keepAwakeCommand();
+  if (!cmd) return awake;
+  try {
+    const child = spawn(cmd[0], cmd[1], { cwd: ROOT, detached: true, stdio: "ignore", windowsHide: true });
+    child.on("error", () => {}); // 명령이 없으면(caffeinate · systemd-inhibit) 조용히 넘어간다
+    child.unref();
+    awake.pid = child.pid ?? null;
+    saveAwake(awake);
+  } catch {
+    /* 못 띄웠다 */
+  }
+  return awake;
+};
+
+export const awakeOff = () => {
+  const awake = loadAwake();
+  if (!awake) return;
+  saveAwake({ ...awake, active: false });
+  if (alive(awake.pid)) {
+    // 1분 안에 스스로 끝나지만 바로 놓아 준다. Windows 는 cmd 아래 powershell 까지 트리째
+    try {
+      if (process.platform === "win32") {
+        execFileSync("taskkill", ["/PID", String(awake.pid), "/T", "/F"], { stdio: "ignore" });
+      } else {
+        process.kill(awake.pid);
+      }
+    } catch {
+      /* 이미 끝났다 */
+    }
+  }
+};
+
+/** 훅이 돌 때마다 — "아직 일하는 중". 켜져 있을 때만 쓴다 (안 켰으면 아무것도 안 한다). */
+const heartbeat = () => {
+  const awake = loadAwake();
+  if (awake?.active) saveAwake({ ...awake, seen: epoch() });
+};
+
+// ── 사용 한도에서 자동으로 이어 가기 ───────────────────────
+// Claude Code 설정 `autoContinueAtUsageLimit` (사용자 설정 ~/.claude/settings.json) — 5시간 한도가 풀리면 알아서 이어 간다.
+// 프로젝트 설정이 아니라 사용자 설정이라 /start 가 이걸로 켠다. 다른 키는 건드리지 않고, 파일이 깨져 있으면 손대지 않는다.
+
+export const autoContinueOn = (file = join(process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude"), "settings.json")) => {
+  let settings = {};
+  try {
+    settings = JSON.parse(readFileSync(file, "utf8"));
+  } catch (err) {
+    if (err?.code !== "ENOENT") return `${file} 를 읽지 못해 그대로 둔다 — /config 에서 "Continue automatically at usage limit" 를 켠다`;
+  }
+  if (settings.autoContinueAtUsageLimit === true) return "이미 켜져 있다 (autoContinueAtUsageLimit)";
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(file, JSON.stringify({ ...settings, autoContinueAtUsageLimit: true }, null, 2) + "\n", "utf8");
+  return `켰다 — ${file} 의 autoContinueAtUsageLimit`;
+};
+
+// ── StopFailure 훅 — 사용 한도 · API 오류로 턴이 끝났을 때 ─────
+// 막을 수는 없다(이미 실패했다). 언제 무엇으로 멈췄는지 상태에 남겨 status · 아침 요약에 보이게 한다.
+// 다시 이어 가는 건 Claude Code 의 "Continue automatically at usage limit" 설정이 한다 — 그동안 깨어 있게 heartbeat.
+
+export const stopFailureHook = (input) => {
+  heartbeat();
+  const state = loadState();
+  if (!state?.active) return;
+  const failures = [...(state.failures ?? []), { at: now(), type: input?.error_type ?? "unknown" }].slice(-20);
+  saveState({ ...state, failures });
 };
 
 // ── start · status · off ───────────────────────────────────
@@ -403,6 +569,7 @@ export const start = () => {
     return 1;
   }
   const previous = loadState();
+  awakeOn("autopilot");
   if (previous?.active) {
     saveState({ ...previous, stage: null, stageTurns: 0, stalls: 0, fp: null });
     console.log(`이미 실행 중인 run ${previous.runId} 를 이어서 한다 (턴 카운터만 초기화).\n${phaseTable()}`);
@@ -440,7 +607,11 @@ export const status = () => {
   console.log(
     `${state.active ? "켜짐" : "꺼짐"} — run ${state.runId} · 브랜치 ${state.branch} · 시작 ${state.startedAt}` +
       (state.finishedAt ? ` · 끝 ${state.finishedAt}` : "") +
-      `\n단계 ${state.stage ?? "-"} · 이 단계 ${state.stageTurns ?? 0}턴 · 진전 없음 ${state.stalls ?? 0}/${CAPS.stall} · 전체 ${state.totalTurns ?? 0}턴\n${phaseTable()}`,
+      `\n단계 ${state.stage ?? "-"} · 이 단계 ${state.stageTurns ?? 0}턴 · 진전 없음 ${state.stalls ?? 0}/${CAPS.stall} · 전체 ${state.totalTurns ?? 0}턴\n${phaseTable()}` +
+      `\n잠자기 막기: ${loadAwake()?.active ? "켜짐" : "꺼짐"}` +
+      (state.failures?.length
+        ? `\n멈춘 기록(사용 한도 · API 오류): ${state.failures.map((f) => `${f.at} ${f.type}`).join(" · ")}`
+        : ""),
   );
   return 0;
 };
@@ -448,6 +619,7 @@ export const status = () => {
 export const off = () => {
   const state = loadState();
   if (state?.active) saveState({ ...state, active: false, finishedAt: now(), stage: "off" });
+  awakeOff();
   console.log(state?.active ? `autopilot 끔 — run ${state.runId}` : "이미 꺼져 있다.");
   return 0;
 };
@@ -471,17 +643,23 @@ if (isMain) {
       readStdin();
       stopHook();
     } else if (command === "pre-tool") preToolHook(readStdin());
+    else if (command === "stop-failure") stopFailureHook(readStdin());
+    else if (command === "auto-continue") console.log(autoContinueOn());
+    else if (command === "awake") {
+      if (process.argv[3] === "off") awakeOff();
+      else console.log(`잠자기 막기 켬 — pid ${awakeOn(process.argv.slice(4).join(" ")).pid ?? "-"}`);
+    }
     else if (command === "start") code = start();
     else if (command === "status") code = status();
     else if (command === "off") code = off();
     else {
-      console.log("사용법: autopilot-gate.mjs start | status | off | stop-hook | pre-tool");
+      console.log("사용법: autopilot-gate.mjs start | status | off | awake [on|off] | auto-continue | stop-hook | pre-tool | stop-failure");
       code = 1;
     }
   } catch (err) {
     // 게이트가 터져서 세션이 멈추지 못하거나 도구가 막히면 안 된다 — 훅이면 그냥 통과시킨다
     process.stderr.write(`[autopilot-gate] ${err?.stack ?? err}\n`);
-    code = command === "stop-hook" || command === "pre-tool" ? 0 : 1;
+    code = ["stop-hook", "pre-tool", "stop-failure", "awake"].includes(command) ? 0 : 1;
   }
   process.exitCode = code;
 }

@@ -11,7 +11,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { forbiddenReason, parsePhases, parseProgress } from "./autopilot-gate.mjs";
+import { autoContinueOn, forbiddenReason, keepAwakeCommand, parsePhases, parseProgress } from "./autopilot-gate.mjs";
 
 const GATE = join(dirname(fileURLToPath(import.meta.url)), "autopilot-gate.mjs");
 
@@ -75,6 +75,13 @@ const makeRepo = (t, { branch = "auto/test", env = {} } = {}) => {
       git("add", "-A");
       git("commit", "-q", "--allow-empty", "-m", message);
     },
+    awake: () => {
+      try {
+        return JSON.parse(readFileSync(join(dir, ".claude", "autopilot", "awake.json"), "utf8"));
+      } catch {
+        return null;
+      }
+    },
     state: () => {
       try {
         return JSON.parse(readFileSync(join(dir, ".claude", "autopilot", "state.json"), "utf8"));
@@ -83,12 +90,13 @@ const makeRepo = (t, { branch = "auto/test", env = {} } = {}) => {
       }
     },
     run: (command, input = {}) => {
-      const r = spawnSync(process.execPath, [GATE, command], {
+      const r = spawnSync(process.execPath, [GATE, ...command.split(" ")], {
         input: JSON.stringify(input),
         encoding: "utf8",
         env: {
           ...process.env,
           AUTOPILOT_ROOT: dir,
+          AUTOPILOT_NO_KEEP_AWAKE: "1", // 진짜 절전 막기 프로세스를 띄우지 않는다 (임시 폴더를 잡아 지우지 못한다)
           AUTOPILOT_STALL_CAP: "3",
           AUTOPILOT_PHASE_TURN_CAP: "6",
           AUTOPILOT_FINISH_TURN_CAP: "4",
@@ -414,4 +422,89 @@ test("PROGRESS.md: 옛 양식 '## N 단계' 와 양식 안내 줄도 읽는다",
   );
   assert.deepEqual(entries.get(1), { status: "✅", verify: "통과" });
   assert.deepEqual(entries.get(2), { status: "⬜", verify: "" });
+});
+
+// ── 잠자기 막기 · StopFailure ─────────────────────────────
+
+test("awake on · off — 켜면 active, 끄면 내려간다 (훅이 다녀가면 seen 이 갱신된다)", (t) => {
+  const repo = makeRepo(t);
+  repo.run("awake on start");
+  const on = repo.awake();
+  assert.equal(on.active, true);
+  assert.equal(on.why, "start");
+  assert.ok(on.seen >= on.since);
+
+  repo.write(".claude/autopilot/awake.json", JSON.stringify({ ...on, seen: 1 }));
+  repo.run("pre-tool", { tool_name: "Bash", tool_input: { command: "git status" } });
+  assert.ok(repo.awake().seen > 1, "PreToolUse 가 seen 을 갱신해야 한다");
+
+  repo.run("awake off");
+  assert.equal(repo.awake().active, false);
+});
+
+test("autopilot 이 켜면 잠자기 막기도 켜지고, off · 끝나면 꺼진다", (t) => {
+  const repo = started(t);
+  assert.equal(repo.awake().active, true);
+  repo.run("off");
+  assert.equal(repo.awake().active, false);
+});
+
+test("요약까지 끝나면 잠자기 막기를 놓는다", (t) => {
+  const repo = started(t);
+  finishPhases(repo);
+  repo.write("DECISIONS.md", DECISIONS + summary(repo.state().runId));
+  repo.commit("docs: 무인 실행 결과");
+  repo.run("stop-hook");
+  assert.equal(repo.state().stage, "done");
+  assert.equal(repo.awake().active, false);
+});
+
+test("StopFailure — 켜져 있을 때만 멈춘 시각 · 종류를 남기고 status 에 보인다", (t) => {
+  const repo = started(t);
+  repo.run("stop-failure", { hook_event_name: "StopFailure", error_type: "rate_limit", error_message: "limit" });
+  assert.deepEqual(repo.state().failures.map((f) => f.type), ["rate_limit"]);
+  assert.match(repo.run("status").stdout, /멈춘 기록.*rate_limit/);
+
+  repo.run("off");
+  repo.run("stop-failure", { error_type: "overloaded" });
+  assert.equal(repo.state().failures.length, 1, "꺼진 뒤에는 남기지 않는다");
+});
+
+test("잠자기 막기 명령 — 플랫폼마다 관리자 권한 없이", () => {
+  const [win, winArgs] = keepAwakeCommand("win32", "C:/repo/.claude/autopilot/awake.json");
+  assert.equal(win, "cmd.exe"); // detached powershell 은 콘솔이 없어 바로 끝난다 — cmd 를 거친다
+  assert.ok(winArgs.includes("powershell.exe"));
+  const script = Buffer.from(winArgs.at(-1), "base64").toString("utf16le");
+  assert.match(script, /SetThreadExecutionState\(\[uint32\]2147483649\)/); // ES_CONTINUOUS | ES_SYSTEM_REQUIRED
+  assert.match(script, /SetThreadExecutionState\(\[uint32\]2147483648\)/); // 끝날 때 풀기
+  assert.match(script, /-not \$s\.active/);
+  assert.match(script, /21600/); // 훅이 6시간 안 오면 끝 — 5시간 사용 한도를 기다리는 동안은 깨어 있게
+
+  const [mac, macArgs] = keepAwakeCommand("darwin", "/r/awake.json");
+  assert.equal(mac, "caffeinate");
+  assert.match(macArgs.at(-1), /"active":true/);
+  assert.equal(keepAwakeCommand("linux", "/r/awake.json")[0], "systemd-inhibit");
+  assert.equal(keepAwakeCommand("aix", "/r/awake.json"), null);
+});
+
+test("auto-continue — 사용자 설정에 한 줄만 더하고, 깨진 파일은 건드리지 않는다", (t) => {
+  const dir = mkdtempSync(join(tmpdir(), "autocontinue-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const file = join(dir, "settings.json");
+
+  assert.match(autoContinueOn(file), /켰다/); // 없으면 만든다
+  assert.deepEqual(JSON.parse(readFileSync(file, "utf8")), { autoContinueAtUsageLimit: true });
+
+  writeFileSync(file, JSON.stringify({ model: "opus", permissions: { allow: ["Bash"] } }));
+  autoContinueOn(file);
+  assert.deepEqual(JSON.parse(readFileSync(file, "utf8")), {
+    model: "opus",
+    permissions: { allow: ["Bash"] },
+    autoContinueAtUsageLimit: true,
+  });
+  assert.match(autoContinueOn(file), /이미 켜져/);
+
+  writeFileSync(file, "{ 깨진 json");
+  assert.match(autoContinueOn(file), /그대로 둔다/);
+  assert.equal(readFileSync(file, "utf8"), "{ 깨진 json");
 });

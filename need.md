@@ -16,7 +16,8 @@
 
 | 무엇 | 상태 | 메모 |
 | --- | --- | --- |
-| `/autopilot` 실제 한 바퀴 | 🔌 | 아래 확인 순서 3 |
+| `/autopilot` 실제 한 바퀴 | 🔄 | test2(비품 대여함 · phase 6개)에서 도는 중 — `.claude/` 편집 확인 창 · 백그라운드 에이전트 중 "진전 없음" 이 보였다 (고침, test2 엔 일부만) |
+| 밤새 돌리기 | 🔌 | 잠자기 막기(Windows 실제 확인 · macOS · Linux 는 명령만) · 한도 자동 재개(`autoContinueAtUsageLimit` — VS Code 확장도 따르는지 시험 필요) |
 | 배포 롤백 실제 서버 | 🔌 | AWS 를 붙인 뒤 첫 배포에서 |
 | 하위 에이전트 권한 | ⬜ | 신뢰 전 폴더면 `/plan` 리서치의 웹 검색에서 물을 수 있다 (커맨드 `allowed-tools` 가 안 넘어간다) |
 | 안내 페이지 사진 39장 | ⬜ | `docs/guides/img/README.md` 의 이름대로 넣기 |

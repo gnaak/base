@@ -33,6 +33,9 @@ DECISIONS.md                 ← 사람이 아침에 보는 페이지의 원본 
 
 ## 0. 시작 전
 
+- `node .claude/hooks/autopilot-gate.mjs awake on plan` — 기획 · 개발 동안 PC 가 잠들지 않게 (`/start` 가 이미 켰으면 표시만 새로).
+  `node` 가 없으면 건너뛴다
+
 - `$ARGUMENTS` 가 비어 있으면 "무엇을 만들고 싶은지" 한두 줄을 먼저 묻는다
 - **`/start` 가 만든 브리프만 있으면**(`PRD/00_brief.md` 머리에 `> /start 인터뷰` 표시, 다른 산출물 없음) 묻지 않고
   1·2단계를 건너뛰어 3단계(리서치)부터 한다 — 인터뷰는 `/start` 의 대화에서 끝났다
@@ -188,10 +191,11 @@ AskUserQuestion 으로 최대 2라운드, 라운드당 4개까지. 아이디어 
 
 그리고 **묻지 않고 바로** Skill 로 `autopilot` 을 부른다 — 사람이 자는 동안 기획에서 개발까지 끝나게 하는 게 목적이다.
 한 줄로 알린다: "이어서 개발을 시작해요. `auto/…` 브랜치에서 phase 1 부터 끝까지 돌고, 푸시 · 배포는 하지 않아요.
-멈추려면 `/autopilot stop`. **PC 가 잠자기에 들어가면 멈춰요** — 노트북은 전원을 꽂고 절전을 꺼 두세요."
+멈추려면 `/autopilot stop`. 끝날 때까지 PC 는 잠들지 않아요."
 
 부르지 않는 경우: 사람이 "기획만" 이라고 했거나(`$ARGUMENTS` · 인터뷰), `DECISIONS.md` ⛔ 에 개발 전에 풀어야 할 것이 있을 때
-(리서치 전부 실패 · 블로커가 남아 must 범위가 정해지지 않음). 그때는 이유와 함께 "다음은 `/autopilot`" 으로 끝낸다.
+(리서치 전부 실패 · 블로커가 남아 must 범위가 정해지지 않음). 그때는 `node .claude/hooks/autopilot-gate.mjs awake off` 로
+잠자기 막기를 풀고, 이유와 함께 "다음은 `/autopilot`" 으로 끝낸다.
 손으로 한 phase 씩 하려면 `/fullstack` · `/feature`.
 
 ## 하지 말 것
