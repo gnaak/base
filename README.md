@@ -62,7 +62,8 @@ Spring은 프레임워크가 계층을 강제하지만 FastAPI는 아무것도 �
 ## 3. 빠른 시작
 
 > **개발 도구가 하나도 없어도 된다 — Claude Code 로 `/start`.** VS Code + Claude Code 를 깔고(`docs/guides/00-claude-code.html`),
-> 템플릿을 받아 열고(`01-get-template.html`), Claude 패널에 `/start 만들고 싶은 것 한두 줄`. 만들 것을 대화로 정하고 →
+> 템플릿을 받아 열고(`01-get-template.html`), Claude 패널에 만들고 싶은 걸 말한다 — 처음 연 폴더면 SessionStart 훅이 알려 줘서
+> `/start` 를 안 쳐도 시작한다. 한 줄 아이디어도, 고객과 나눈 대화 · 계약서(docx · hwpx · pdf …)도 된다. 만들 것을 대화로 정하고 →
 > 필요한 도구(uv · Node · Docker)를 설치하고 → DB · 시크릿 · 이름 · git 을 셋업하고 → 로그인까지 브라우저로 확인한 뒤 → `/plan` 으로 넘어간다.
 > 사람이 직접 해야 하는 일(설치 확인 창 · 프로그램 실행)은 그때 `docs/guides/` 의 안내 페이지를 브라우저로 띄운다.
 > 아래는 손으로 할 때의 순서다.

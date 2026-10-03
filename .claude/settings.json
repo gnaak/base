@@ -1,11 +1,22 @@
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session-start.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/autopilot-gate.mjs\" stop-hook",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/autopilot-gate.mjs\" stop-hook 2>/dev/null || true",
             "timeout": 30
           }
         ]
@@ -17,7 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/autopilot-gate.mjs\" pre-tool",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/autopilot-gate.mjs\" pre-tool 2>/dev/null || true",
             "timeout": 30
           }
         ]
