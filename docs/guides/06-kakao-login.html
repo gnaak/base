@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>카카오 로그인 키 받기</title>
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+<main>
+<a class="back" href="index.html">← 안내 목록</a>
+<h1>카카오 로그인 키 받기</h1>
+<p class="lead">"카카오로 시작하기" 버튼이 실제로 동작하려면 카카오에 내 서비스를 등록하고 키 두 개를 받아야 해요. 로그인 기능 자체는 이미 만들어져 있어서, 키만 넣으면 돼요.</p>
+<ul class="meta"><li>20~30분</li><li>필요: 카카오 계정 · 휴대폰 본인인증</li><li>무료</li></ul>
+
+<div class="box warn"><strong>예전 블로그 글과 화면이 달라요</strong><p>카카오 개발자 사이트가 2025년 12월에 바뀌었어요. 주소 등록(리다이렉트 URI)이 <b>[앱] → [플랫폼 키] → [REST API 키]</b> 안으로 옮겨졌어요. 예전 글의 "[카카오 로그인] → [일반]" 에서 찾으면 없어요.</p></div>
+
+<h2>순서</h2>
+<ol class="steps">
+  <li>
+    <strong>앱 만들기</strong>
+    <a href="https://developers.kakao.com/console/app">developers.kakao.com/console/app</a> 에 카카오 계정으로 로그인 → <kbd>애플리케이션 추가</kbd> → 앱 이름(서비스 이름)을 적고 저장해요.
+    앱 아이콘도 이때 올려 두면 좋아요 — 4번에서 필요해요.
+    <figure class="shot" data-shot="06-1.png" data-what="앱 관리 페이지 — 애플리케이션 추가 버튼과 앱 목록"></figure>
+  </li>
+  <li>
+    <strong>카카오 로그인 켜기</strong>
+    왼쪽 메뉴 <b>[카카오 로그인] → [사용 설정]</b> 에서 상태를 <b>ON</b> 으로 바꿔요.
+    <figure class="shot" data-shot="06-2.png" data-what="카카오 로그인 사용 설정 — 상태 ON 토글"></figure>
+  </li>
+  <li>
+    <strong>주소(리다이렉트 URI) 등록 · 키 확인</strong>
+    <b>[앱] → [플랫폼 키] → [REST API 키]</b> 로 가요. 여기에 세 가지가 있어요.
+    <ul>
+      <li><b>REST API 키</b> — 첫 번째 키예요. 아래 5번에서 써요</li>
+      <li><b>리다이렉트 URI</b> — 아래 주소를 <b>한 줄에 하나씩</b> 등록해요. 글자 하나라도 다르면 로그인 때 <code>KOE006</code> 오류가 나요
+        <pre><code>http://localhost:3000/kakao/login</code></pre>
+        서버에 올린 뒤에는 <code>https://내도메인/kakao/login</code> 도 한 줄 더 추가해요 (http · https 를 구분해요)</li>
+      <li><b>클라이언트 시크릿</b> — 두 번째 키예요. 켜져 있는지 확인하고 값을 확인해요</li>
+    </ul>
+    <figure class="shot" data-shot="06-3.png" data-what="플랫폼 키 > REST API 키 화면 — REST API 키 값 위치"></figure>
+    <figure class="shot" data-shot="06-4.png" data-what="같은 화면의 리다이렉트 URI — localhost 주소 한 줄 등록된 모습"></figure>
+    <figure class="shot" data-shot="06-5.png" data-what="클라이언트 시크릿 — 사용 상태와 값"></figure>
+  </li>
+  <li>
+    <strong>이메일을 받을 수 있게 — 개인 개발자 비즈 앱 전환</strong>
+    이 서비스는 <b>이메일이 확인된 카카오 계정만</b> 로그인시켜요 (같은 이메일로 다른 계정이 가로채지 못하게). 그런데 카카오는 이메일을 "필수"로 받는 걸 <b>비즈 앱</b>에만 허락해요.
+    사업자가 없어도 돼요:
+    <ul>
+      <li>오른쪽 위 내 계정 → <b>[계정 설정] → [본인인증]</b> 에서 휴대폰 본인인증</li>
+      <li><b>[앱] → [일반]</b> 에 앱 아이콘이 있는지 확인</li>
+      <li><b>[앱] → [일반] → [비즈니스 정보]</b> 에서 <kbd>개인 개발자 비즈 앱 전환</kbd> → 약관 동의. 예전엔 심사가 있었는데 지금은 바로 바뀌어요</li>
+    </ul>
+    <figure class="shot" data-shot="06-6.png" data-what="계정 설정 > 본인인증 완료 화면"></figure>
+    <figure class="shot" data-shot="06-7.png" data-what="앱 > 일반 > 비즈니스 정보 — 개인 개발자 비즈 앱 전환 버튼"></figure>
+  </li>
+  <li>
+    <strong>받을 정보(동의항목) 고르기</strong>
+    <b>[카카오 로그인] → [동의항목]</b> 에서:
+    <ul>
+      <li><b>카카오계정(이메일)</b> — <b>필수 동의</b> (4번을 해야 고를 수 있어요)</li>
+      <li><b>닉네임</b> — 필수 또는 선택</li>
+      <li><b>프로필 사진</b> — 선택 (없어도 돼요)</li>
+    </ul>
+    <figure class="shot" data-shot="06-8.png" data-what="동의항목 — 카카오계정(이메일) 필수 동의로 설정된 모습"></figure>
+  </li>
+  <li>
+    <strong>키를 설정 파일에 적기 — 대화창에 붙여 넣지 마세요</strong>
+    Claude 에게 "카카오 키 받았어요" 라고 하면 설정 파일 두 개를 메모장으로 열고 몇 번째 줄인지 알려 줘요. 직접 붙여 넣고 저장해요.
+    <table>
+      <tr><th>파일</th><th>줄</th><th>넣을 값</th></tr>
+      <tr><td><code>backend/.env</code></td><td><code>kakao_client_id=</code></td><td>REST API 키</td></tr>
+      <tr><td><code>backend/.env</code></td><td><code>kakao_client_secret=</code></td><td>클라이언트 시크릿</td></tr>
+      <tr><td><code>frontend/.env</code></td><td><code>VITE_APP_PUBLIC_KAKAO_REST_API_KEY=</code></td><td>REST API 키 (위와 같은 값)</td></tr>
+    </table>
+    <p>리다이렉트 주소 줄(<code>local_kakao_redirect_uri</code>)은 이미 <code>http://localhost:3000/kakao/login</code> 으로 적혀 있어요. 그대로 두면 돼요.</p>
+  </li>
+</ol>
+
+<div class="box ok"><strong>됐는지 확인</strong><p>화면을 다시 띄우고(Claude 에게 "다시 켜 줘") 첫 화면의 카카오 버튼을 눌러요. 카카오 동의 화면 → 내 서비스로 돌아와 로그인되면 끝이에요.</p></div>
+
+<h2>막히면</h2>
+<ul>
+  <li><b><code>KOE006</code></b> — 등록한 주소와 실제 주소가 달라요. <code>http</code> / <code>https</code>, 끝의 <code>/</code>, 포트(<code>:3000</code>)까지 똑같은지 봐요</li>
+  <li><b>리다이렉트 URI 입력칸이 안 보여요</b> — 예전 위치를 보고 있어요. <b>[앱] → [플랫폼 키] → [REST API 키]</b></li>
+  <li><b>이메일을 "필수 동의"로 못 바꿔요 (회색)</b> — 아직 비즈 앱이 아니에요. 4번</li>
+  <li><b>주소가 맞는데도 안 돼요</b> — 웹 사이트 도메인 등록을 요구하는 경우가 있어요. <b>[앱] → [일반] → [플랫폼] → [웹]</b> 에 <code>http://localhost:3000</code> 을 넣어 봐요</li>
+  <li><b>로그인했는데 "이메일 동의가 필요" 오류</b> — 동의 화면에서 이메일을 빼고 동의했어요. 5번에서 이메일을 필수로 하면 다시 안 생겨요</li>
+</ul>
+
+<div class="box note"><strong>서버에 올릴 때</strong><p>운영 서버의 키는 이 파일이 아니라 AWS Parameter Store 에 넣어요 (<code>infra/README.md</code> 의 "OAuth · 외부 API 키"). 그리고 3번의 리다이렉트 URI 에 <code>https://내도메인/kakao/login</code> 을 추가해요.</p></div>
+</main>
+<script src="guide.js"></script>
+</body>
+</html>

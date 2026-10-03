@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>구글 로그인 키 받기</title>
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+<main>
+<a class="back" href="index.html">← 안내 목록</a>
+<h1>구글 로그인 키 받기</h1>
+<p class="lead">"Google 로 시작하기" 버튼이 동작하려면 구글 클라우드에 내 서비스를 등록하고 키 두 개(클라이언트 ID · 시크릿)를 받아야 해요. 로그인 기능 자체는 이미 만들어져 있어요.</p>
+<ul class="meta"><li>15~20분</li><li>필요: 구글 계정</li><li>무료 (결제 정보 필요 없음)</li></ul>
+
+<div class="box note"><strong>메뉴 이름이 바뀌었어요</strong><p>예전 글의 "OAuth 동의 화면(OAuth consent screen)" 은 지금 <b>Google Auth Platform</b> 하나로 합쳐져 있고, 안에 <b>Branding · Audience · Data Access · Clients</b> 탭이 있어요.</p></div>
+
+<h2>순서</h2>
+<ol class="steps">
+  <li>
+    <strong>프로젝트 만들기</strong>
+    <a href="https://console.cloud.google.com/">console.cloud.google.com</a> 에 로그인 → 위쪽 프로젝트 선택 → <kbd>새 프로젝트</kbd> → 서비스 이름으로 만들어요.
+    <figure class="shot" data-shot="07-1.png" data-what="프로젝트 선택 창 — 새 프로젝트 버튼"></figure>
+  </li>
+  <li>
+    <strong>Google Auth Platform 시작</strong>
+    왼쪽 메뉴 <b>APIs &amp; Services → Google Auth Platform</b> → <kbd>Get started</kbd>.
+    앱 이름 · 지원 이메일을 적고, 사용자 유형은 <b>External(외부)</b> 을 골라요 — <b>나중에 못 바꿔요.</b> 회사 Google Workspace 안에서만 쓸 때만 Internal.
+    <figure class="shot" data-shot="07-2.png" data-what="Google Auth Platform 첫 화면 — Get started"></figure>
+  </li>
+  <li>
+    <strong>받을 정보(Data Access)</strong>
+    <b>Data Access</b> 탭 → <kbd>Add or remove scopes</kbd> → <code>openid</code> · <code>.../auth/userinfo.email</code> · <code>.../auth/userinfo.profile</code> 세 개를 체크하고 저장해요.
+    <figure class="shot" data-shot="07-3.png" data-what="Data Access — openid · email · profile 세 개가 체크된 모습"></figure>
+  </li>
+  <li>
+    <strong>키 만들기(Clients)</strong>
+    <b>Clients</b> 탭 → <kbd>Create Client</kbd> → Application type 은 <b>Web application</b> → <b>Authorized redirect URIs</b> 에 아래 주소를 추가 → <kbd>Create</kbd>.
+    <pre><code>http://localhost:3000/google/login</code></pre>
+    서버에 올린 뒤에는 <code>https://내도메인/google/login</code> 도 한 줄 더 추가해요.
+    <figure class="shot" data-shot="07-4.png" data-what="Web application 만들기 — Authorized redirect URIs 에 localhost 주소"></figure>
+  </li>
+  <li>
+    <strong>키 확인 — 시크릿은 지금 저장</strong>
+    "OAuth client created" 창에 <b>Client ID</b> 와 <b>Client secret</b> 이 떠요. 시크릿은 나중에 다시 전체를 못 볼 수 있으니 <kbd>Download JSON</kbd> 으로 받아 두거나 바로 6번을 해요.
+    <figure class="shot" data-shot="07-5.png" data-what="OAuth client created 창 — Client ID 와 Client secret"></figure>
+  </li>
+  <li>
+    <strong>키를 설정 파일에 적기 — 대화창에 붙여 넣지 마세요</strong>
+    Claude 에게 "구글 키 받았어요" 라고 하면 설정 파일 두 개를 메모장으로 열고 몇 번째 줄인지 알려 줘요.
+    <table>
+      <tr><th>파일</th><th>줄</th><th>넣을 값</th></tr>
+      <tr><td><code>backend/.env</code></td><td><code>google_client_id=</code></td><td>Client ID</td></tr>
+      <tr><td><code>backend/.env</code></td><td><code>google_client_secret=</code></td><td>Client secret</td></tr>
+      <tr><td><code>frontend/.env</code></td><td><code>VITE_APP_PUBLIC_GOOGLE_CLIENT_ID=</code></td><td>Client ID (위와 같은 값)</td></tr>
+    </table>
+  </li>
+</ol>
+
+<div class="box ok"><strong>"Testing" 그대로 둬도 돼요</strong><p>Audience 탭에 상태가 <b>Testing</b> 으로 나와요. 이 서비스는 이름 · 이메일 · 프로필(기본 정보)만 받아서, Testing 이어도 <b>누구나</b> 로그인할 수 있고 7일 만료도 걸리지 않아요. 동의 화면에 앱 이름 · 로고가 깔끔하게 나오길 원하면 Branding 을 채우고 <kbd>Publish app</kbd> — 기본 정보만 받으면 구글 심사도 없어요.</p></div>
+
+<h2>막히면</h2>
+<ul>
+  <li><b><code>Error 400: redirect_uri_mismatch</code></b> — 등록한 주소와 실제 주소가 달라요. <code>http</code> / <code>https</code>, 끝의 <code>/</code>, 포트까지 똑같은지 봐요</li>
+  <li><b>방금 고쳤는데 그대로 mismatch</b> — 구글은 반영까지 <b>5분에서 몇 시간</b> 걸려요. 잠시 뒤에 다시 해요</li>
+  <li><b>"Google hasn't verified this app" 경고</b> — 3번에서 기본 세 개 말고 다른 범위를 골랐는지 봐요</li>
+  <li><b>Google Auth Platform 메뉴가 안 보여요</b> — 위쪽 검색창에 "Google Auth Platform" 을 쳐요</li>
+</ul>
+
+<div class="box note"><strong>서버에 올릴 때</strong><p>운영 서버의 키는 이 파일이 아니라 AWS Parameter Store 에 넣어요 (<code>infra/README.md</code> 의 "OAuth · 외부 API 키"). 그리고 4번의 redirect URI 에 <code>https://내도메인/google/login</code> 을 추가해요.</p></div>
+</main>
+<script src="guide.js"></script>
+</body>
+</html>

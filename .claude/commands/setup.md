@@ -53,9 +53,11 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 
 `{env}_domain` 규칙: 스킴 없이, CORS 때문에 포트까지, 서브도메인 공유가 필요할 때만 앞에 점.
 
-**OAuth 를 쓴다면** — Google·Kakao 콘솔에 새 redirect URI 를 등록하고
-`{local,prod}_{google,kakao}_redirect_uri` 를 콘솔 값과 **정확히** 일치시킨다.
-안 쓰면 키를 비워둬도 서버는 정상 기동한다.
+**OAuth 를 쓴다면** — 키 발급 안내 `docs/guides/06-kakao-login.html` · `07-google-login.html` 을 브라우저로 연다
+(카카오는 2025-12 콘솔 개편 · 이메일 필수 동의에 개인 개발자 비즈 앱 전환이 필요하다 — 안내에 있다).
+키는 **대화로 받지 않는다** — `PP line kakao_client_id` 등으로 줄 번호를 얻어 `backend/.env` · `frontend/.env` 를 메모장으로 열어 사람이 적게 한다.
+`{local,prod}_{google,kakao}_redirect_uri` 는 콘솔에 등록한 값과 **정확히** 일치해야 한다. 안 쓰면 키를 비워둬도 서버는 정상 기동하고,
+아예 빼려면 `.claude/skills/modules/references/remove-oauth.md`.
 
 ## ③ 브랜딩 · 샘플 코드
 

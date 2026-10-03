@@ -28,8 +28,21 @@
 | `03-3.png` | Docker Desktop | 첫 실행 약관 · 로그인 — Accept / Skip |
 | `03-4.png` | Docker Desktop | WSL 업데이트 안내 (뜰 때만) |
 | `03-5.png` | Docker Desktop | 왼쪽 아래 초록 "Engine running" |
-| `04-1.png` | MySQL · Redis 직접 | MySQL Installer — "Server only" |
-| `04-2.png` | MySQL · Redis 직접 | root 비밀번호 정하는 화면 |
+| `04-1.png` | MySQL 직접 | MySQL Installer — "Server only" |
+| `04-2.png` | MySQL 직접 | root 비밀번호 정하는 화면 |
 | `05-1.png` | 내 GitHub 에 올리기 | 새 저장소 — Private, README 체크 꺼짐 |
 | `05-2.png` | 내 GitHub 에 올리기 | 빈 저장소 페이지 — HTTPS 주소와 복사 버튼 |
 | `05-3.png` | 내 GitHub 에 올리기 | 처음 올릴 때 GitHub 로그인 · 승인 창 |
+| `06-1.png` | 카카오 로그인 키 | 앱 관리 페이지 — 애플리케이션 추가 버튼과 앱 목록 |
+| `06-2.png` | 카카오 로그인 키 | [카카오 로그인] > [사용 설정] — 상태 ON |
+| `06-3.png` | 카카오 로그인 키 | [앱] > [플랫폼 키] > [REST API 키] — 키 값 위치 |
+| `06-4.png` | 카카오 로그인 키 | 같은 화면의 리다이렉트 URI — localhost 한 줄 |
+| `06-5.png` | 카카오 로그인 키 | 클라이언트 시크릿 — 사용 상태와 값 |
+| `06-6.png` | 카카오 로그인 키 | [계정 설정] > [본인인증] 완료 |
+| `06-7.png` | 카카오 로그인 키 | [앱] > [일반] > [비즈니스 정보] — 개인 개발자 비즈 앱 전환 버튼 |
+| `06-8.png` | 카카오 로그인 키 | [동의항목] — 카카오계정(이메일) 필수 동의 |
+| `07-1.png` | 구글 로그인 키 | 프로젝트 선택 창 — 새 프로젝트 |
+| `07-2.png` | 구글 로그인 키 | Google Auth Platform — Get started |
+| `07-3.png` | 구글 로그인 키 | Data Access — openid · email · profile 체크 |
+| `07-4.png` | 구글 로그인 키 | Web application — Authorized redirect URIs 에 localhost |
+| `07-5.png` | 구글 로그인 키 | OAuth client created — Client ID · secret |
