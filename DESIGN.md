@@ -103,9 +103,9 @@ Pretendard는 CDN에서 받아 한글을 맡는다.
 | `rounded-control` | `--radius-control` | 8px (관리자 버튼의 `rounded-lg`) | 버튼 · 입력칸 · 뱃지 · 체크박스(절반) |
 | `rounded-card` | `--radius-card` | 12px | 카드 · 목록 묶음 · 토스트 |
 | `rounded-sheet` | `--radius-sheet` | 16px | 모달 · 바텀시트 윗모서리 |
-| `h-control-sm` · `min-h-` · `w-` · `min-w-` | `--control-h-sm` | 36px | **기본** — 버튼 · 입력칸 · 아이콘 버튼 · 선택 · 체크 · 토글 · 뱃지 (size 를 안 적으면 sm) |
-| `h-control-md` · … | `--control-h-md` | 44px — 손가락 터치 권장 크기 | 모바일에서 자주 누르는 주요 버튼 · 입력칸에 `size="md"` |
-| `h-control-lg` · … | `--control-h-lg` | 52px | 결제 같은 주 버튼 · 목록 한 줄 |
+| `h-control-sm` · `min-h-` · `w-` · `min-w-` | `--control-h-sm` | 32px | **기본** — 버튼 · 입력칸 · 아이콘 버튼 · 선택 · 체크 · 토글 · 뱃지 (size 를 안 적으면 sm) |
+| `h-control-md` · … | `--control-h-md` | 38px | 조금 큰 버튼 · 입력칸 |
+| `h-control-lg` · … | `--control-h-lg` | 44px — **손가락 터치 권장** | 휴대폰에서 자주 누르는 주요 버튼(결제 등) · 목록 한 줄 |
 | `font-client` | `--font-client` | Geist → Pretendard (`font-sans` 와 같다) | 고객 화면 전체 (`.theme-client` 아래는 자동) |
 
 ### 그림자
@@ -241,8 +241,8 @@ const columns: Column<UserRow>[] = [
 |---|---|---|
 | `ui/button.tsx` | **Button** — main · sub1(흰 면+링) · sub2(옅은 회색) · danger · ghost / `loading` | Button. `type` 기본 "button". ghost · loading 은 고객에만 |
 | `ui/iconButton.tsx` | **IconButton** — 글자 없는 버튼, `label` 필수(aria-label) | — (뒤로 · 닫기 · 장바구니) |
-| `ui/textField.tsx` · `textArea.tsx` | **TextField** · **TextArea** — label · hint · error · required, aria 연결 | InputBox · TextareaBox. 글자 16px 고정(iOS 확대 방지) |
-| `ui/select.tsx` | **Select** — 네이티브 `<select>` | SelectBox (직접 그린 목록 → 휴대폰 OS 시트) |
+| `ui/textField.tsx` · `textArea.tsx` | **TextField** · **TextArea** — label · hint · error · required, aria 연결 | InputBox · TextareaBox. 글자 14px · 손가락 기기만 16px(iOS 확대 방지) · 포커스는 테두리 색만 |
+| `ui/select.tsx` | **Select** — 직접 그린 둥근 목록 (combobox + listbox · 키보드 · Esc 는 목록만 닫음) | SelectBox 와 같은 방식. 부모가 overflow-hidden 이면 목록이 잘릴 수 있다 |
 | `ui/checkbox.tsx` · `toggle.tsx` · `radioGroup.tsx` | **Checkbox** · **Toggle**(`role="switch"`) · **RadioGroup**(카드형 선택) | Checkbox · Toggle · RadioButton |
 | `ui/card.tsx` · `badge.tsx` · `listRow.tsx` | **Card**(flat · raised) · **Badge**(neutral · success · warning · error · info) · **ListRow**(`to` → 링크, `onClick` → 버튼) | — |
 | `ui/emptyState.tsx` · `skeleton.tsx` · `spinner.tsx` | **EmptyState** · **Skeleton** · Spinner | Skeleton · Loading |
@@ -282,7 +282,7 @@ const columns: Column<UserRow>[] = [
 
 - 덮어쓰지 않는 것: `--ship` `--preview` `--develop`(관리자 워크플로 색 — 킷이 안 쓴다), 고정 radius 클래스(`rounded-comfy` 등 — 관리자용),
   브랜드 로그인 색(`kakao` · `google`)
-- `--control-h-md` 는 **44px 아래로 내리지 않는다** (터치 최소 크기). 모양 값은 공백 RGB 가 아니라 그대로 CSS 길이(`14px`)다
+- 휴대폰에서 자주 누르는 주요 버튼은 `size="lg"`(`--control-h-lg` 44px — 터치 권장). 기본은 sm(32px). 모양 값은 공백 RGB 가 아니라 그대로 CSS 길이(`14px`)다
 - 색 변수는 위 7장의 ⚠️ 그대로 — 테마마다 라이트·다크 둘 다, 기본 테마도 `[data-theme]` 를 붙인다
 
 ### 알아 둘 것

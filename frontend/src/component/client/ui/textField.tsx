@@ -75,7 +75,7 @@ const TextField = ({
           required={required}
           aria-invalid={invalid || undefined}
           aria-describedby={describedBy(inputId, hint, error)}
-          className="flex-1 min-w-0 h-full bg-transparent outline-none text-[16px] text-text-main placeholder:text-text-placeholder disabled:cursor-not-allowed"
+          className="flex-1 min-w-0 h-full bg-transparent outline-none text-[14px] [@media(pointer:coarse)]:text-[16px] text-text-main placeholder:text-text-placeholder disabled:cursor-not-allowed"
           {...props}
         />
         {rightIcon && (

@@ -51,7 +51,7 @@ const TextArea = ({
           maxLength={maxLength}
           aria-invalid={invalid || undefined}
           aria-describedby={describedBy(inputId, hint, error)}
-          className="w-full resize-none bg-transparent outline-none text-[16px] leading-relaxed text-text-main placeholder:text-text-placeholder disabled:cursor-not-allowed"
+          className="w-full resize-none bg-transparent outline-none text-[14px] [@media(pointer:coarse)]:text-[16px] leading-relaxed text-text-main placeholder:text-text-placeholder disabled:cursor-not-allowed"
           {...props}
         />
         {showCount && maxLength && (

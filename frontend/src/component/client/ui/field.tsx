@@ -24,7 +24,7 @@ const Field = ({ id, label, hint, error, required, full = true, className = "", 
   return (
     <div className={["flex flex-col gap-1.5 font-client", full ? "w-full" : "", className].join(" ")}>
       {label && (
-        <label htmlFor={id} className="text-[14px] font-medium tracking-tight text-text-main">
+        <label htmlFor={id} className="text-[13px] font-medium tracking-tight text-text-main">
           {label}
           {required && (
             <span className="ml-0.5 text-point-red" aria-hidden="true">
@@ -35,12 +35,12 @@ const Field = ({ id, label, hint, error, required, full = true, className = "", 
       )}
       {children}
       {errorText ? (
-        <p id={`${id}-error`} className="text-[13px] leading-snug text-point-red">
+        <p id={`${id}-error`} className="text-[12px] leading-snug text-point-red">
           {errorText}
         </p>
       ) : (
         hint && (
-          <p id={`${id}-hint`} className="text-[13px] leading-snug text-text-sub">
+          <p id={`${id}-hint`} className="text-[12px] leading-snug text-text-sub">
             {hint}
           </p>
         )

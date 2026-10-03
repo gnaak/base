@@ -21,8 +21,8 @@ const EmptyState = ({ icon, title, description, action, className = "" }: EmptyS
         {icon}
       </div>
     )}
-    <p className="text-[16px] font-semibold tracking-tight text-text-main">{title}</p>
-    {description && <p className="mt-1.5 max-w-xs text-[14px] leading-relaxed text-text-sub">{description}</p>}
+    <p className="text-[15px] font-semibold tracking-tight text-text-main">{title}</p>
+    {description && <p className="mt-1.5 max-w-xs text-[13px] leading-relaxed text-text-sub">{description}</p>}
     {action && <div className="mt-5">{action}</div>}
   </div>
 );

@@ -97,11 +97,11 @@ const Modal = ({
           </div>
         )}
         <div className="flex-1 min-w-0 pt-1.5">
-          <h2 id={titleId} className="text-[18px] font-semibold leading-snug tracking-tight text-text-main">
+          <h2 id={titleId} className="text-[16px] font-semibold leading-snug tracking-tight text-text-main">
             {title}
           </h2>
           {description && (
-            <div id={descId} className="mt-1.5 text-[14px] leading-relaxed text-text-sub whitespace-pre-wrap">
+            <div id={descId} className="mt-1.5 text-[13px] leading-relaxed text-text-sub whitespace-pre-wrap">
               {description}
             </div>
           )}

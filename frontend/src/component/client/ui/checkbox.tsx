@@ -16,8 +16,8 @@ interface CheckboxProps extends Omit<ComponentProps<"input">, "onChange" | "size
 // 줄 높이는 컨트롤 토큰 — 글자까지 눌러도 체크되고(label), md 줄 전체가 44px 터치 영역이다
 const sizeStyles: Record<Size, { row: string; box: string; icon: string; text: string }> = {
   sm: { row: "min-h-control-sm gap-2", box: "w-4 h-4", icon: "w-3 h-3", text: "text-[13px]" },
-  md: { row: "min-h-control-md gap-2.5", box: "w-5 h-5", icon: "w-3.5 h-3.5", text: "text-[15px]" },
-  lg: { row: "min-h-control-lg gap-3", box: "w-6 h-6", icon: "w-4 h-4", text: "text-[16px]" },
+  md: { row: "min-h-control-md gap-2.5", box: "w-5 h-5", icon: "w-3.5 h-3.5", text: "text-[14px]" },
+  lg: { row: "min-h-control-lg gap-3", box: "w-6 h-6", icon: "w-4 h-4", text: "text-[15px]" },
 };
 
 /**

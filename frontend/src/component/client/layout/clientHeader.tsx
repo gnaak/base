@@ -46,7 +46,7 @@ const ClientHeader = ({
       {onBack ? <IconButton icon={<ChevronLeft />} label={backLabel} onClick={onBack} /> : left}
     </div>
     {title && (
-      <h1 className="absolute left-1/2 max-w-[60%] -translate-x-1/2 truncate text-[16px] font-semibold tracking-tight text-text-main">
+      <h1 className="absolute left-1/2 max-w-[60%] -translate-x-1/2 truncate text-[15px] font-semibold tracking-tight text-text-main">
         {title}
       </h1>
     )}

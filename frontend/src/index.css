@@ -92,9 +92,9 @@
     --radius-control: 8px; /* 버튼 · 입력 · 체크박스 · 뱃지 → rounded-control */
     --radius-card: 12px; /* 카드 · 목록 묶음 · 토스트 → rounded-card */
     --radius-sheet: 16px; /* 모달 · 바텀시트 윗모서리 → rounded-sheet */
-    --control-h-sm: 36px; /* → h-control-sm */
-    --control-h-md: 44px; /* 손가락 터치 최소 크기(44px) → h-control-md */
-    --control-h-lg: 52px; /* → h-control-lg */
+    --control-h-sm: 32px; /* 기본 — size 를 안 적으면 sm → h-control-sm */
+    --control-h-md: 38px; /* → h-control-md */
+    --control-h-lg: 44px; /* 손가락 터치 권장(44px) — 휴대폰의 주요 버튼 → h-control-lg */
     --font-client: "Geist", "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   }
 

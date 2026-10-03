@@ -43,10 +43,10 @@ const ListRow = ({
     <>
       {leading && <span className="flex shrink-0 items-center text-text-sub [&_svg]:w-5 [&_svg]:h-5">{leading}</span>}
       <span className="flex-1 min-w-0 flex flex-col gap-0.5 text-left">
-        <span className="text-[15px] font-medium tracking-tight text-text-main truncate">{title}</span>
+        <span className="text-[14px] font-medium tracking-tight text-text-main truncate">{title}</span>
         {sub && <span className="text-[13px] text-text-sub truncate">{sub}</span>}
       </span>
-      {trailing && <span className="flex shrink-0 items-center gap-2 text-[14px] text-text-sub">{trailing}</span>}
+      {trailing && <span className="flex shrink-0 items-center gap-2 text-[13px] text-text-sub">{trailing}</span>}
       {interactive && chevron && <ChevronRight className="w-[18px] h-[18px] shrink-0 text-text-disabled" aria-hidden="true" />}
     </>
   );

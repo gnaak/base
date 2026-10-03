@@ -329,7 +329,7 @@ const UiPreview = () => {
             </Button>
           </Row>
           <Row label="full">
-            <Button full size="lg" loading={saving} onClick={handleFakeSave}>
+            <Button full loading={saving} onClick={handleFakeSave}>
               24,000원 결제하기
             </Button>
           </Row>

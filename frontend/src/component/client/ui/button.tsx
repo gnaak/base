@@ -36,11 +36,11 @@ const variants: Record<ButtonVariant, string> = {
   ghost: "bg-transparent text-text-main enabled:hover:bg-bg-hover enabled:active:bg-bg-active",
 };
 
-// 높이는 --control-h-* 토큰 (md = 44px 터치 최소 크기). 글자가 길어 두 줄이 되면 늘어난다
+// 높이는 --control-h-* 토큰 (sm 32 · md 38 · lg 44px). 글자가 길어 두 줄이 되면 늘어난다
 const sizes: Record<ButtonSize, string> = {
-  sm: "min-h-control-sm px-3 py-1.5 text-[13px] gap-1.5",
-  md: "min-h-control-md px-4 py-1.5 text-[15px] gap-2",
-  lg: "min-h-control-lg px-5 py-2 text-[16px] gap-2",
+  sm: "min-h-control-sm px-3 py-1 text-[13px] gap-1.5",
+  md: "min-h-control-md px-3.5 py-1.5 text-[14px] gap-1.5",
+  lg: "min-h-control-lg px-4 py-1.5 text-[15px] gap-2",
 };
 
 const iconSizes: Record<ButtonSize, string> = {

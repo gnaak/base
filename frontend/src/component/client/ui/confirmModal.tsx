@@ -85,11 +85,11 @@ const ConfirmModal = ({
         >
           {icon ?? style.icon}
         </div>
-        <h2 id={titleId} className="mt-5 text-[17px] font-semibold tracking-tight text-text-main">
+        <h2 id={titleId} className="mt-4 text-[16px] font-semibold tracking-tight text-text-main">
           {title}
         </h2>
         {description && (
-          <div id={descId} className="mt-2 text-[14px] leading-relaxed text-text-sub flex flex-col gap-3">
+          <div id={descId} className="mt-1.5 text-[13px] leading-relaxed text-text-sub flex flex-col gap-3">
             {description}
           </div>
         )}

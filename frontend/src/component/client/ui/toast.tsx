@@ -84,7 +84,7 @@ const Toast = ({
         >
           <Icon className={["w-[18px] h-[18px] shrink-0", description ? "mt-px" : "", color].join(" ")} aria-hidden="true" />
           <div className="flex-1 min-w-0">
-            {title && <p className="text-[14px] font-medium">{title}</p>}
+            {title && <p className="text-[13px] font-medium">{title}</p>}
             {description && <p className="mt-0.5 text-[13px] leading-relaxed text-text-sub">{description}</p>}
           </div>
           {closable && (

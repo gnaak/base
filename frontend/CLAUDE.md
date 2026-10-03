@@ -39,7 +39,7 @@ src/
 - `container/client/**` · `component/client/**` 에서 날 `<button>` `<input>` `<select>` `<textarea>` 는 **린트 에러**다
   (`ui/` · `layout/` 만 예외). 없는 컨트롤이면 페이지에 그리지 말고 `ui/` 에 추가한다
 - API 는 관리자 킷과 같은 이름 — `variant="main"|"sub1"|"sub2"|"danger"`(+ghost) · `size` · `leftIcon` · `full` ·
-  `onChange(값)`. 다른 점: 높이 `h-control-*`(md 44px) · `rounded-control`/`card`/`sheet` · `font-client` 라 테마가 모양까지 바꾼다
+  `onChange(값)`. 다른 점: 높이 `h-control-*`(기본 sm 32px · 휴대폰 주요 버튼은 lg 44px) · `rounded-control`/`card`/`sheet` · `font-client` 라 테마가 모양까지 바꾼다
 - 진행 중인 버튼은 `loading`(disabled + `aria-busy` + 스피너). 확인 창은 `ConfirmModal`, 고르기·폼은 `Modal`(모바일 바텀시트)
 - 테마는 `container/client/layout.tsx` 의 `.theme-client` 요소에 `data-theme` 으로 건다 — 모달 portal 이 이 요소에서 테마를 읽어 간다
 - 화면으로 확인: `npm run dev` 후 **`/dev/ui`** (운영 빌드에는 빠진다)
