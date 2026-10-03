@@ -19,6 +19,9 @@ dist/
 dist-ssr/
 *.local
 
+# 무인 실행 상태 (.claude/hooks/autopilot-gate.mjs 가 쓴다 — run 마다 다르다)
+.claude/autopilot/
+
 # Playwright (E2E 결과물)
 frontend/test-results/
 frontend/playwright-report/

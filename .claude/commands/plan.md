@@ -166,6 +166,7 @@ AskUserQuestion 으로 최대 2라운드, 라운드당 4개까지. 아이디어 
 ```
 
 마지막 보고(사람이 있으면): 만든 파일 목록, phase 개수, `DECISIONS.md` 의 🔴 개수와 🧑 첫 항목.
+다음은 **`/autopilot`** — phase 1 부터 사람 없이 끝까지 개발한다 (손으로 한 phase 씩 하려면 `/fullstack` · `/feature`).
 
 ## 하지 말 것
 

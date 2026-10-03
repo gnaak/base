@@ -79,6 +79,7 @@ cd frontend && npm run check:types && npm run lint
 cd frontend && npm test                              # vitest
 cd frontend && npm run build
 cd frontend && npm run e2e                           # 화면·세션 흐름을 바꿨다면 (전용 포트 3100/8100 · DB db_base_e2e)
+node --test .claude/hooks/autopilot-gate.test.mjs   # .claude/hooks 를 건드렸다면 (무인 실행 게이트)
 ./infra/.bin/<버전>/terraform -chdir=infra test     # infra/ 를 건드렸다면 (키 불필요, mock)
 ```
 
@@ -94,7 +95,8 @@ CI에서 다시 볼 일이 없다. (terraform 은 `./infra/tf.ps1` 을 한 번 �
 
 | | |
 | --- | --- |
-| `.claude/commands/` | `/setup`(clone 직후 1회) → `/plan`(기획 1회) → `/feature` `/design` `/fullstack` `/fix` `/test` → `/verify`(phase 끝·푸시 전) · `/seo_check`(푸시 전) |
+| `.claude/commands/` | `/setup`(clone 직후 1회) → `/plan`(기획 1회) → **`/autopilot`**(phase 전부 무인) 또는 `/feature` `/design` `/fullstack` `/fix` `/test` → `/verify`(phase 끝·푸시 전) · `/seo_check`(푸시 전) |
+| `.claude/hooks/` · `settings.json` | 무인 실행 게이트 — Stop 훅(남은 phase 가 있으면 다음 지시, 진전 없으면 ❌ 로 넘김) · PreToolUse 훅(무인 중 push·merge·배포 차단). `/autopilot` 이 켜 둔 동안만 동작한다 |
 | `.claude/agents/` | 단계별 서브에이전트 — `plan/`(리서치·PRD·페이지 맵·디자인) · `dev/backend/`(탐색·모델·API·**외부 연동**) · `dev/frontend/`(탐색·작성) · `verify/`(테스트 작성·보안 검토·완료 기준 대조) |
 | `.claude/skills/security/` | 이 템플릿 기준 보안 체크리스트 — sec-reviewer·`/verify` 가 쓴다 |
 | `.claude/skills/seo/` | SEO·AEO·GEO·LLMO·NEO 진단·구현 ([원본](https://github.com/leopard627/fire-your-seo-agency), MIT) |
@@ -114,7 +116,7 @@ CI에서 다시 볼 일이 없다. (terraform 은 `./infra/tf.ps1` 을 한 번 �
 ## phase 관리
 
 **시작 순서**: `/plan {아이디어}` → 인터뷰(사람이 붙는 유일한 곳) → 외부 리서치 → `PRD/02_PRD.md` →
-`03_PAGE.md`(페이지 맵) · `04_DESIGN.md`(고객 화면 테마) → `PROJECT.md`·`PROGRESS.md`·`DECISIONS.md` → phase 1부터 개발
+`03_PAGE.md`(페이지 맵) · `04_DESIGN.md`(고객 화면 테마) → `PROJECT.md`·`PROGRESS.md`·`DECISIONS.md` → **`/autopilot`**(phase 1부터 무인 개발)
 
 **무인으로 돈다 — 결정은 멈추지 않고 기록한다.**
 - **되돌리기 쉬운 결정은 기본값으로 진행한다.** 디자인 방향이 그렇다 — 후보를 전부 테마로 저장하고 기본값을 자동으로 고른다.
@@ -125,6 +127,10 @@ CI에서 다시 볼 일이 없다. (terraform 은 `./infra/tf.ps1` 을 한 번 �
   하드코딩하지 말고 기본값을 가진 설정(`RawEnv` 필드 → 운영은 SSM `/<project>/backend/*`)으로 둔다 —
   아침의 결정이 코드 수정이 아니라 값 하나가 되게. 데이터 구조가 갈리는 "구조" U 만 다시 개발이 필요하다
 - **무인으로 넘지 않는 선**: 실제 결제 키, 운영 배포, main merge. 무인 개발은 브랜치·테스트 키·로컬 DB 까지만 간다
+- **`/autopilot` 이 phase 를 돈다** — phase 마다 구현 → E2E(`frontend/e2e/phase-N.spec.ts`, 테스트 이름이 완료 기준 ID) →
+  `/test` → `/verify` → 커밋(제목에 `phase N`). 턴을 끝내려 하면 Stop 훅이 `PROGRESS.md` · git 을 **근거로** 보고 다음 지시를 준다 —
+  ✅ 라고 적어도 커밋과 `- 검증:` 줄이 없으면 안 넘어가고, 진전 없이 3번 멈추면 그 phase 를 ❌ 로 넘긴다.
+  push·merge·배포 명령은 PreToolUse 훅이 막는다. 다른 Stop 훅(`/goal`·ralph-loop 등)과 같이 켜지 말 것
 
 > `PRD/`, `PROJECT.md`, `PROGRESS.md`, `DECISIONS.md` 는 템플릿에 없다. 새 프로젝트에서 `/plan` 이 만든다.
 > 기획이 이미 끝나 있으면 아래 양식대로 `PROJECT.md` 를 직접 써도 된다.
@@ -158,11 +164,12 @@ CI에서 다시 볼 일이 없다. (terraform 은 `./infra/tf.ps1` 을 한 번 �
 **진행 기록 양식** (`PROGRESS.md`):
 
 ```markdown
-## N 단계: [이름]
+## phase N: [이름]
 
 - 상태: ⬜ 대기 / 🔄 진행중 / ✅ 완료 / ❌ 실패
 - 완료 시각:
 - 수행 내용:
+- 검증: (/verify 결과 한 줄 — 무인 실행은 이 줄과 제목에 `phase N` 이 든 커밋이 있어야 ✅ 로 친다)
 - 이슈/메모:
 ```
 

@@ -14,6 +14,8 @@ tools: Read, Grep, Glob
 2. 기준마다:
    - **구현**을 찾는다 — 그 동작을 만드는 라우터·서비스·컴포넌트 (`파일:줄`)
    - **테스트**를 찾는다 — 그 기준을 단언하는 테스트 (`backend/tests/`, `frontend/src/**/*.test.*`, `frontend/e2e/`).
+     먼저 **기준 ID 로 grep** 한다 — pytest 는 docstring 첫 줄, E2E(`frontend/e2e/phase-N.spec.ts`)는 테스트 이름이 ID 로 시작한다.
+     ID 가 붙어 있어도 단언이 기준과 맞는지는 따로 본다
      테스트 이름·단언문이 기준의 입력과 기대 결과를 실제로 확인하는지 본다 (이름만 비슷하면 안 된다)
    - 판정:
      | 판정 | 뜻 |

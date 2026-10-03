@@ -850,6 +850,8 @@ clone 부터 운영 배포까지 순서대로. **Claude Code 를 쓴다면 clone
 그다음 **`/plan {아이디어 한두 줄}`** 이 인터뷰 → 외부 리서치(경쟁·UX·디자인·연동·규제) → PRD →
 페이지 맵 · 고객 화면 테마 → `PROJECT.md` 의 phase 계획까지 만듭니다. 사람이 붙는 건 처음 인터뷰뿐이고,
 돈·법처럼 사람이 정해야 하는 것은 기본값으로 진행하면서 `DECISIONS.md` 에 모입니다. 개발은 phase 1(디자인 기반)부터입니다.
+**`/autopilot`** 을 부르면 phase 1 부터 마지막까지 사람 없이 돕니다 — phase 마다 구현 → E2E → 테스트 → `/verify` → 커밋,
+막히면 그 phase 를 ❌ 로 적고 다음으로, 끝나면 `DECISIONS.md` 요약과 휴대폰 페이지. push·merge·배포는 하지 않습니다.
 
 ### 9.1 가져오기
 
@@ -942,6 +944,7 @@ Terraform 이 EC2·RDS·Cloudflare 를 만들고, 그 뒤로는 main 푸시 = �
 - [ ] 브랜드 색(`index.css` 변수) · `adminMenu` · `SAMPLE_USERS`
 - [ ] alembic 리비전 유지/초기화 결정
 - [ ] `/plan {아이디어}` → `PROJECT.md` · `DECISIONS.md` (phase 0 의 심사·신청은 개발보다 먼저, 🔴 결정은 확인)
+- [ ] `/autopilot` (편집 자동 승인 모드에서) → 아침에 `DECISIONS.md` · 페이지 확인 → 브랜치 검토 후 머지
 - [ ] (배포) `edge` 결정 · 네임서버(CF Active / Route 53) · AWS 키 · `infra/.env` · `terraform.tfvars` · `apply`
 - [ ] (배포) GitHub Variables 3개 · Parameter Store 에 OAuth 키 · OAuth 콘솔 운영 URI
 - [ ] (배포) main 푸시 → CI 초록불
@@ -957,6 +960,8 @@ Claude Code로 개발한다면 `CLAUDE.md`, `frontend/CLAUDE.md`, `backend/CLAUD
 | `commands/setup.md` | `/setup` — 템플릿을 새 프로젝트로 가져왔을 때 바꿀 것들 (clone 직후 1회, 위 9.2~9.4) |
 | `commands/plan.md` | `/plan` — 아이디어 → 인터뷰 → 리서치 → `PRD/` → 페이지 맵·디자인 테마 → `PROJECT.md` · `DECISIONS.md` (`/setup` 다음 1회, 인터뷰 뒤로 무인) |
 | `commands/verify.md` | `/verify` — 린트·타입·테스트·빌드·디자인 린트 + 보안 검토 + 의존성 취약점 + 완료 기준 대조 (phase 끝·푸시 전) |
+| `commands/autopilot.md` | `/autopilot` — `PROJECT.md` 의 phase 를 사람 없이 끝까지 (`status` · `stop`). `/plan` 다음 |
+| `hooks/` · `settings.json` | 무인 실행 게이트 — Stop 훅이 근거(phase 커밋 · 검증 줄)를 보고 다음 지시, 진전 없으면 ❌ 로 넘김. PreToolUse 훅이 무인 중 push·merge·배포를 막는다. 꺼져 있으면 아무것도 안 한다 |
 | `commands/seo_check.md` | `/seo_check` — 검색·AI 인용이 조용히 0이 되는 사고를 정적 점검 (푸시 전) |
 | `skills/security/` | 이 템플릿 기준 보안 체크리스트 (권한·쿠키·OAuth·업로드·nginx 헤더·WebSocket·외부 연동 등) |
 | `skills/seo/` | SEO·AEO·GEO·LLMO·NEO(네이버) 진단·구현 스킬 |

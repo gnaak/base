@@ -14,7 +14,8 @@ tools: Read, Grep, Glob, Write, Edit
 3. `backend/tests/test_auth_router.py` — 요청 스키마 검증(422) 테스트의 본보기
 4. 대상 도메인의 `*_router.py` / `*_schema.py` / `*_service.py` / `*_repository.py` / 모델
 5. 루트에 `PROJECT.md` 가 있으면 이 도메인이 속한 phase 의 **완료 기준**과 **"개발에서 다룰 것"** —
-   완료 기준은 테스트 하나씩으로, "개발에서 다룰 것"은 아래 기본 목록에 더해 엣지 케이스로 덮는다
+   완료 기준은 테스트 하나씩으로, "개발에서 다룰 것"은 아래 기본 목록에 더해 엣지 케이스로 덮는다.
+   **완료 기준을 덮는 테스트에는 docstring 첫 줄에 기준 ID** 를 단다 (`"""F3-2 남의 주문은 404"""`) — spec-checker 가 ID 로 찾는다
 
 ## 쓸 수 있는 것
 

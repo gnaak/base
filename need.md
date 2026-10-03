@@ -72,16 +72,20 @@
 | 6 | 보안 수정 — 5 가 찾은 것 (OAuth state, 이메일 검증, 빈 jwt_secret, nginx 헤더, WebSocket 등) | ✅ | `e5ee584` |
 | 7 | 브라우저 E2E(Playwright) + 마이그레이션 CI | ✅ | `1d99d6a` |
 | — | 정리 — clone 체크리스트, 고객 첫 화면 · 테마 토글 · 확인 모달 | ✅ | `44fb586` `8434972` |
-| 8 | **무인 실행 (autopilot)** | ⬜ **다음** | |
+| 8 | 무인 실행 — `/autopilot` + Stop·PreToolUse 훅(근거로 판정, 상한, push·배포 차단) | 🔌 연결 | 아래 커밋 |
 | 9 | 배포 롤백 | ⬜ | |
 | 10 | 배포 스킬 | ⬜ | |
 
 순서는 "사람이 안 보는 동안 지켜줄 장치부터" — 고칠 것·만들 것(3·4)을 먼저 하고, 검증(5)이 그 전부를 덮게 했다.
 8 은 1~7 의 통합 검증을 겸한다 — 샘플 아이디어로 끝까지 돌리면 앞 단계가 전부 한 번에 검증된다.
 
-## D8. 무인 실행 — 다음에 할 것
+## D8. 무인 실행
 
-- [ ] 처리
+- [x] 연결 (2026-10-03) — 실제 run 은 사람이 [아침 확인 순서](#아침-확인-순서)로 본다
+
+**만든 것** — `.claude/commands/autopilot.md`(`/autopilot` · `status` · `stop`) ·
+`.claude/hooks/autopilot-gate.mjs`(Stop · PreToolUse 훅, Node 하나) · `.claude/settings.json`(훅 등록) ·
+`autopilot-gate.test.mjs`(임시 git 저장소 28개, CI frontend 잡). 아래는 처음에 적어 둔 설계이고 그대로 갔다.
 
 `/plan` 이 만든 `PROJECT.md` 의 phase 를 사람 없이 끝까지 돈다.
 
@@ -132,7 +136,6 @@
 ## 확인 못 한 것 · 범위 밖
 
 - `nginx -t` 를 못 돌렸다 (로컬 Docker 가 꺼져 있었다) — 6 에서 `deploy/site.conf` · `nginx.conf` 를 고쳤다
-- CI 의 e2e 잡은 로컬에서만 같은 순서로 돌려 봤다 — 첫 실행 결과는 GitHub Actions 에서 확인
 - npm dev 의존성 moderate 3건 (운영 번들엔 없다), eslint 경고 1 (`googleCallback` 의 1회 실행 useEffect — 의도)
 - 나중에: fe-test-writer, Playwright MCP, 배포 승인 게이트(GitHub environments), 모니터링·알림
 
