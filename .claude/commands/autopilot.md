@@ -1,6 +1,7 @@
 ---
 name: autopilot
 description: "PROJECT.md 의 phase 를 사람 없이 끝까지 돈다 — phase 마다 구현 → E2E → 테스트 → /verify → 커밋, 막히면 ❌ 로 적고 다음 phase, 끝나면 DECISIONS.md 요약 + 휴대폰 페이지. /plan 다음에 사용. 인자: 없음(시작·이어서) · status · stop."
+allowed-tools: Bash PowerShell Skill WebSearch WebFetch Read Write Edit Glob Grep
 ---
 
 $ARGUMENTS

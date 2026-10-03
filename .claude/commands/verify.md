@@ -1,6 +1,7 @@
 ---
 name: verify
 description: "검증을 한 번에 — 기계 검사(린트·타입·테스트·빌드·디자인 린트) + 보안 검토(sec-reviewer) + 의존성 취약점 + 완료 기준 대조(spec-checker). phase 를 끝낼 때, 푸시 전에, 무인 개발의 각 phase 끝에 사용. 인자: 없음(main 대비 변경분) · full(전체) · phase N."
+allowed-tools: Bash PowerShell Skill WebSearch WebFetch Read Write Edit Glob Grep
 ---
 
 $ARGUMENTS

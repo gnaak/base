@@ -1,6 +1,7 @@
 ---
 name: plan
 description: 새 프로젝트를 0에서 기획한다. 아이디어 한두 줄 → 인터뷰 → 외부 리서치 → PRD → 페이지 맵·디자인 테마 → PROJECT.md · DECISIONS.md. 인터뷰 뒤로는 사람을 기다리지 않는다. /setup 다음, 개발 전에 1회.
+allowed-tools: Bash PowerShell Skill WebSearch WebFetch Read Write Edit Glob Grep
 ---
 
 $ARGUMENTS

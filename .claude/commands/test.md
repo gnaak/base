@@ -1,6 +1,7 @@
 ---
 name: test
 description: 백엔드 라우터 테스트 작성 후 실행. 라우터 구현이 끝났을 때 사용.
+allowed-tools: Bash PowerShell Skill WebSearch WebFetch Read Write Edit Glob Grep
 ---
 
 $ARGUMENTS 도메인의 라우터 테스트를 작성하고 돌리세요.

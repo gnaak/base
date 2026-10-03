@@ -1,6 +1,7 @@
 ---
 name: start
 description: "처음 한 번 — 이 템플릿을 막 받은 사람(개발 도구가 하나도 없어도 된다)이 만들 것을 대화로 정하고, 이 PC 에서 돌아가게 셋업(도구 · DB · 시크릿 · 이름 · git)한 뒤 /plan 으로 넘어간다. 여러 번 다시 쳐도 했던 단계는 건너뛴다. 이미 PROJECT.md 가 있으면 쓰지 않는다."
+allowed-tools: Bash PowerShell Skill WebSearch WebFetch Read Write Edit Glob Grep
 ---
 
 $ARGUMENTS
@@ -11,6 +12,11 @@ $ARGUMENTS
 ## 말하는 방식
 
 - 쉬운 말로. 명령어 · 파일 경로는 필요할 때만 보여 주고, 무엇을 하는지 한 줄로 먼저 말한다 ("DB 를 만들게요")
+- **명령마다 "허용할까요?" 가 뜨지 않게** — 이 커맨드의 `allowed-tools` 가 셸 · 스킬 · 웹 · 파일을 미리 허용한다.
+  새로 받은 폴더는 아직 신뢰 전이라 `.claude/settings.json` 의 허용 규칙이 안 먹는데, 커맨드의 `allowed-tools` 는 신뢰와 상관없이 먹는다
+  (금지 목록은 그대로 막는다). 대신 **이 커맨드를 부른 한 턴 동안만** 유효하다 — 사용자가 새 메시지를 보내면 풀린다.
+  그래서 끝까지 AskUserQuestion 으로 이어 가고(답은 새 메시지가 아니라 같은 턴이다), 사용자가 선택지 밖에서 새 메시지를 보냈다면
+  이어 가기 전에 Skill 로 `start` 를 다시 불러 허용을 다시 건다 (0 단계가 어디까지 했는지 보고 이어서 한다)
 - **사람의 답이 필요한 곳은 전부 AskUserQuestion(선택지)으로 묻는다** — 글로 묻고 기다리지 않는다.
   Remote Control 로 휴대폰에서 볼 때 선택지 창이어야 **알림이 간다**. 비개발자에게도 버튼이 쉽다.
   자유롭게 말할 것(아이디어 · 비밀번호 · 이름)도 선택지 + 직접 입력(Other)으로 받는다. 한 번에 4개까지 묶을 수 있다
@@ -71,7 +77,7 @@ Windows 확인 창이 뜨면 '예' 만 눌러 주세요. (준비 30분 안팎, �
 | 들어온 것 | 할 일 |
 | --- | --- |
 | 한두 줄 (직접 입력) | 그걸로 아래 질문을 이어 간다 |
-| "붙여넣을게요" | "다음 메시지에 그대로 붙여넣어 주세요" — 받으면 원문을 `PRD/sources/` 에 `대화-YYYYMMDD.md` 로 그대로 저장하고 읽는다 |
+| "붙여넣을게요" | AskUserQuestion 의 직접 입력 칸에 그대로 붙여넣게 한다 (새 메시지로 보내면 허용이 풀린다 — 그래도 오면 받는다). 원문은 `PRD/sources/` 에 `대화-YYYYMMDD.md` 로 그대로 저장하고 읽는다 |
 | "파일이 있어요" | `PRD/sources/` 를 만들고 **탐색기로 열어 준다**(Windows `explorer "PRD\sources"` / macOS `open PRD/sources`) → AskUserQuestion [다 넣었어요 / 파일이 없어요] |
 
 `PRD/sources/` 의 파일 읽기:

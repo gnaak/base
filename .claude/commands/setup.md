@@ -1,6 +1,7 @@
 ---
 name: setup
 description: 템플릿을 새 프로젝트로 가져왔을 때 바꿔야 할 것들을 훑고 고친다. clone 직후 1회.
+allowed-tools: Bash PowerShell Skill WebSearch WebFetch Read Write Edit Glob Grep
 ---
 
 $ARGUMENTS
