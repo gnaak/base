@@ -16,8 +16,9 @@ $ARGUMENTS
      `Start-Process "<파일>"`(PowerShell) / macOS: `open "<파일>"` / Linux: `xdg-open "<파일>"`
   2. "열린 안내대로 ○○를 해 주세요. 끝나면 '했어' 라고 말해 주세요" 한 줄로 말하고 기다린다
   3. "했어" 가 오면 **다시 확인**하고 다음으로 간다 (확인이 안 되면 무엇이 안 됐는지 말한다)
-- 끊겨도 괜찮다 — 다시 `/start` 하면 아래 0 에서 어디까지 했는지 보고 이어서 한다. 프로그램을 설치하면 **VS Code 를
-  완전히 껐다 켜야** 새 프로그램이 보인다(Windows) — 그럴 땐 그렇게 말하고 멈춘다
+- **할 수 있는 건 묻지 않고 한다.** 있으면 건너뛰고, 없으면 설치한다 — 사람에게 넘기는 건 Claude 가 할 수 없는 것뿐이다
+  (Windows 설치 확인 창의 "예" · 프로그램 첫 실행의 약관 동의 · 재부팅 · 사람만 아는 비밀번호). 설치 확인 창은 보안 장치다 — 우회하지 않는다
+- 끊겨도 괜찮다 — 다시 `/start` 하면 아래 0 에서 어디까지 했는지 보고 이어서 한다 (재부팅이 필요할 때가 그렇다)
 
 ## 0. 어디까지 했나
 
@@ -31,8 +32,8 @@ $ARGUMENTS
 
 ## 1. 인사 · 아이디어 — 대화로
 
-짧게 알린다: "만들 것을 같이 정하고 → 이 PC 에서 돌아가게 준비하고 → 기획까지 갈게요. 사람이 할 일은 처음 대화와
-가끔 설치 확인 정도예요. (준비 20~40분, 기획 30~60분)"
+짧게 알린다: "만들 것을 같이 정하고 → 이 PC 에서 돌아가게 준비하고 → 기획까지 갈게요. 필요한 프로그램이 없으면 제가 설치해요 —
+Windows 확인 창이 뜨면 '예' 만 눌러 주세요. (준비 20~40분, 기획 30~60분)"
 
 `$ARGUMENTS` 에 아이디어가 있으면 거기서 시작한다. 양식이 아니라 **대화**다 — 한 번에 한두 가지만 묻고, 들은 걸 사용자의 말로
 되받아 정리한다. "모르겠다"는 그대로 받는다 (추측으로 채우지 않는다). 알아낼 것은 `/plan` 인터뷰와 같다:
@@ -59,17 +60,29 @@ $ARGUMENTS
 > /start 인터뷰 · 작성일: YYYY-MM-DD · 표시명: [표시명] · slug: [slug] · 한 줄 소개: [한 줄]
 ```
 
-## 4. 도구 — 없으면 설치를 돕는다
+## 4. 도구 — 있으면 건너뛰고, 없으면 설치한다
 
-| 도구 | 확인 | 왜 | 없으면 (Windows) | 없으면 (macOS · Linux) |
+| 도구 | 확인 | 왜 | 없으면 (Windows — 묻지 않고) | 없으면 (macOS · Linux) |
 | --- | --- | --- | --- | --- |
-| Git | `git --version` | 기록 · GitHub | `winget install --id Git.Git -e` | macOS 는 처음 `git` 을 치면 설치 창 |
-| uv | `uv --version` | **파이썬을 대신 받아 온다** — 파이썬을 따로 설치하지 않는다 | `winget install --id astral-sh.uv -e` | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
-| Node.js 20 이상 | `node --version` | 화면(프론트) | `winget install --id OpenJS.NodeJS.LTS -e` | nodejs.org 의 LTS 설치 파일 |
+| uv | `uv --version` | **파이썬을 대신 받아 온다** — 파이썬은 설치하지 않는다 | `winget install --id astral-sh.uv -e` (확인 창 없음) | `brew install uv`, brew 가 없으면 `02-tools.html` |
+| Node.js 20+ | `node --version` | 화면(프론트) | `winget install --id OpenJS.NodeJS.LTS -e` ("예" 한 번) | `brew install node`, 없으면 `02-tools.html` |
+| Git | `git --version` | 기록 · GitHub | `winget install --id Git.Git -e` ("예" 한 번) | macOS 는 `git` 을 치면 설치 창이 뜬다 |
 
-- 설치는 **사용자에게 먼저 묻고**("제가 설치할게요 — 관리자 확인 창이 뜨면 '예' 를 눌러 주세요") 한다.
-  `winget` 이 없거나 실패하면 `docs/guides/02-tools.html` 을 열어 손으로 설치하게 한다
-- 설치가 끝나면 Windows 는 지금 창에서 바로 안 보일 수 있다 → "VS Code 를 완전히 껐다 켜고 `/start` 를 다시 쳐 주세요" 로 멈춘다
+- winget 은 **항상** `--accept-package-agreements --accept-source-agreements` 를 붙인다 — 안 붙이면 처음 쓸 때 동의를 묻느라 멈춘다
+- 설치를 시작하기 전에 한 줄: "Node.js 를 설치할게요 — 확인 창이 뜨면 '예' 를 눌러 주세요"
+- **설치 직후에도 VS Code 를 껐다 켜지 않는다** — 지금 세션은 옛 PATH 를 갖고 있으니 명령마다 새 경로를 앞에 붙여 쓴다.
+  확인도 그렇게 한다 (Bash 도구는 명령마다 셸이 새로 떠서, 매번 붙여야 한다):
+  ```bash
+  # Git Bash (Windows) — 설치된 것만 앞에 붙여도 된다
+  export PATH="/c/Program Files/nodejs:/c/Program Files/Git/cmd:$HOME/AppData/Local/Microsoft/WinGet/Links:$HOME/.local/bin:/c/Program Files/Docker/Docker/resources/bin:$PATH"
+  ```
+  ```powershell
+  # PowerShell — 시스템 · 사용자 PATH 를 레지스트리에서 다시 읽는다
+  $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')
+  ```
+  그래도 못 찾을 때만 "VS Code 를 껐다 켜고 `/start` 를 다시 쳐 주세요" 로 멈춘다
+- winget 이 없거나(오래된 Windows) 설치가 실패하면 그때 `docs/guides/02-tools.html` 을 열어 손으로 하게 한다
+- `curl … | sh` 로 설치하지 않는다 (`.claude/settings.local.json` 이 막아 둔 형태다)
 
 ## 5. 이 PC 에서 돌아가게 — 묻지 않고 한다
 
@@ -88,12 +101,16 @@ $ARGUMENTS
      `… prepare_local databases db_{slug} db_{slug}_test db_{slug}_e2e`, `… prepare_local redis-db` 가 준 번호를 `.env` 의 `redis_db` 에
    - **Redis 인증 실패** — "no password is set" 이면 `.env` 의 `local_redis_password` 를 비운다. 비밀번호가 틀렸다면 사용자에게 묻는다
      (이것만 묻는다). 고친 뒤 다시 check
-   - **접속 안 됨** — Docker 로 띄운다:
-     - `docker info` 가 되면 저장소 루트에서 `docker compose up -d` → `docker compose ps` 가 healthy 가 될 때까지 기다린 뒤 다시 check →
-       `databases` · `redis-db` (위와 같이)
-     - Docker 가 설치돼 있는데 꺼져 있으면: Docker Desktop 을 켜 달라고 한다 (`docs/guides/03-docker.html`)
-     - Docker 가 없으면: 설치를 묻는다 — Windows `winget install --id Docker.DockerDesktop -e` (**재부팅이 필요할 수 있다**),
-       안내는 `docs/guides/03-docker.html`. Docker 를 못 쓰는 PC 면 `docs/guides/04-mysql-redis.html`(직접 설치)
+   - **접속 안 됨** — Docker 로 띄운다. 할 수 있는 건 다 알아서:
+     1. `docker` 가 없으면 설치 — Windows `winget install --id Docker.DockerDesktop -e --accept-package-agreements --accept-source-agreements`
+        ("예" 한 번). WSL 이 없다고 나오면 `wsl --install --no-distribution`(PowerShell, "예" 한 번). 둘 다 **재부팅이 필요할 수 있다** —
+        그러면 "PC 를 다시 시작하고 VS Code 를 열어 `/start` 를 쳐 주세요" 로 멈춘다. macOS 는 `brew install --cask docker`, 없으면 `03-docker.html`
+     2. 꺼져 있으면(`docker info` 실패) 켠다 — Windows `Start-Process "$env:ProgramFiles\Docker\Docker\Docker Desktop.exe"`, macOS `open -a Docker`.
+        `docker info` 가 될 때까지 10초 간격으로 2분 기다린다
+     3. 2분이 지나도 안 켜지면 대개 첫 실행의 약관 화면이다 → `docs/guides/03-docker.html` 을 열고 "약관에 동의(Accept)해 주세요" 로 기다린다.
+        가상화가 꺼져 있다는 메시지면 같은 문서의 "막히면" (BIOS) — 그래도 안 되면 `04-mysql-redis.html`(직접 설치)
+     4. 켜지면 저장소 루트에서 `docker compose up -d` → `docker compose ps` 가 둘 다 healthy 가 될 때까지 기다림 → 다시 `check` →
+        `databases` · `redis-db` (위와 같이)
 5. **테이블** — `cd backend && uv run alembic upgrade head`
 6. **로컬 관리자** — 비밀번호를 만들어(위 secrets 명령, 16자) 환경변수로 넘긴다:
    `ADMIN_PASSWORD=<만든 값> uv run python -m scripts.create_admin admin@example.com --password-env ADMIN_PASSWORD`.
@@ -106,7 +123,8 @@ $ARGUMENTS
    cd backend  && uv run pytest -q
    cd frontend && npm run check:types && npm test && npm run e2e
    ```
-   실패하면 설정 문제(DB 이름 · Redis 번호 · 3100/8100 포트를 다른 프로그램이 씀 등)를 찾아 고치고 다시. 두 번 실패하면 멈추고
+   E2E 는 3100 · 8100 포트를 쓴다 — 다른 프로그램이 쓰고 있으면 빈 포트를 골라 `E2E_WEB_PORT=… E2E_API_PORT=… npm run e2e`.
+   실패하면 설정 문제(DB 이름 · Redis 번호 등)를 찾아 고치고 다시. 두 번 실패하면 멈추고
    무엇이 실패했는지 쉬운 말로 보고한다 (코드를 고치지 않는다 — 템플릿 그대로는 통과해야 정상이다)
 
 ## 6. git — 이 프로젝트의 기록으로 새로 시작
@@ -146,5 +164,5 @@ git branch -M start main
 - 운영 값(`prod_*` · 도메인 · `infra/`)을 건드리지 않는다
 - 이미 채워진 `.env` 값을 덮어쓰지 않는다 (빈 칸과 템플릿 기본값만)
 - 다른 프로젝트의 DB · Redis 를 건드리지 않는다 — `CREATE DATABASE IF NOT EXISTS` 와 비어 있는 Redis 번호만 (`prepare_local` 이 그렇게 한다)
-- 사용자에게 묻지 않고 프로그램을 설치하지 않는다
+- 설치 확인 창(UAC) · `sudo` 비밀번호를 우회하지 않는다 — 사람이 누르게 한다
 - 셋업 확인이 실패했다고 앱 코드를 고치지 않는다 — 설정을 본다

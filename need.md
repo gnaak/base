@@ -160,8 +160,11 @@
 - `/plan` 은 `/start` 의 브리프가 있으면 인터뷰를 건너뛴다. 받는 쪽 기록은 GitHub **Use this template** 이나 `/start` 의 git 새로 시작으로 커밋 하나
 
 **처음부터 확인할 때 볼 것** — 아래는 추측이라 실제로 봐야 한다
-- `winget` 패키지 ID (`Git.Git` · `astral-sh.uv` · `OpenJS.NodeJS.LTS` · `Docker.DockerDesktop`) 로 실제로 설치되는가
-- Windows 에서 설치 직후 Claude Code 셸이 새 프로그램을 못 찾는가 (VS Code 재시작 안내가 맞는가)
+- `winget` 설치가 묻지 않고 끝까지 가는가 — ID 네 개(`Git.Git` · `astral-sh.uv` · `OpenJS.NodeJS.LTS` · `Docker.DockerDesktop`)는
+  `winget show` 로 있는 것을 확인했다 (2026-10-03). 설치 자체는 아직
+- 설치 직후 VS Code 재시작 없이 이어지는가 — `/start` 는 명령마다 PATH 를 다시 읽는다(레지스트리 · 알려진 경로). 이 PC 에서 그 명령이
+  도는 것까지는 확인했다
+- Docker Desktop 자동 실행 → 첫 실행 약관 화면에서 멈추는지, WSL 이 없는 PC 에서 재부팅 안내로 멈추는지
 - VS Code 확장의 "편집 자동 허용" 모드 이름 (`00-claude-code.html`)
 - 권한 창이 어디서 뜨는가 (스킬 호출 · 설치 명령)
 
