@@ -11,11 +11,15 @@ $ARGUMENTS
 ## 말하는 방식
 
 - 쉬운 말로. 명령어 · 파일 경로는 필요할 때만 보여 주고, 무엇을 하는지 한 줄로 먼저 말한다 ("DB 를 만들게요")
-- **사람이 직접 해야 하는 일**(설치 확인 창의 "예", 프로그램 실행, 회원가입 같은 것)이 생기면:
+- **사람의 답이 필요한 곳은 전부 AskUserQuestion(선택지)으로 묻는다** — 글로 묻고 기다리지 않는다.
+  Remote Control 로 휴대폰에서 볼 때 선택지 창이어야 **알림이 간다**. 비개발자에게도 버튼이 쉽다.
+  자유롭게 말할 것(아이디어 · 비밀번호 · 이름)도 선택지 + 직접 입력(Other)으로 받는다. 한 번에 4개까지 묶을 수 있다
+- **사람이 직접 해야 하는 일**(설치 확인 창의 "예", 프로그램 실행 · 약관 동의 같은 것)이 생기면:
   1. 그 일의 안내 문서(`docs/guides/*.html`)를 **브라우저로 연다** — Windows: `start "" "<파일>"`(Git Bash) 또는
      `Start-Process "<파일>"`(PowerShell) / macOS: `open "<파일>"` / Linux: `xdg-open "<파일>"`
-  2. "열린 안내대로 ○○를 해 주세요. 끝나면 '했어' 라고 말해 주세요" 한 줄로 말하고 기다린다
-  3. "했어" 가 오면 **다시 확인**하고 다음으로 간다 (확인이 안 되면 무엇이 안 됐는지 말한다)
+  2. AskUserQuestion 으로 기다린다 — "열린 안내대로 ○○를 해 주세요" + 선택지 [다 했어요 / 막혔어요]
+  3. "다 했어요" 면 **다시 확인**하고 다음으로 간다. 확인이 안 되거나 "막혔어요" 면 무엇이 안 됐는지 보고 다시 묻는다
+- 숫자 범위는 `~` 로 쓰지 않는다 (화면에서 `20~40분, 30~60분` 의 `~` 두 개가 취소선이 된다) — "30분 안팎", "20–40분"
 - **할 수 있는 건 묻지 않고 한다.** 있으면 건너뛰고, 없으면 설치한다 — 사람에게 넘기는 건 Claude 가 할 수 없는 것뿐이다
   (Windows 설치 확인 창의 "예" · 프로그램 첫 실행의 약관 동의 · 재부팅 · 사람만 아는 비밀번호). 설치 확인 창은 보안 장치다 — 우회하지 않는다
 - **명령은 저장소 루트에서, `cd` 를 섞지 않는다.** `cd … && …` 처럼 폴더를 옮기는 묶음 명령은 허용 설정이 있어도 확인 창이 뜬다 —
@@ -23,33 +27,52 @@ $ARGUMENTS
   `npm --prefix frontend …` 로, 명령 하나에 한 가지 일만 (아래 명령들이 모두 그 형태다)
 - 끊겨도 괜찮다 — 다시 `/start` 하면 아래 0 에서 어디까지 했는지 보고 이어서 한다 (재부팅이 필요할 때가 그렇다)
 
-## 0. 어디까지 했나
+## 0. 어디까지 했나 · git 바로 끊기
 
 | 보이는 것 | 뜻 | 할 일 |
 | --- | --- | --- |
 | `PROJECT.md` 가 있다 | 기획까지 끝난 프로젝트 | 멈추고 안내: 개발은 `/autopilot`(맡기고 자기) 또는 `/fullstack` 등 (하나씩) |
 | `PRD/00_brief.md` 머리에 `> /start 인터뷰` | 아이디어 · 이름은 정했다 | 표시명 · slug 를 거기서 읽고 4 부터 |
-| 둘 다 없다 | 처음 | 1 부터 — 단 아래 "여기가 템플릿 원본일 수 있다" 먼저 |
+| `backend/.env` 가 없다 | **막 받은 템플릿 — 새 프로젝트다** | 묻지 않고 아래 "git 바로 끊기" → 1 부터 |
+| `backend/.env` 가 있고 커밋이 여럿 · 브리프 없음 | 셋업해 둔 템플릿 원본일 수 있다 | AskUserQuestion: "여기를 새 프로젝트로 바꿀까요? (설정 · 이름 · git 기록이 바뀌어요)" [새 프로젝트로 / 아니요 — 멈추기] |
 
-**여기가 템플릿 원본일 수 있다** — 처음인데 git 커밋이 여럿이면(템플릿을 "Use this template" 이 아니라 그대로 받아 온 폴더)
-템플릿을 개발하는 원본 저장소일 수도 있다. 이 커맨드는 설정 · 이름 · git 기록을 바꾸므로 **시작 전에 한 번만** 묻는다:
-"템플릿을 그대로 받아 온 폴더네요. 여기를 새 프로젝트로 바꿔도 될까요? (설정 · 이름 · git 기록이 바뀌어요)". 아니라고 하면 멈춘다.
-커밋이 하나뿐(Use this template)이거나 git 이 아닌 폴더(ZIP)면 묻지 않는다.
+**git 바로 끊기** — 새 프로젝트로 정해지면 아이디어보다 먼저 한다 (base 를 가리키는 원격으로 실수로 푸시하지 않게):
+
+| 지금 | 할 일 |
+| --- | --- |
+| git 저장소가 아니다 (ZIP 으로 받음) | `git init -b main` → 첫 커밋 |
+| 커밋이 하나뿐 (GitHub "Use this template" 으로 만든 내 저장소) | 그대로 — 원격은 이미 내 저장소다 |
+| 커밋이 여럿 (base 를 그대로 받음) | base 원격과 기록을 떼고 새로 시작 ↓ |
+
+```bash
+git remote remove origin
+git checkout --orphan start
+git add -A
+git commit -m "init: base 템플릿에서 시작"
+git branch -M start main
+```
+
+- `rm -rf .git` 은 쓰지 않는다 (위 방법이면 지울 것 없이 새 기록이 된다)
+- 커밋 전에 `git config user.name` · `git config user.email` 이 비어 있으면(처음 쓰는 PC) 이 폴더에만 임시로 정한다 —
+  `git config user.name "me"` · `git config user.email "me@localhost"`. GitHub 에 올릴 때(05) 본인 것으로 바꾸자고 마지막 보고에서 말한다
 
 4~6 의 각 항목도 이미 된 것(`.env` 에 값이 있음, DB 가 있음, 관리자가 있음 …)은 건너뛴다.
 
-## 1. 인사 · 아이디어 — 대화로
+## 1. 인사 · 아이디어
 
 짧게 알린다: "만들 것을 같이 정하고 → 이 PC 에서 돌아가게 준비하고 → 기획까지 갈게요. 필요한 프로그램이 없으면 제가 설치해요 —
-Windows 확인 창이 뜨면 '예' 만 눌러 주세요. (준비 20~40분, 기획 30~60분)"
+Windows 확인 창이 뜨면 '예' 만 눌러 주세요. (준비 30분 안팎, 기획 1시간 안팎)"
+
+첫 메시지에 아이디어나 자료가 이미 있으면 바로 그걸로 간다. 없으면 AskUserQuestion — "무엇을 만들까요?"
+[한두 줄로 말할게요 · 고객과 나눈 대화를 붙여넣을게요 · 계약서 같은 파일이 있어요] + 직접 입력(여기에 바로 아이디어를 써도 된다)
 
 **받는 것은 한 줄 아이디어만이 아니다** — 고객과 나눈 대화(카톡 · 메일 · 회의록), 계약서 · 과업지시서 · 견적서, 기획 메모일 수 있다.
 
 | 들어온 것 | 할 일 |
 | --- | --- |
-| 한두 줄 | 그대로 대화를 시작한다 |
-| 붙여넣은 긴 글 | 원문을 `PRD/sources/` 에 `대화-YYYYMMDD.md` 처럼 그대로 저장하고 읽는다 |
-| "파일이 있어요" | `PRD/sources/` 를 만들고 **탐색기로 열어 준다**(Windows `explorer "PRD\sources"` / macOS `open PRD/sources`) — "여기에 넣고 '넣었어' 라고 해 주세요" |
+| 한두 줄 (직접 입력) | 그걸로 아래 질문을 이어 간다 |
+| "붙여넣을게요" | "다음 메시지에 그대로 붙여넣어 주세요" — 받으면 원문을 `PRD/sources/` 에 `대화-YYYYMMDD.md` 로 그대로 저장하고 읽는다 |
+| "파일이 있어요" | `PRD/sources/` 를 만들고 **탐색기로 열어 준다**(Windows `explorer "PRD\sources"` / macOS `open PRD/sources`) → AskUserQuestion [다 넣었어요 / 파일이 없어요] |
 
 `PRD/sources/` 의 파일 읽기:
 - txt · md · csv(카카오톡 대화 내보내기 포함) · docx · hwpx · xlsx · pptx —
@@ -66,20 +89,23 @@ Windows 확인 창이 뜨면 '예' 만 눌러 주세요. (준비 20~40분, 기�
 `PRD/sources/` 는 `.gitignore` 에 있다 — 고객 대화 · 계약서에는 개인정보와 기밀이 있어 git(GitHub)에 올리지 않는다.
 브리프에는 요약만 쓰고, 사람 이름 · 연락처 · 계좌 같은 건 옮기지 않는다 (필요하면 "담당자 A" 처럼).
 
-자료가 없으면 양식이 아니라 **대화**다 — 한 번에 한두 가지만 묻고, 들은 걸 사용자의 말로 되받아 정리한다.
-"모르겠다"는 그대로 받는다 (추측으로 채우지 않는다). 알아낼 것은 `/plan` 인터뷰와 같다:
+질문은 **AskUserQuestion 으로 묶어서** 묻는다 (한 번에 4개까지, 질문마다 흔한 답 2–4개 + 직접 입력).
+들은 걸 사용자의 말로 되받아 정리한다. "모르겠다"는 그대로 받는다 (추측으로 채우지 않는다) — 선택지에 "아직 모르겠어요" 를 넣는다.
+알아낼 것은 `/plan` 인터뷰와 같다 (자료에 답이 있는 건 뺀다):
 
 - 무엇을 · 누가 쓰나(얼마나) · 지금은 그 문제를 어떻게 해결하나(진짜 경쟁자는 엑셀 · 전화 · 카톡인 경우가 많다)
 - 돈은 어떻게 버나 (구독 · 수수료 · 광고 · 내부용) — 결제가 있으면 PG 심사가 일정을 좌우한다
 - 언제까지 · 몇 명이서
-- 로그인 방식(구글 · 카카오 · 이메일) · 관리자 화면이 필요한가
+- 로그인 방식(구글 · 카카오 · 이메일 — 여러 개 고를 수 있게) · 관리자 화면이 필요한가
 - 개인정보 · 결제 · 위치 · 의료 · 금융 · 청소년 중 해당하는 것 · 참고하는 서비스
 
-세 번쯤 주고받고 한 문단으로 요약해 "이렇게 이해했어요 — 맞아요?" 를 묻는다. "그냥 알아서 해" 면 아는 것만으로 간다.
+두세 번 묻고 한 문단으로 요약한 뒤 AskUserQuestion — "이렇게 이해했어요" [맞아요 / 고칠 게 있어요(직접 입력)].
+"그냥 알아서 해" 면 아는 것만으로 간다.
 
 ## 2. 이름
 
-- **표시명**(화면 · 제목에 쓴다, 한글 가능)과 **slug**(영문 소문자 · 숫자 · `_`, DB · 서버 이름에 쓴다)를 아이디어에서 제안하고 확인받는다
+- **표시명**(화면 · 제목에 쓴다, 한글 가능)과 **slug**(영문 소문자 · 숫자 · `_`, DB · 서버 이름에 쓴다)를 아이디어에서 2–3개 제안해
+  AskUserQuestion 으로 고르게 한다 (선택지 이름 예: "동네 클래스 · dongne_class") + 직접 입력
 - 예: 표시명 "동네 클래스", slug `dongne_class` → DB `db_dongne_class` · `db_dongne_class_test` · `db_dongne_class_e2e`
 
 ## 3. 브리프 — `PRD/00_brief.md`
@@ -143,15 +169,15 @@ Windows 확인 창이 뜨면 '예' 만 눌러 주세요. (준비 20~40분, 기�
 4. **DB · Redis** — `uv --directory backend run python -m scripts.prepare_local check`
    - **둘 다 OK** (이미 이 PC 에 떠 있다 — 다른 프로젝트와 같이 써도 된다):
      `… prepare_local databases db_{slug} db_{slug}_test db_{slug}_e2e`, `… prepare_local redis-db` 가 준 번호를 `.env` 의 `redis_db` 에
-   - **Redis 인증 실패** — "no password is set" 이면 `.env` 의 `local_redis_password` 를 비운다. 비밀번호가 틀렸다면 사용자에게 묻는다
-     (이것만 묻는다). 고친 뒤 다시 check
+   - **Redis 인증 실패** — "no password is set" 이면 `.env` 의 `local_redis_password` 를 비운다. 비밀번호가 틀렸다면 AskUserQuestion 으로 묻는다
+     [비밀번호를 알아요(직접 입력) / 모르겠어요 → Docker 로 새로 띄우기]. 고친 뒤 다시 check
    - **접속 안 됨** — Docker 로 띄운다. 할 수 있는 건 다 알아서:
      1. `docker` 가 없으면 설치 — Windows `winget install --id Docker.DockerDesktop -e --accept-package-agreements --accept-source-agreements`
         ("예" 한 번). WSL 이 없다고 나오면 `wsl --install --no-distribution`(PowerShell, "예" 한 번). 둘 다 **재부팅이 필요할 수 있다** —
         그러면 "PC 를 다시 시작하고 VS Code 를 열어 `/start` 를 쳐 주세요" 로 멈춘다. macOS 는 `brew install --cask docker`, 없으면 `03-docker.html`
      2. 꺼져 있으면(`docker info` 실패) 켠다 — Windows `Start-Process "$env:ProgramFiles\Docker\Docker\Docker Desktop.exe"`, macOS `open -a Docker`.
         `docker info` 가 될 때까지 10초 간격으로 2분 기다린다
-     3. 2분이 지나도 안 켜지면 대개 첫 실행의 약관 화면이다 → `docs/guides/03-docker.html` 을 열고 "약관에 동의(Accept)해 주세요" 로 기다린다.
+     3. 2분이 지나도 안 켜지면 대개 첫 실행의 약관 화면이다 → `docs/guides/03-docker.html` 을 열고 AskUserQuestion "Docker Desktop 의 약관에 동의(Accept)해 주세요" [다 했어요 / 막혔어요] 로 기다린다.
         가상화가 꺼져 있다는 메시지면 같은 문서의 "막히면" (BIOS) — 그래도 안 되면 `04-mysql-redis.html`(직접 설치)
      4. 켜지면 저장소 루트에서 `docker compose up -d` → `docker compose ps` 가 둘 다 healthy 가 될 때까지 기다림 → 다시 `check` →
         `databases` · `redis-db` (위와 같이)
@@ -173,23 +199,10 @@ Windows 확인 창이 뜨면 '예' 만 눌러 주세요. (준비 20~40분, 기�
    실패하면 설정 문제(DB 이름 · Redis 번호 등)를 찾아 고치고 다시. 두 번 실패하면 멈추고
    무엇이 실패했는지 쉬운 말로 보고한다 (코드를 고치지 않는다 — 템플릿 그대로는 통과해야 정상이다)
 
-## 6. git — 이 프로젝트의 기록으로 새로 시작
+## 6. 셋업 결과 커밋
 
-| 지금 | 할 일 |
-| --- | --- |
-| git 저장소가 아니다 (ZIP 으로 받음) | `git init -b main` → 아래 첫 커밋 |
-| 커밋이 하나뿐 (GitHub "Use this template" 으로 만든 내 저장소) | 원격은 이미 내 저장소다. 지금 변경만 커밋 |
-| 커밋이 여럿 (base 를 그대로 clone) | base 기록 · 원격을 떼고 새로 시작 ↓ |
-
-```bash
-git remote remove origin              # base 를 가리키고 있다 — 여기로 푸시하면 안 된다
-git checkout --orphan start
-git add -A
-git commit -m "init: {표시명} — base 템플릿에서 시작"
-git branch -M start main
-```
-
-`rm -rf .git` 은 쓰지 않는다 (위 방법이면 지울 것 없이 새 기록이 된다). `.env` 는 `.gitignore` 라 커밋되지 않는다 — 커밋 전에 `git status` 로 확인.
+git 은 0 에서 이미 새 기록으로 시작했다. 여기서는 브리프 · 이름 바꾸기 · 설정 파일 변경을 커밋만 한다 —
+`git status` 로 `.env` · `PRD/sources/` 가 안 들어가는지 보고 `git commit -m "chore: {표시명} — /start 셋업"`.
 내 GitHub 에 올리고 싶으면 `docs/guides/05-github.html` (저장소 만들기 → `git remote add origin …` → `git push -u origin main`).
 
 ## 7. 보고 → 기획으로
@@ -202,8 +215,9 @@ git branch -M start main
 | 확인 | pytest · 화면 테스트 · E2E 통과 여부 |
 | git | 새 기록 · 원격 |
 
-그리고 묻는다: **"기획(`/plan`)을 바로 시작할까요? 리서치 → 기획서 → 화면 목록 → 디자인 → 개발 계획까지 30~60분, 그동안 자리를 비워도 돼요."**
-예면 `/plan` 을 이어서 한다 (브리프가 있어 인터뷰를 건너뛴다). 아니면 "나중에 `/plan` 이라고 치면 돼요".
+그리고 AskUserQuestion: **"기획을 바로 시작할까요? 리서치 → 기획서 → 화면 목록 → 디자인 → 개발 계획까지 1시간 안팎, 그동안 자리를 비워도 돼요."**
+[지금 시작 (추천) / 나중에]. 지금이면 `/plan` 을 이어서 한다 (브리프가 있어 인터뷰를 건너뛴다). 나중이면 "나중에 `/plan` 이라고 치면 돼요".
+git 사용자 이름을 임시(`me`)로 정했다면 여기서 한 줄 알린다.
 
 ## 하지 말 것
 
