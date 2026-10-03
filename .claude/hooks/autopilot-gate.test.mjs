@@ -510,11 +510,12 @@ test("auto-continue — 사용자 설정에 한 줄만 더하고, 깨진 파일�
 });
 
 test("무인 중 확인 창에서 멈추는 호출은 거부한다 — .claude 편집 · 백그라운드 에이전트", (t) => {
-  const root = "C:/repo";
-  assert.match(unattendedStopReason({ tool_name: "Edit", tool_input: { file_path: "C:/repo/.claude/agents/x.md" } }, root), /\.claude\/agents\/x\.md/);
+  const root = join(tmpdir(), "repo"); // Windows · Linux(CI) 둘 다 맞는 절대 경로
+  const at = (...parts) => ({ tool_name: "Edit", tool_input: { file_path: join(root, ...parts) } });
+  assert.match(unattendedStopReason(at(".claude", "agents", "x.md"), root), /\.claude\/agents\/x\.md/);
   assert.ok(unattendedStopReason({ tool_name: "Write", tool_input: { file_path: ".claude/skills/deploy/SKILL.md" } }, root));
-  assert.equal(unattendedStopReason({ tool_name: "Edit", tool_input: { file_path: "C:/repo/backend/app/main.py" } }, root), null);
-  assert.equal(unattendedStopReason({ tool_name: "Edit", tool_input: { file_path: "C:/repo/.claudeignore" } }, root), null);
+  assert.equal(unattendedStopReason(at("backend", "app", "main.py"), root), null);
+  assert.equal(unattendedStopReason(at(".claudeignore"), root), null);
   assert.ok(unattendedStopReason({ tool_name: "Agent", tool_input: { run_in_background: true } }, root));
   assert.equal(unattendedStopReason({ tool_name: "Agent", tool_input: { run_in_background: false } }, root), null);
 
