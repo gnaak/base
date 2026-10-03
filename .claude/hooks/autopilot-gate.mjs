@@ -20,7 +20,7 @@ import { createHash } from "node:crypto";
 import { execFileSync, spawn } from "node:child_process";
 import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = process.env.AUTOPILOT_ROOT || resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -364,22 +364,50 @@ export const FORBIDDEN = [
 
 export const forbiddenReason = (command) => FORBIDDEN.find(([re]) => re.test(command ?? ""))?.[1] ?? null;
 
-export const preToolHook = (input) => {
-  heartbeat();
-  if (!loadState()?.active) return;
-  const hit = forbiddenReason(input?.tool_input?.command);
-  if (!hit) return;
+const EDIT_TOOLS = new Set(["Edit", "Write", "MultiEdit", "NotebookEdit"]);
+
+/** 무인 실행을 확인 창에서 멈추게 하는 호출이면 이유를, 아니면 null. 확인 창 대신 거부해서 Claude 가 다른 길로 가게 한다. */
+export const unattendedStopReason = (input, root = ROOT) => {
+  const tool = input?.tool_name;
+  const args = input?.tool_input ?? {};
+  // .claude/ 아래 편집은 편집 자동 승인에서도 파일마다 묻는다 (test2 에서 확인) — 밤새 거기서 멈춘다
+  if (EDIT_TOOLS.has(tool) && args.file_path) {
+    const rel = relative(resolve(root), resolve(root, args.file_path)).replace(/\\/g, "/");
+    if (rel === ".claude" || rel.startsWith(".claude/")) {
+      return (
+        `[autopilot] 무인 실행 중에는 .claude/ 아래(${rel})를 고치지 않는다 — 확인 창이 떠서 멈춘다. ` +
+        "설명 문서에 남은 언급이면 그대로 두고 DECISIONS.md 🔍 에 \"사람이 있을 때 정리\" 한 줄을 적고 계속하라."
+      );
+    }
+  }
+  // 백그라운드 에이전트는 완료 알림이 턴을 바꾸고, 기다리며 턴을 끝내면 Stop 훅이 "진전 없음" 을 센다
+  if ((tool === "Agent" || tool === "Task") && args.run_in_background === true) {
+    return (
+      "[autopilot] 무인 실행 중에는 하위 에이전트를 run_in_background: false 로 부른다 — 병렬이 필요하면 한 메시지에 여러 개. " +
+      "같은 호출을 run_in_background: false 로 다시 하라."
+    );
+  }
+  return null;
+};
+
+const deny = (reason) =>
   // 도구 호출을 막고 이유를 Claude 에게 보여 준다 (exit 2 + stderr 도 되지만 문서가 권하는 건 이 JSON)
   process.stdout.write(
     JSON.stringify({
-      hookSpecificOutput: {
-        hookEventName: "PreToolUse",
-        permissionDecision: "deny",
-        permissionDecisionReason:
-          `[autopilot] 무인 실행 중에는 ${hit} 을(를) 하지 않는다 — 브랜치 · 테스트 키 · 로컬 DB 까지만. ` +
-          "사람이 해야 하는 일이면 DECISIONS.md 의 🧑 사람이 할 일에 적고 계속하라.",
-      },
+      hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: reason },
     }),
+  );
+
+export const preToolHook = (input) => {
+  heartbeat();
+  if (!loadState()?.active) return;
+  const stop = unattendedStopReason(input);
+  if (stop) return deny(stop);
+  const hit = forbiddenReason(input?.tool_input?.command);
+  if (!hit) return;
+  deny(
+    `[autopilot] 무인 실행 중에는 ${hit} 을(를) 하지 않는다 — 브랜치 · 테스트 키 · 로컬 DB 까지만. ` +
+      "사람이 해야 하는 일이면 DECISIONS.md 의 🧑 사람이 할 일에 적고 계속하라.",
   );
 };
 

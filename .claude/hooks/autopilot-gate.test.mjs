@@ -11,7 +11,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { autoContinueOn, forbiddenReason, keepAwakeCommand, parsePhases, parseProgress } from "./autopilot-gate.mjs";
+import { autoContinueOn, forbiddenReason, keepAwakeCommand, parsePhases, parseProgress, unattendedStopReason } from "./autopilot-gate.mjs";
 
 const GATE = join(dirname(fileURLToPath(import.meta.url)), "autopilot-gate.mjs");
 
@@ -507,4 +507,20 @@ test("auto-continue — 사용자 설정에 한 줄만 더하고, 깨진 파일�
   writeFileSync(file, "{ 깨진 json");
   assert.match(autoContinueOn(file), /그대로 둔다/);
   assert.equal(readFileSync(file, "utf8"), "{ 깨진 json");
+});
+
+test("무인 중 확인 창에서 멈추는 호출은 거부한다 — .claude 편집 · 백그라운드 에이전트", (t) => {
+  const root = "C:/repo";
+  assert.match(unattendedStopReason({ tool_name: "Edit", tool_input: { file_path: "C:/repo/.claude/agents/x.md" } }, root), /\.claude\/agents\/x\.md/);
+  assert.ok(unattendedStopReason({ tool_name: "Write", tool_input: { file_path: ".claude/skills/deploy/SKILL.md" } }, root));
+  assert.equal(unattendedStopReason({ tool_name: "Edit", tool_input: { file_path: "C:/repo/backend/app/main.py" } }, root), null);
+  assert.equal(unattendedStopReason({ tool_name: "Edit", tool_input: { file_path: "C:/repo/.claudeignore" } }, root), null);
+  assert.ok(unattendedStopReason({ tool_name: "Agent", tool_input: { run_in_background: true } }, root));
+  assert.equal(unattendedStopReason({ tool_name: "Agent", tool_input: { run_in_background: false } }, root), null);
+
+  const repo = started(t);
+  const { json } = repo.run("pre-tool", { tool_name: "Edit", tool_input: { file_path: join(repo.dir, ".claude", "agents", "a.md") } });
+  assert.equal(json.hookSpecificOutput.permissionDecision, "deny");
+  repo.run("off");
+  assert.equal(repo.run("pre-tool", { tool_name: "Edit", tool_input: { file_path: join(repo.dir, ".claude", "agents", "a.md") } }).stdout, "", "꺼져 있으면 사람이 고치는 거다");
 });
