@@ -15,6 +15,9 @@ tools: Read, Glob, Grep, Write
 
 ## 이 템플릿의 디자인 구조 (먼저 이해할 것)
 
+루트 `DESIGN.md` **0장 "사람이 정한 취향"** 을 먼저 읽는다 — 테마가 바꿀 수 있는 건 색 · 모양 토큰 · 글꼴이고,
+0장의 크기 · 포커스 · 표 · 배치 규칙은 테마와 상관없이 지킨다 (테마 후보가 0장과 부딪히면 그 후보를 고친다).
+
 - 토큰은 `index.css` 의 CSS 변수이고 `tailwind.config.js` 가 그 변수를 클래스(`bg-bg-card`, `text-text-main` …)로 노출한다.
   값은 **공백 구분 RGB**(`37 99 235`) — `rgb(var(--x) / <alpha-value>)` 로 쓰기 때문이다
 - 다크모드는 `darkMode: "class"` — `<html>` 에 `.dark` 가 붙으면 `.dark { … }` 의 값이 상속된다

@@ -33,12 +33,13 @@ const TableHeader = ({ columns, rowSizeClass }: TableHeaderProps) => {
     <thead className="bg-bg-sub border-b border-line">
       <tr className={rowSizeClass}>
         {columns.map((col) => {
+          // 기본은 가운데 — 헤더도 본문과 같이 (사람이 정했다 · DESIGN.md "사람이 정한 취향")
           const alignClass =
-            col.align === "center"
-              ? "text-center justify-center"
+            col.align === "left"
+              ? "text-left justify-start"
               : col.align === "right"
                 ? "text-right justify-end"
-                : "text-left justify-start";
+                : "text-center justify-center";
 
           return (
             <th

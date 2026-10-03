@@ -93,7 +93,11 @@ const AdminLayout = () => {
           </div>
         </header>
         <div className="flex-1 overflow-y-auto scrollbar-hide">
-          <Outlet />
+          {/* 페이지네이션의 기준 상자 — 표가 짧으면 화면 맨 아래, 길면 표 끝 아래 15px 에 붙는다.
+              아래 여백은 페이지네이션(32px) + 15px + 숨 쉴 틈 */}
+          <div className="relative min-h-full pb-[64px]">
+            <Outlet />
+          </div>
         </div>
       </main>
     </div>

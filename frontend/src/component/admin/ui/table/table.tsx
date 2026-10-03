@@ -17,7 +17,7 @@ export type Align = "left" | "center" | "right";
  * @property key     행 데이터에서 읽을 key
  * @property header  테이블 헤더에 표시될 텍스트
  * @property width   개별 컬럼 가로 너비 (예: "150px" 또는 "20%")
- * @property align   정렬(left/center/right)
+ * @property align   정렬(left/center/right) — 안 주면 가운데 (헤더도)
  * @property render  셀 커스텀 렌더 함수(row → ReactNode)
  * @property rowCount 행 개수
  */

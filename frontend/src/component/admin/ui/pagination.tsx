@@ -3,10 +3,12 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 type PaginationSize = "sm" | "md";
 
 /**
- * - overlay: 테이블 하단 중앙 고정(absolute). 데이터 없으면 렌더 생략.
- * - flow: 문서 흐름에 두어 flex 레이아웃 안에서도 보임. 0건이어도 비활성 UI 표시.
+ * 페이지 맨 아래 가운데에 붙는다 — **항상** 기준 상자의 bottom 15px (absolute). 데이터가 없으면 그리지 않는다.
+ * 기준 상자는 관리자 레이아웃의 본문(`container/admin/layout.tsx` — relative · min-h-full · 아래 여백)이다.
+ * 그래서 카드처럼 relative 인 상자 안에 넣지 말고 **페이지의 맨 바깥**에 둔다.
+ * 표 길이에 따라 위치가 들썩이지 않게 한 것이다 (사람이 정했다 · DESIGN.md "사람이 정한 취향").
+ * 예전의 `variant="flow"`(흐름에 두기)는 없앴다 — 무인 개발이 그걸 골라 페이지마다 위치가 달랐다.
  */
-type PaginationVariant = "overlay" | "flow";
 
 interface Props {
   page: number;
@@ -16,7 +18,6 @@ interface Props {
   pageSize?: number;
   size?: PaginationSize;
   className?: string;
-  variant?: PaginationVariant;
 }
 
 const Pagination = ({
@@ -28,12 +29,8 @@ const Pagination = ({
   size = "md",
 
   className = "",
-
-  variant = "overlay",
-
 }: Props) => {
-
-  if (variant === "overlay" && total <= 0) return null;
+  if (total <= 0) return null;
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -122,16 +119,8 @@ const Pagination = ({
     </nav>
   );
 
-  if (variant === "flow") {
-    return (
-      <div className={`flex justify-center shrink-0 py-1 ${className}`}>
-        {nav}
-      </div>
-    );
-  }
-
   return (
-    <div className={`absolute bottom-5 left-1/2 -translate-x-1/2 ${className}`}>
+    <div className={`absolute bottom-[15px] left-1/2 -translate-x-1/2 ${className}`}>
       {nav}
     </div>
   );

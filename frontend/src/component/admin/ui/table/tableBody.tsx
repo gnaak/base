@@ -116,12 +116,13 @@ const TableBody = <Row extends TableRow>({
             }}
           >
             {columns.map((col) => {
+              // 기본은 가운데 (헤더와 같다). 긴 글 · 금액처럼 꼭 필요한 열만 align 을 준다
               const alignClass =
-                col.align === "center"
-                  ? "text-center"
+                col.align === "left"
+                  ? "text-left"
                   : col.align === "right"
                     ? "text-right"
-                    : "text-left";
+                    : "text-center";
 
               return (
                 <td
