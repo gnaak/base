@@ -185,7 +185,8 @@ const finishMissing = (state) => {
 // ── 판정 ───────────────────────────────────────────────────
 
 const RULES =
-  "묻지 말 것 — 결정이 필요하면 더 안전한 기본값으로 가고 DECISIONS.md 에 적는다. push · merge · 배포는 하지 않는다.";
+  "묻지 말 것 — 결정이 필요하면 더 안전한 기본값으로 가고 DECISIONS.md 에 적는다. push · merge · 배포는 하지 않는다. " +
+  "하위 에이전트는 포그라운드로 · .claude/ 는 고치지 않는다 · 진행 보고는 사용자의 언어(한국어)로.";
 
 // 지금 해야 할 일 하나를 고른다: 근거 없는 ✅ → 진행할 phase → 마무리
 export const decide = (state) => {
@@ -207,7 +208,7 @@ export const decide = (state) => {
         phase,
         text:
           `phase ${phase.n} 「${phase.name}」 이 ✅ 인데 근거가 없다: ${missing.join(", ")}. ` +
-          `/verify phase ${phase.n} 결과를 PROGRESS.md 의 \`- 검증:\` 줄에 적고 \`feat: phase ${phase.n} — ${phase.name}\` 으로 커밋하라. ` +
+          `/verify phase ${phase.n} quick 결과를 PROGRESS.md 의 \`- 검증:\` 줄에 적고 \`feat: phase ${phase.n} — ${phase.name}\` 으로 커밋하라. ` +
           `실제로 끝나지 않았으면 🔄 로 되돌리고 이어서 한다. ${RULES}`,
       };
     }
@@ -222,8 +223,8 @@ export const decide = (state) => {
       phase: current,
       text:
         `phase ${current.n}/${last} 「${current.name}」 을 ${started ? "이어서 한다" : "시작한다"}. ` +
-        "`.claude/commands/autopilot.md` 의 \"phase 하나\" 순서대로: PROGRESS 🔄 → 구현 → phase E2E → /test → " +
-        `/verify phase ${current.n} → ❌ 고치기 → PROGRESS ✅ + \`- 검증:\` 줄 → 커밋 \`feat: phase ${current.n} — ${current.name}\`. ${RULES}`,
+        "`.claude/commands/autopilot.md` 의 \"phase 하나\" 순서대로: PROGRESS 🔄 → 구현(탐색 없이 · 백엔드 + 화면 병렬 · 테스트) → phase E2E → " +
+        `/verify phase ${current.n} quick → ❌ 고치기 → PROGRESS ✅ + \`- 검증:\` 줄 → 커밋 \`feat: phase ${current.n} — ${current.name}\`. ${RULES}`,
     };
   }
 

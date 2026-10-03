@@ -1,6 +1,6 @@
 ---
 name: verify
-description: "검증을 한 번에 — 기계 검사(린트·타입·테스트·빌드·디자인 린트) + 보안 검토(sec-reviewer) + 의존성 취약점 + 완료 기준 대조(spec-checker). phase 를 끝낼 때, 푸시 전에, 무인 개발의 각 phase 끝에 사용. 인자: 없음(main 대비 변경분) · full(전체) · phase N."
+description: "검증을 한 번에 — 기계 검사(린트·타입·테스트·빌드·디자인 린트) + 보안 검토(sec-reviewer) + 의존성 취약점 + 완료 기준 대조(spec-checker). phase 를 끝낼 때, 푸시 전에, 무인 개발의 각 phase 끝에 사용. 인자: 없음(main 대비 변경분) · full(전체) · phase N · phase N quick(보안 · 의존성 빼고 — 무인 실행의 phase 끝)."
 allowed-tools: Bash PowerShell Skill WebSearch WebFetch Read Write Edit Glob Grep
 ---
 
@@ -15,6 +15,7 @@ $ARGUMENTS
 | (없음) | `git diff --name-only main...HEAD` + 아직 커밋 안 된 변경 (`git status --short`) |
 | `full` | 저장소 전체 |
 | `phase N` | 변경분 + PROJECT.md 의 phase N 완료 기준 대조 |
+| `phase N quick` | `phase N` 에서 **보안 검토(2) · 의존성(3)을 뺀다** — 기계 검사 + 완료 기준만. 무인 실행이 phase 마다 쓰고, 보안은 마무리의 `full` 에서 전체 코드로 한 번 본다 |
 
 변경분이 비어 있으면 그렇게 보고하고 끝낸다 (`full` 을 권한다).
 
@@ -36,17 +37,18 @@ cd frontend && npm run e2e                             # 화면·인증·세션 
 
 실패하면 실패한 명령·첫 에러를 그대로 보고에 넣고 다음 단계도 계속한다 (한 번에 다 보이게).
 
-## 2. 보안 검토 — `sec-reviewer`
+## 2. 보안 검토 — `sec-reviewer` (`quick` 이면 건너뛴다)
 
 대상(변경 파일 목록 또는 `full`)을 넘겨 호출한다. sec-reviewer 는 `.claude/skills/security/` 체크리스트를 따른다.
 
-## 3. 의존성 취약점 — 메인이 직접 돌린다 (네트워크 필요)
+## 3. 의존성 취약점 — 메인이 직접 돌린다 (네트워크 필요 · `quick` 이면 건너뛴다)
 
 `.claude/skills/security/references/deps.md` 의 명령. `pyproject.toml`·`uv.lock`·`package.json`·`package-lock.json` 이
 바뀌었거나 `full` 일 때만. 운영 의존성의 high·critical 은 ❌.
 
 ## 4. 완료 기준 대조 — `spec-checker` (PROJECT.md 가 있을 때만)
 
+기계 검사와 겹치지 않으니 **기계 검사를 돌리는 동안 같이** 부른다 (보안 검토가 있으면 sec-reviewer 와 한 메시지에서 병렬 · 포그라운드).
 `phase N` 을 받았거나, `PROGRESS.md` 에 🔄 진행중 phase 가 있으면 그 phase 로 호출한다.
 
 ## 5. 보고

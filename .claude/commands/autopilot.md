@@ -54,8 +54,15 @@ $ARGUMENTS
 1. `PROGRESS.md` 그 phase 를 `- 상태: 🔄 진행중`
 2. **읽기** — `PROJECT.md` 의 그 phase(목표 · 기능 · 페이지 · 설정값 · 모듈 · 완료 기준 · 개발에서 다룰 것),
    `PRD/02_PRD.md` 의 그 F-ID, `PRD/03_PAGE.md` 의 그 P-ID, phase 1 이면 `PRD/04_DESIGN.md`
-3. **구현** — 커맨드의 단계를 그대로 따른다 (에이전트 호출 순서 · 보고 확인):
-   백엔드 + 화면이면 `/fullstack`, 백엔드만 `/feature`, 화면만 `/design`.
+3. **구현 — 빠른 길.** 사람이 붙는 `/fullstack` · `/feature` 보다 짧다 — 메인이 2 에서 이미 읽었으므로 **탐색 에이전트(be-researcher ·
+   fe-researcher)를 부르지 않는다** (phase 마다 6분 안팎이 들었다):
+   a. **메인이 정한다** — 바꿀 파일과 **API 모양**(경로 · 요청/응답 스키마 · 에러코드 · 권한)을 몇 줄로. 기존 코드는 Grep · Read 로 짚는다
+   b. 모델이 바뀌면 `be-db-modeler` → 마이그레이션 (아래)
+   c. **한 메시지에서 병렬로** — `be-api-builder`(외부 연동이면 `be-external-api` 도) · `fe-ui-builder`(a 의 API 모양을 넘겨 연결까지).
+      화면이 백엔드를 기다리지 않는다 (예전에는 10분 안팎 기다렸다)
+   d. **한 메시지에서 병렬로** — `be-test-writer`(라우터마다 · 테스트 이름이나 docstring 에 완료 기준 ID) · `fe-api-connector`(c 의 결과가
+      API 모양과 어긋난 곳만 — 없으면 부르지 않는다)
+   e. 백엔드만 · 화면만인 phase 는 그쪽만. 에이전트 프롬프트에는 a 의 결정과 해당 F-ID · P-ID 문장을 그대로 넣는다
    - **모듈** 줄(`+scheduler` · `−websocket`)이 있으면 **기능보다 먼저** `.claude/skills/modules/references/` 의 그 레시피를
      끝까지 — 빼기는 레시피의 확인 grep 이 0건이어야 끝. 운영 Parameter Store 에서 지울 키는 `DECISIONS.md` 🧑 에.
      **`.claude/` 아래 파일은 고치지 않는다** — 편집 자동 승인에서도 파일마다 확인 창이 떠서 밤새 멈춘다 (modules `SKILL.md` 원칙 6)
@@ -69,10 +76,9 @@ $ARGUMENTS
    - **테스트 이름은 완료 기준 ID 로 시작** — `test("F3-2 남의 주문은 볼 수 없다", …)`. spec-checker 가 ID 로 찾는다
    - 로그인은 `e2e/helpers.ts` 의 `loginNewUser` · `loginAdmin`. 화면이 없는 phase 는 건너뛰고 `PROGRESS.md` 메모에 이유
    - 사람이 화면을 안 보는 대신 E2E 가 화면을 눌러 본다 — "버튼이 실제로 눌리는가"(다른 요소가 가리는가)까지
-5. **`/test {도메인}`** — 라우터마다. 테스트 이름이나 docstring 에 완료 기준 ID 를 단다.
-   테스트가 **앱 버그**를 잡으면 묻지 말고 앱을 고친다 (최대 3번). 그래도 안 되면 ⛔ 에 적는다.
+5. **테스트가 앱 버그를 잡으면** (3d) 묻지 말고 앱을 고친다 (최대 3번). 그래도 안 되면 ⛔ 에 적는다.
    테스트를 기대값에 맞춰 느슨하게 고치지 않는다
-6. **`/verify phase {N}`** → ❌ 를 고치고 다시 `/verify` (최대 2라운드)
+6. **`/verify phase {N} quick`** — 기계 검사 + 완료 기준 대조 (보안 검토는 마무리에서 전체로 한 번) → ❌ 를 고치고 다시 (최대 2라운드)
 7. **판정**
    - ✅ — 기계 검사(린트·타입·테스트·빌드·E2E)가 초록이고 완료 기준 ❌ 미충족이 없다.
      🟡 테스트 없음 · ⚠️ 는 ✅ 로 가되 `DECISIONS.md` 🔍 에 남긴다
@@ -86,7 +92,7 @@ $ARGUMENTS
    - 상태: ✅ 완료
    - 완료 시각: YYYY-MM-DD HH:MM
    - 수행 내용: (한두 줄)
-   - 검증: /verify phase N — 기계 ✅ · 보안 ❌0 ⚠️2 · 완료 기준 충족 5 / 테스트 없음 1 · E2E 3
+   - 검증: /verify phase N quick — 기계 ✅ · 완료 기준 충족 5 / 테스트 없음 1 · E2E 3
    ```
 9. **커밋** — `feat: phase {N} — {이름}`. **제목에 `phase {N}` 이 있어야 한다** — 게이트가 이걸 근거로 본다
 10. 바로 다음 phase 로 간다. 멈출 필요 없다 (멈추면 게이트가 다음 지시를 준다)
@@ -112,7 +118,8 @@ $ARGUMENTS
 ## 6. 마무리 — phase 가 전부 ✅ 또는 ❌
 
 1. 커밋 안 된 변경을 정리한다 (phase 의 것이면 커밋, 아니면 stash)
-2. **`/verify full`**
+2. **`/verify full`** — 보안 검토는 여기서 전체 코드로 한 번이다. ❌ 는 고치고 다시 (최대 2라운드) —
+   고친 커밋은 `fix: 보안 — {요약}`. 그래도 남으면 `DECISIONS.md` 🔍 에 파일:줄과 함께
 3. `DECISIONS.md` 맨 위(제목 바로 아래)에 이번 run 의 절을 넣고 "마지막 갱신" 줄을 고친다:
    ```markdown
    ## 🌙 무인 실행 결과 — run {run id}

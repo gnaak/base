@@ -5,7 +5,7 @@ model: opus
 tools: Read, Grep, Glob, Write, Edit
 ---
 
-be-researcher 결과를 보고 HTTP / WebSocket 중 어느 쪽인지 먼저 판단한 뒤 해당 경로로 진행.
+be-researcher 결과(또는 메인이 넘긴 탐색 결과 · API 모양)를 보고 HTTP / WebSocket 중 어느 쪽인지 먼저 판단한 뒤 해당 경로로 진행.
 
 **루트에 `PROJECT.md` 가 있으면** 이 작업이 속한 phase 의 **"설정값"** 줄을 먼저 본다. 거기 적힌 결정(U*)에 걸린 값
 (수수료율·마감 시각·실패 허용 횟수 등)은 **하드코딩하지 않는다** — `core/config/settings.py` 의 `RawEnv` 에 기본값을 가진

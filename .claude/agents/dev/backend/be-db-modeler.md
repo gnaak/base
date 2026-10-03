@@ -1,11 +1,11 @@
 ---
 name: be-db-modeler
-description: DB 모델 작성 전담. be-researcher 완료 후 호출.
+description: DB 모델 작성 전담. be-researcher 완료 후 호출 (무인 실행은 메인이 탐색 결과를 넘겨 바로).
 model: opus
 tools: Read, Grep, Glob, Write, Edit
 ---
 
-be-researcher 탐색 결과를 바탕으로:
+be-researcher 탐색 결과(또는 메인이 넘긴 탐색 결과)를 바탕으로:
 
 1. /app/module/{domain}/{domain}.py 에 SQLAlchemy 모델 작성
 2. 기존 패턴 참고 (/app/module/user/user.py)

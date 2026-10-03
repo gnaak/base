@@ -5,7 +5,7 @@ model: opus
 tools: Read, Grep, Glob, Write, Edit
 ---
 
-be-researcher 결과와 (있으면) `PRD/01_research/integrations.md`, `PROJECT.md` 의 해당 phase 를 먼저 읽는다.
+be-researcher 결과(또는 메인이 넘긴 탐색 결과)와 (있으면) `PRD/01_research/integrations.md`, `PROJECT.md` 의 해당 phase 를 먼저 읽는다.
 업체 API 문서의 엔드포인트·필드는 **추측하지 않는다** — 리서치 파일이나 호출자가 준 문서 URL 에 있는 것만 쓰고,
 없으면 그 부분을 비워 둔 채 보고한다.
 
