@@ -1,10 +1,9 @@
 # DESIGN — base 디자인 시스템
 
-> **이 문서는 관리자(콘솔) 화면 기준이다.** 고객이 보는 화면은 서비스마다 업종에 맞는 톤이 필요해서
-> 프로젝트마다 정한다 — `/plan` 이 업종 디자인 리서치로 후보를 만들어 `PRD/04_DESIGN.md` 에 테마별 값을 적으면,
-> 개발 phase 1 이 고객 레이아웃 최상단의 `.theme-client[data-theme]` 범위에서 아래 토큰을 덮어쓰고 이 문서에
-> "고객 화면" 절을 더한다. 테마 전환은 `data-theme` 값 하나. 토큰 이름·다크모드 구조는 그대로라
-> 컴포넌트는 어느 쪽에서든 같은 클래스를 쓴다.
+> **1~7장은 관리자(콘솔) 화면 기준이다.** 고객이 보는 화면은 **정해진 킷(`component/client/ui`)** 을 쓰고
+> 톤만 프로젝트마다 다르다 — `/plan` 이 업종 디자인 리서치로 후보를 만들어 `PRD/04_DESIGN.md` 에 테마별 **토큰 값**을 적으면,
+> 개발 phase 1 이 고객 레이아웃 최상단의 `.theme-client[data-theme]` 범위에서 토큰(색 · 모양 · 글꼴)을 덮어쓴다.
+> 테마 전환은 `data-theme` 값 하나. 킷 · 덮어쓸 수 있는 토큰 목록 · 린트는 [8장 "고객 화면"](#8-고객-화면--componentclientui).
 
 Vercel 콘솔 계열의 절제된 시스템. **깊이를 선이 아니라 1px 링(그림자)으로** 주고,
 색은 거의 쓰지 않으며, 타이포그래피의 음수 트래킹으로 밀도를 만든다.
@@ -96,6 +95,19 @@ Pretendard는 CDN에서 받아 한글을 맡는다.
 | `rounded-image` | 12px | 이미지·썸네일 |
 | `rounded-tab` / `rounded-nav-pill` | 64px / 100px | 탭·필 |
 
+위는 고정값(관리자용)이다. **고객 화면 킷은 아래 모양 토큰만 쓴다** — 값이 `index.css` 의 CSS 변수라 테마가 모양을 바꿀 수 있다.
+기본값은 지금 화면 그대로라 테마가 없으면 아무것도 안 바뀐다.
+
+| 클래스 | 변수 | 기본값 | 쓰는 곳 |
+|---|---|---|---|
+| `rounded-control` | `--radius-control` | 8px (관리자 버튼의 `rounded-lg`) | 버튼 · 입력칸 · 뱃지 · 체크박스(절반) |
+| `rounded-card` | `--radius-card` | 12px | 카드 · 목록 묶음 · 토스트 |
+| `rounded-sheet` | `--radius-sheet` | 16px | 모달 · 바텀시트 윗모서리 |
+| `h-control-sm` · `min-h-` · `w-` · `min-w-` | `--control-h-sm` | 36px | 작은 버튼 · 입력칸 |
+| `h-control-md` · … | `--control-h-md` | 44px — **손가락 터치 최소 크기** | 기본 버튼 · 입력칸 · 아이콘 버튼 |
+| `h-control-lg` · … | `--control-h-lg` | 52px | 결제 같은 주 버튼 · 목록 한 줄 |
+| `font-client` | `--font-client` | Geist → Pretendard (`font-sans` 와 같다) | 고객 화면 전체 (`.theme-client` 아래는 자동) |
+
 ### 그림자
 
 | 클래스 | 용도 |
@@ -124,7 +136,8 @@ Pretendard는 CDN에서 받아 한글을 맡는다.
 
 ## 5. 컴포넌트
 
-`frontend/src/component/admin/` — 참고용이자 출발점이다. 프로젝트에 맞게 고쳐 써도 된다.
+`frontend/src/component/admin/` — 관리자 화면용. 참고용이자 출발점이다. 프로젝트에 맞게 고쳐 써도 된다.
+고객 화면은 이걸 쓰지 않고 `component/client/ui` 를 쓴다 (8장) — prop 이름이 같아서 쓰는 법은 하나다.
 
 | 경로 | 컴포넌트 |
 |---|---|
@@ -203,3 +216,81 @@ const columns: Column<UserRow>[] = [
 **없는 클래스는 에러 없이 조용히 무시된다.** 쓰기 전에 `tailwind.config.js`에 실제로 있는지
 확인할 것 — 예전에 어드민 레이아웃이 `bg-adminMain`(존재하지 않음)을 쓰고 있어서
 배경색이 아예 안 먹고 있었다.
+
+---
+
+## 8. 고객 화면 — `component/client/ui`
+
+고객 화면의 컴포넌트는 **정해져 있다.** 프로젝트마다 다른 건 토큰 값(테마)뿐이고, 컴포넌트를 새로 지어내지 않는다 —
+그래야 phase 를 몇 번 돌아도 버튼 · 입력칸 · 시트가 한 모양으로 남는다. API 는 관리자 킷(5장)과 같은 이름이다
+(`variant="main"|"sub1"|"sub2"|"danger"` · `size` · `leftIcon` · `rightIcon` · `full` · `value`/`onChange(값)` …).
+
+### 규칙 — 고객 화면은 이 킷만 쓴다 (린트)
+
+- `src/container/client/**` · `src/component/client/**` 에서 날 `<button>` `<input>` `<select>` `<textarea>` 는
+  **`npm run lint` 에러**다 (`eslint.config.js` 의 `CLIENT_KIT_RULES`). 날 태그는 킷(`component/client/ui/` · `layout/`) 안에만 있다
+- 킷에 없는 컨트롤이 필요하면 페이지에 그리지 말고 `component/client/ui/` 에 추가한다 — 그때도 토큰 클래스만
+  (`rounded-control` · `h-control-*` · `bg-bg-card` …). 한 페이지 전용 조합(예: `planCard`)은 킷 컴포넌트를 묶어 `component/client/{페이지}/` 에
+- 범위 밖: 소셜 로그인 버튼(`hooks/auth/` — 각 사 가이드 색) · `ThemeToggle`(`component/common/` — 관리자와 같이 쓴다)
+- 눈으로 확인: 개발 서버의 **`/dev/ui`** — 모든 컴포넌트·상태 + 데모 테마 셋(기본 · 둥글고 따뜻한 · 각지고 단단한) + 라이트/다크.
+  "프로젝트 테마" 칸에 `data-theme` 이름을 넣으면 `index.css` 의 실제 테마로 본다. 운영 빌드에는 없다 (`import.meta.env.DEV`)
+
+### 컴포넌트
+
+| 경로 | 컴포넌트 | 관리자 짝 · 메모 |
+|---|---|---|
+| `ui/button.tsx` | **Button** — main · sub1(흰 면+링) · sub2(옅은 회색) · danger · ghost / `loading` | Button. `type` 기본 "button". ghost · loading 은 고객에만 |
+| `ui/iconButton.tsx` | **IconButton** — 글자 없는 버튼, `label` 필수(aria-label) | — (뒤로 · 닫기 · 장바구니) |
+| `ui/textField.tsx` · `textArea.tsx` | **TextField** · **TextArea** — label · hint · error · required, aria 연결 | InputBox · TextareaBox. 글자 16px 고정(iOS 확대 방지) |
+| `ui/select.tsx` | **Select** — 네이티브 `<select>` | SelectBox (직접 그린 목록 → 휴대폰 OS 시트) |
+| `ui/checkbox.tsx` · `toggle.tsx` · `radioGroup.tsx` | **Checkbox** · **Toggle**(`role="switch"`) · **RadioGroup**(카드형 선택) | Checkbox · Toggle · RadioButton |
+| `ui/card.tsx` · `badge.tsx` · `listRow.tsx` | **Card**(flat · raised) · **Badge**(neutral · success · warning · error · info) · **ListRow**(`to` → 링크, `onClick` → 버튼) | — |
+| `ui/emptyState.tsx` · `skeleton.tsx` · `spinner.tsx` | **EmptyState** · **Skeleton** · Spinner | Skeleton · Loading |
+| `ui/modal.tsx` · `confirmModal.tsx` · `toast.tsx` | **Modal**(모바일 바텀시트 · sm 이상 가운데) · **ConfirmModal** · **Toast** | Modal · ConfirmModal · Toast 와 같은 API (+ children · loading) |
+| `layout/clientHeader.tsx` · `bottomTab.tsx` · `pageContainer.tsx` | **ClientHeader**(뒤로 · 제목 · 오른쪽) · **BottomTab**(NavLink, safe-area) · **PageContainer**(최대 폭 · 여백) | — |
+
+킷 내부용: `dialogShell.tsx`(모달 껍데기 — ESC · 스크롤 잠금 · 포커스) · `themePortal.tsx` · `field.tsx` · `fieldStyle.ts`.
+
+```tsx
+<PageContainer bottomTab>
+  <TextField label="받는 분" required value={name} onChange={setName} error={nameError} />
+  <Card padding="none" className="divide-y divide-line">
+    <ListRow leading={<Receipt />} title="주문 내역" to="/orders" />
+    <ListRow title="푸시 알림" trailing={<Toggle aria-label="푸시 알림" checked={push} onChange={setPush} />} />
+  </Card>
+  <Button full size="lg" loading={paying} onClick={handlePay}>24,000원 결제하기</Button>
+</PageContainer>
+<BottomTab items={[{ label: "홈", to: "/", icon: Home }, { label: "주문", to: "/orders", icon: Receipt }]} />
+```
+
+### 테마가 덮어쓸 수 있는 토큰 — 이 목록만
+
+`.theme-client[data-theme="x"]`(라이트) · `.dark .theme-client[data-theme="x"]`(다크) 에서 **아래 변수만** 덮어쓴다.
+컴포넌트 · 클래스는 손대지 않는다.
+
+| 묶음 | 변수 | 라이트·다크 |
+|---|---|---|
+| 강조 | `--primary` `--primary-light` `--primary-dark` | 둘 다 |
+| 배경 | `--bg` `--bg-card` `--bg-sub` `--bg-hover` `--bg-active` `--bg-disabled` | 둘 다 |
+| 글자 | `--text-main` `--text-sub` `--text-disabled` `--text-placeholder` `--text-inverse` | 둘 다 |
+| 선 | `--border` `--border-strong` `--border-focus` `--shadow-border` | 둘 다 |
+| 입력 | `--input-bg` `--input-border` | 둘 다 |
+| 상태 | `--point-green` `--point-red` `--point-amber` `--point-blue` `--success-bg` `--error-bg` `--warning-bg` `--info-bg` | 둘 다 — 바꾸면 흰 배경·흰 글자 대비 4.5:1 을 다시 확인 |
+| 면 | `--overlay` `--surface-raised` `--skeleton-base` `--skeleton-shine` | 둘 다 |
+| **모양** | `--radius-control` `--radius-card` `--radius-sheet` `--control-h-sm` `--control-h-md` `--control-h-lg` | 라이트 규칙에 한 번 — 다크 규칙이 안 덮으니 그대로 간다 |
+| **글꼴** | `--font-client` | 라이트 규칙에 한 번 (웹폰트 로딩은 phase 1 이 `index.html`·`index.css` 에) |
+
+- 덮어쓰지 않는 것: `--ship` `--preview` `--develop`(관리자 워크플로 색 — 킷이 안 쓴다), 고정 radius 클래스(`rounded-comfy` 등 — 관리자용),
+  브랜드 로그인 색(`kakao` · `google`)
+- `--control-h-md` 는 **44px 아래로 내리지 않는다** (터치 최소 크기). 모양 값은 공백 RGB 가 아니라 그대로 CSS 길이(`14px`)다
+- 색 변수는 위 7장의 ⚠️ 그대로 — 테마마다 라이트·다크 둘 다, 기본 테마도 `[data-theme]` 를 붙인다
+
+### 알아 둘 것
+
+- **글꼴** — `index.css` 의 전역 `*` 가 요소마다 글꼴을 박아서 부모 글꼴이 상속되지 않는다. 그래서
+  `:where(.theme-client, .theme-client *)` 가 `--font-client` 로 다시 잡는다 (code · `font-mono` 는 그대로)
+- **모달 · 토스트는 `document.body` 로 portal 한다** (sticky · transform 부모에 갇히지 않게). body 는 `.theme-client` 밖이라
+  `themePortal.tsx` 가 가장 가까운 `.theme-client` 의 `data-theme` 과 인라인 `--*` 변수를 portal 감싸개로 옮긴다 —
+  **테마는 `.theme-client` 요소 자체에 건다** (중간 요소에 변수를 두면 모달에 안 따라간다)
+- 글자색 · 배경은 `.theme-client` 요소에서 다시 잡는다(`bg-bg text-text-main`) — body 의 값은 `:root` 토큰으로 계산돼 내려온다
+- safe-area(노치 · 홈 인디케이터)는 body 가 네 방향 모두 비운다. 화면에 붙는 것(BottomTab · 시트 · 토스트 · sticky 헤더)만 따로 비운다

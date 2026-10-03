@@ -31,6 +31,21 @@ const DEFAULT_SUFFIX = '(^|[\\s:])[a-z][a-z0-9-]*-DEFAULT(?=$|\\s)'
 const DEFAULT_SUFFIX_MESSAGE =
   '`-DEFAULT` 클래스는 생성되지 않는다 — 접미사를 뺀다 (`rounded-DEFAULT` → `rounded`, `bg-primary-DEFAULT` → `bg-primary`)'
 
+const DESIGN_SYNTAX_RULES = [
+  { selector: `Literal[value=/${FIXED_COLOR}/]`, message: FIXED_COLOR_MESSAGE },
+  { selector: `TemplateElement[value.raw=/${FIXED_COLOR}/]`, message: FIXED_COLOR_MESSAGE },
+  { selector: `Literal[value=/${DEFAULT_SUFFIX}/]`, message: DEFAULT_SUFFIX_MESSAGE },
+  { selector: `TemplateElement[value.raw=/${DEFAULT_SUFFIX}/]`, message: DEFAULT_SUFFIX_MESSAGE },
+]
+
+// 3) 고객 화면은 킷만 — 페이지마다 버튼·입력칸을 새로 그리면 화면마다 모양이 달라지고 테마(모양 토큰)가 안 닿는다.
+//    킷 자체(ui/ · layout/)만 날 태그를 쓴다. 소셜 로그인 버튼(hooks/auth)·ThemeToggle(component/common)은 범위 밖이다
+const CLIENT_KIT_MESSAGE =
+  '고객 화면에서는 날 <button>·<input>·<select>·<textarea> 를 쓰지 않는다 — component/client/ui 의 Button · IconButton · TextField · TextArea · Select · Checkbox · Toggle · RadioGroup · ListRow 를 쓴다. 없는 컨트롤이면 ui/ 에 추가한다. DESIGN.md "고객 화면"'
+const CLIENT_KIT_RULES = [
+  { selector: 'JSXOpeningElement[name.name=/^(button|input|select|textarea)$/]', message: CLIENT_KIT_MESSAGE },
+]
+
 export default tseslint.config(
   { ignores: ['dist'] },
   {
@@ -65,13 +80,15 @@ export default tseslint.config(
           whitelist: ['theme-client'],
         },
       ],
-      'no-restricted-syntax': [
-        'error',
-        { selector: `Literal[value=/${FIXED_COLOR}/]`, message: FIXED_COLOR_MESSAGE },
-        { selector: `TemplateElement[value.raw=/${FIXED_COLOR}/]`, message: FIXED_COLOR_MESSAGE },
-        { selector: `Literal[value=/${DEFAULT_SUFFIX}/]`, message: DEFAULT_SUFFIX_MESSAGE },
-        { selector: `TemplateElement[value.raw=/${DEFAULT_SUFFIX}/]`, message: DEFAULT_SUFFIX_MESSAGE },
-      ],
+      'no-restricted-syntax': ['error', ...DESIGN_SYNTAX_RULES],
+    },
+  },
+  {
+    // 고객 화면 — 같은 규칙 이름이라 위 디자인 규칙을 다시 적어야 한다 (뒤 블록의 옵션이 앞을 통째로 바꾼다)
+    files: ['src/container/client/**/*.{ts,tsx}', 'src/component/client/**/*.{ts,tsx}'],
+    ignores: ['src/component/client/ui/**', 'src/component/client/layout/**'],
+    rules: {
+      'no-restricted-syntax': ['error', ...DESIGN_SYNTAX_RULES, ...CLIENT_KIT_RULES],
     },
   },
 )

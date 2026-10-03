@@ -14,7 +14,7 @@ fe-researcher 결과(또는 메인이 넘긴 탐색 결과 · API 모양)를 바
 
 - `PRD/03_PAGE.md` — 만드는 페이지의 라우트·대상·포함 F-ID·진입 경로·다음 페이지·필요한 UI 패턴. **맵대로 만든다.**
   맵에 없는 페이지가 필요해 보이면 만들지 말고 보고한다 (페이지는 기획 결정이다)
-- `PRD/04_DESIGN.md` — 고객 화면의 원칙·타이포·모양·레이아웃, 7장 "만들 컴포넌트"(위치·재사용 여부)
+- `PRD/04_DESIGN.md` — 고객 화면의 원칙·타이포·모양·레이아웃, 7장 "만들 컴포넌트"(프로젝트 전용만 — 위치·무엇으로)
 - 둘 다 없으면(템플릿 그대로 쓰는 경우) 아래 규칙과 루트 `DESIGN.md` 만 따른다
 
 ## 화면이 어느 쪽인가
@@ -22,12 +22,20 @@ fe-researcher 결과(또는 메인이 넘긴 탐색 결과 · API 모양)를 바
 | 영역 | 디자인 | 컴포넌트 |
 | --- | --- | --- |
 | 관리자 (`/admin/**`) | 루트 `DESIGN.md` — 콘솔 스타일 그대로 | `component/admin/` 를 재사용 |
-| 고객 (`.theme-client` 아래) | `04_DESIGN.md` — 프로젝트마다 다르다 | `component/client/` 에 필요한 것을 만든다 |
+| 고객 (`.theme-client` 아래) | `04_DESIGN.md`(톤) + 루트 `DESIGN.md` 8장(킷) | **`component/client/ui` · `layout` 킷만** (린트) |
 
-- **고객 화면 컴포넌트는 필요하면 만든다.** 관리자용 컴포넌트를 억지로 끼워 맞추지 않는다.
-  다만 역할이 같고 토큰만으로 고객 톤이 나오는 것(Modal·Toast·폼 컨트롤 등)은 `04_DESIGN.md` 7장 표대로 재사용한다
-- 새로 만든 컴포넌트가 두 페이지 이상에서 쓰이면 `component/client/ui/` 로, 한 페이지 전용이면 그 페이지 이름 폴더로
-- 새 컴포넌트도 **색·radius·그림자는 토큰 클래스로만** 쓴다 — 그래야 `.theme-client` 값과 다크모드가 따라온다
+- **고객 화면은 고객 킷만 쓴다** — 관리자 컴포넌트(`component/admin/`)도, 날 `<button>`·`<input>`·`<select>`·`<textarea>` 도 쓰지 않는다.
+  `container/client/**` · `component/client/**` 에서 날 태그는 `npm run lint` 에러다 (킷 `ui/` · `layout/` 만 예외)
+  - 폼: Button(+`loading`) · IconButton(`label` 필수) · TextField · TextArea · Select · Checkbox · Toggle · RadioGroup → `component/client/ui/`
+  - 표시: Card · Badge · ListRow(`to` 링크 / `onClick` 버튼) · EmptyState · Skeleton · Spinner → `component/client/ui/`
+  - 피드백: Modal(모바일 바텀시트) · ConfirmModal · Toast → `component/client/ui/`
+  - 레이아웃: ClientHeader · BottomTab · PageContainer → `component/client/layout/`
+  - prop 이름은 관리자 킷과 같다 (`variant="main"|"sub1"|"sub2"|"danger"` · `size` · `leftIcon` · `full` · `onChange(값)`)
+- `04_DESIGN.md` 7장의 **프로젝트 전용** 컴포넌트만 새로 만든다:
+  - 킷을 묶은 조합(요금제 카드 등) → `component/client/{도메인}/` — 여러 페이지가 써도 `ui/` 가 아니다 (ui/ 는 린트 예외라)
+  - 킷에 없는 컨트롤(수량 스테퍼 등, 날 태그가 필요한 것) → `component/client/ui/` — 기존 킷 파일의 모양(`rounded-control` · `h-control-*` · `font-client`)을 따른다
+- 새 컴포넌트도 **색·radius·높이는 토큰 클래스로만** 쓴다 — 고정 radius(`rounded-lg` · `rounded-comfy`) 대신 `rounded-control`/`card`/`sheet`. 그래야 테마와 다크모드가 따라온다
+- 화면 확인은 개발 서버의 `/dev/ui` (킷의 모든 상태 · 데모 테마)
 
 ## 규칙
 

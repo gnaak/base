@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -17,6 +18,10 @@ import Kakao from "./container/client/auth/kakao";
 // 컴포넌트 밖에서 한 번만 만든다.
 // 안에서 만들면 App이 리렌더될 때마다 새 인스턴스가 생겨 캐시가 통째로 날아간다.
 const queryClient = new QueryClient();
+
+// 고객 화면 UI 킷 미리보기 — 개발 서버에서만. 운영 빌드는 import.meta.env.DEV 가 false 로 바뀌어
+// 이 import 가 통째로 빠진다 (dist 에 미리보기 코드가 없다)
+const UiPreview = import.meta.env.DEV ? lazy(() => import("./container/dev/uiPreview")) : null;
 
 function App() {
   return (
@@ -39,6 +44,17 @@ function App() {
                   {/* 404 도 고객 레이아웃 안에 둔다 — 밖에 있으면 고객 화면 테마(.theme-client)가 안 걸린다 */}
                   <Route path="*" element={<NotFoundPage />} />
                 </Route>
+
+                {UiPreview && (
+                  <Route
+                    path="/dev/ui/*"
+                    element={
+                      <Suspense fallback={null}>
+                        <UiPreview />
+                      </Suspense>
+                    }
+                  />
+                )}
 
                 <Route path="/admin/login" element={<AdminLogin />} />
                 {/* 관리자 가드는 PrivateRoute 한 곳에만 둔다.

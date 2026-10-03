@@ -84,6 +84,18 @@
     --ship: 255 91 79; /* #ff5b4f */
     --preview: 222 29 141; /* #de1d8d */
     --develop: 10 114 239; /* #0a72ef */
+
+    /* ── Shape (모양) — 고객 화면 킷(component/client/ui)이 쓴다 ───────────
+       색과 달리 라이트·다크가 같아서 .dark 에는 없다. 고객 화면 테마는
+       `.theme-client[data-theme="x"]` 에서 이 값도 덮어써 모양을 바꾼다 (DESIGN.md "고객 화면").
+       기본값은 지금 화면 그대로 — 관리자 버튼의 rounded-lg(8px) · 카드 12px · 모달 16px · Geist→Pretendard */
+    --radius-control: 8px; /* 버튼 · 입력 · 체크박스 · 뱃지 → rounded-control */
+    --radius-card: 12px; /* 카드 · 목록 묶음 · 토스트 → rounded-card */
+    --radius-sheet: 16px; /* 모달 · 바텀시트 윗모서리 → rounded-sheet */
+    --control-h-sm: 36px; /* → h-control-sm */
+    --control-h-md: 44px; /* 손가락 터치 최소 크기(44px) → h-control-md */
+    --control-h-lg: 52px; /* → h-control-lg */
+    --font-client: "Geist", "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   }
 
   .dark {
@@ -152,6 +164,13 @@
   font-feature-settings: "liga" 1, "calt" 1;
   -webkit-user-drag: none;
   touch-action: manipulation;
+}
+
+/* 고객 화면 글꼴 — 위의 `*` 가 요소마다 글꼴을 직접 박아서 부모의 font-family 가 상속되지 않는다.
+   그래서 `.theme-client` 아래 전부를 --font-client 로 다시 잡는다. :where 라 우선순위가 `*` 와 같아(0)
+   순서로만 이기고, code·pre·.font-mono·font-* 클래스에는 진다. 기본값이 위와 같은 글꼴이라 테마가 없으면 그대로다 */
+:where(.theme-client, .theme-client *) {
+  font-family: var(--font-client);
 }
 
 button {

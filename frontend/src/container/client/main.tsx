@@ -6,12 +6,16 @@ import KakaoLoginBtn from "@/hooks/auth/kakaoLogin";
 import { usePost } from "@/hooks/common/useAPI";
 import { useAuth } from "@/hooks/common/useAuth";
 import ThemeToggle from "@/component/common/themeToggle";
+import Badge from "@/component/client/ui/badge";
+import Button from "@/component/client/ui/button";
+import Card from "@/component/client/ui/card";
 
 /**
  * 고객 첫 화면 — **프로젝트마다 교체하는 자리다.** (`/plan` 의 phase 1 이 서비스 화면으로 바꾼다)
  *
  * 템플릿 상태에서도 볼 만하게: 왼쪽 소개 · 오른쪽 로그인 카드, 좁은 화면에선 위아래로 쌓인다.
- * 색은 전부 토큰이라 다크모드와 고객 화면 테마(`.theme-client[data-theme]`)가 그대로 먹는다.
+ * 고객 화면 킷(`component/client/ui`)만 쓴다 — 색·모양이 전부 토큰이라 다크모드와 고객 화면 테마
+ * (`.theme-client[data-theme]`)가 그대로 먹는다. 킷 미리보기는 개발 서버의 `/dev/ui`.
  */
 
 const FEATURES = [
@@ -58,10 +62,9 @@ const ClientMain = () => {
       <main className="flex-1 mx-auto w-full max-w-6xl px-5 md:px-8 py-10 md:py-16 grid gap-12 md:grid-cols-[1fr_380px] md:items-center">
         {/* 소개 */}
         <section className="flex flex-col gap-8">
-          <span className="self-start inline-flex items-center gap-2 rounded-full bg-bg-card shadow-border px-3 py-1 text-[12px] text-text-sub">
-            <span className="w-1.5 h-1.5 rounded-full bg-point-green" />
+          <Badge tone="success" className="self-start">
             zero-to-one 템플릿
-          </span>
+          </Badge>
 
           <div className="flex flex-col gap-4">
             <h1 className="text-[36px] md:text-[52px] leading-[1.1] font-semibold tracking-display">
@@ -77,7 +80,7 @@ const ClientMain = () => {
           <ul className="flex flex-col gap-4 max-w-[520px]">
             {FEATURES.map(({ Icon, title, desc }) => (
               <li key={title} className="flex gap-3">
-                <span className="shrink-0 w-9 h-9 rounded-comfy bg-bg-card shadow-border flex items-center justify-center text-text-sub">
+                <span className="shrink-0 w-9 h-9 rounded-control bg-bg-card shadow-border flex items-center justify-center text-text-sub">
                   <Icon className="w-4 h-4" />
                 </span>
                 <div className="flex flex-col gap-0.5 pt-0.5">
@@ -90,7 +93,7 @@ const ClientMain = () => {
         </section>
 
         {/* 로그인 카드 */}
-        <section className="w-full max-w-[420px] md:max-w-none mx-auto rounded-2xl bg-bg-card shadow-card p-7">
+        <Card as="section" variant="raised" padding="lg" className="w-full max-w-[420px] md:max-w-none mx-auto">
           {user ? (
             <div className="flex flex-col items-center text-center">
               <div className="w-14 h-14 rounded-full bg-bg-sub shadow-border flex items-center justify-center text-[18px] font-semibold text-text-sub">
@@ -98,25 +101,22 @@ const ClientMain = () => {
               </div>
               <h2 className="mt-4 text-[18px] font-semibold tracking-tight">{name}님, 반가워요</h2>
               <p className="mt-1 text-[13px] text-text-sub">로그인된 상태예요.</p>
-              <button
-                type="button"
+              <Button
+                variant="sub1"
+                full
+                className="mt-6"
+                leftIcon={<LogOut />}
+                loading={logoutMutation.isPending}
                 onClick={handleLogout}
-                disabled={logoutMutation.isPending}
-                className="
-                  mt-6 w-full h-11 rounded-xl inline-flex items-center justify-center gap-2
-                  text-[14px] font-medium text-text-main
-                  bg-bg-card shadow-border hover:bg-bg-hover active:bg-bg-active
-                  disabled:opacity-60 transition-colors
-                "
               >
-                <LogOut className="w-4 h-4" />
                 로그아웃
-              </button>
+              </Button>
             </div>
           ) : (
             <div className="flex flex-col">
               <h2 className="text-[18px] font-semibold tracking-tight">시작하기</h2>
               <p className="mt-1 text-[13px] text-text-sub">쓰던 계정으로 바로 계속하세요.</p>
+              {/* 소셜 로그인 버튼은 각 사 가이드 색이라 킷 밖(hooks/auth)에 있다 */}
               <div className="mt-6 flex flex-col gap-3">
                 <GoogleLoginBtn />
                 <KakaoLoginBtn />
@@ -133,7 +133,7 @@ const ClientMain = () => {
               <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
-        </section>
+        </Card>
       </main>
 
       <footer className="mx-auto w-full max-w-6xl px-5 md:px-8 py-6 text-[12px] text-text-disabled">

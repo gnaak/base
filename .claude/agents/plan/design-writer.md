@@ -9,8 +9,8 @@ tools: Read, Glob, Grep, Write
 후보를 **전부 테마로 저장**하고 기본값 하나를 자동으로 고른다. 사람은 실제 화면이 나온 뒤 테마를 바꿔 보며 고른다.
 
 입력: `PRD/00_brief.md`, `PRD/01_research/design.md`(방향 후보), `PRD/03_PAGE.md`(필요한 UI 패턴),
-루트 `DESIGN.md`, `frontend/src/index.css`(실제 CSS 변수 이름), `frontend/tailwind.config.js`(노출된 클래스),
-`frontend/src/component/`(이미 있는 컴포넌트). 재작성이면 기존 `04_DESIGN.md` + reviewer 펀치리스트.
+루트 `DESIGN.md`(**8장 "고객 화면" — 킷 목록과 덮어쓸 수 있는 토큰 목록**), `frontend/src/index.css`(실제 CSS 변수 이름),
+`frontend/tailwind.config.js`(노출된 클래스), `frontend/src/component/client/`(고객 화면 킷). 재작성이면 기존 `04_DESIGN.md` + reviewer 펀치리스트.
 출력: `PRD/04_DESIGN.md` 하나만 쓴다. **`DESIGN.md`·`index.css` 는 고치지 않는다** — phase 1 에서 같이 바꾼다.
 
 ## 이 템플릿의 디자인 구조 (먼저 이해할 것)
@@ -31,6 +31,12 @@ tools: Read, Glob, Grep, Write
   - ⚠️ **기본 테마도 `[data-theme]` 를 붙인다.** `[data-theme]` 없는 `.dark .theme-client` 를 쓰면 다른 테마의
     `.theme-client[data-theme="b"]` 와 우선순위가 같아져 작성 순서에 따라 테마끼리 값이 섞인다
   - Tailwind 클래스 이름은 그대로라 컴포넌트는 어느 테마·어느 영역에서든 같은 클래스를 쓴다
+- **테마는 토큰 덮어쓰기뿐이다** — 색 + 모양(`--radius-control` `--radius-card` `--radius-sheet` `--control-h-sm/md/lg`) + 글꼴(`--font-client`).
+  덮어쓸 수 있는 변수는 `DESIGN.md` 8장 "테마가 덮어쓸 수 있는 토큰" 표에 있는 것만이다. 신규 토큰은 만들지 않는다
+  (모양·글꼴 값은 공백 RGB 가 아니라 CSS 길이·글꼴 목록 그대로, 라이트 규칙에 한 번이면 다크에도 간다)
+- **고객 화면 컴포넌트는 정해져 있다** — `component/client/ui` · `layout`(Button · IconButton · TextField · TextArea · Select · Checkbox ·
+  Toggle · RadioGroup · Card · Badge · ListRow · EmptyState · Skeleton · Modal(모바일 바텀시트) · ConfirmModal · Toast ·
+  ClientHeader · BottomTab · PageContainer). 고객 화면은 이 킷만 쓴다(린트). 테마가 바꾸는 건 이 컴포넌트들의 색·모서리·높이·글꼴이다
 - 사장님 화면이 고객 쪽인지 관리자 쪽인지는 `03_PAGE.md` 의 대상·라우트를 보고 정해서 8장에 적는다
 
 ## 원칙
@@ -41,12 +47,14 @@ tools: Read, Glob, Grep, Write
 - **기본 테마는 기준으로 고르고 근거를 남긴다** — ① 브리프 일정에서 기본 테마만으로 만들 수 있나(토큰 밖 컴포넌트가 많으면 감점)
   ② 결제·주요 버튼 대비가 4.5:1 이상인가 ③ 경쟁사(리서치 표)와 구분되나 ④ 브리프 타겟·톤과 맞나.
   리서치가 추천을 적었으면 참고하되 이 기준으로 다시 확인한다
-- **`index.css` 에 있는 변수 이름만 쓴다.** 새 토큰이 필요하면 `신규` 로 표시하고, `tailwind.config.js` 에 추가할 클래스도 적는다
+- **`DESIGN.md` 8장 목록의 변수만 쓴다.** 후보가 토큰으로 표현 안 되는 것에 기대면(그라데이션 버튼 · 다른 내비게이션 등)
+  새 토큰을 만들지 말고 1장 "토큰 밖 차이" 에 적는다
 - **라이트와 다크 값을 둘 다 적는다.** 한쪽만 있으면 다크모드에서 깨진다
 - **대비를 확인한다** — 본문 텍스트/배경, 보조 텍스트/배경, 버튼 텍스트/버튼 배경. 4.5:1(큰 글자 3:1) 미만이면 바꾼다
 - **폰트는 라이선스를 적는다.** 웹폰트 로딩 방식(셀프 호스팅 / CDN)도
-- **컴포넌트는 `03_PAGE.md` 의 UI 패턴에서 뽑는다.** 템플릿에 역할이 같은 것이 있으면(Modal·Toast·폼 컨트롤 등)
-  토큰만으로 고객 톤이 나오는지 보고 재사용, 아니면 `component/client/` 아래 새로 만든다
+- **컴포넌트 목록은 고정이다.** `03_PAGE.md` 의 UI 패턴 중 킷에 있는 것(버튼 · 입력 · 선택 · 카드 · 뱃지 · 목록 · 빈 상태 ·
+  스켈레톤 · 모달/바텀시트 · 확인 창 · 토스트 · 상단 바 · 하단 탭)은 적지 않는다. 7장에는 **프로젝트 전용**만 —
+  킷 컴포넌트를 묶은 조합(예: 요금제 카드 = Card + Badge + Button)과, 킷에 없는 컨트롤(예: 수량 스테퍼 · 날짜 선택)뿐이다
 
 ## `04_DESIGN.md` 형식
 
@@ -67,26 +75,31 @@ tools: Read, Glob, Grep, Write
 (기본 테마 기준 3~5개. 예: "사진이 주인공 — 카드의 절반 이상은 사진")
 
 ## 3. 토큰 — `.theme-client[data-theme]` 범위에서 덮어쓸 값
-**모든 테마가 같은 변수 집합을, 라이트·다크 둘 다** 채운다.
+**모든 테마가 같은 변수 집합을** 채운다 — 색은 라이트·다크 둘 다, 모양·글꼴은 한 번(다크 칸은 "같음").
+변수는 `DESIGN.md` 8장 목록에 있는 것만.
 | 변수 | a 라이트 | a 다크 | b 라이트 | b 다크 | c 라이트 | c 다크 | 용도 | 비고 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | --primary | 194 65 12 | 251 146 60 | … | … | … | … | 주 버튼·링크 | |
-| --radius-card | 16px | 16px | 8px | 8px | 12px | 12px | 카드 | 신규 → tailwind `rounded-card` |
+| --radius-control | 14px | 같음 | 4px | 같음 | 8px | 같음 | 버튼·입력칸 (`rounded-control`) | |
+| --radius-card | 20px | 같음 | 6px | 같음 | 12px | 같음 | 카드 (`rounded-card`) | |
+| --control-h-md | 48px | 같음 | 44px | 같음 | 44px | 같음 | 기본 버튼·입력 높이 | 44px 미만 금지 |
+| --font-client | "Pretendard", sans-serif | 같음 | … | 같음 | … | 같음 | 고객 화면 글꼴 | |
 
 ## 4. 타이포
-폰트 · 라이선스 · 로딩 방식 / 스케일(제목·본문·보조, px·굵기·행간). 테마마다 폰트가 다르면 폰트도 변수로
+폰트 · 라이선스 · 로딩 방식 / 스케일(제목·본문·보조, px·굵기·행간). 테마마다 폰트가 다르면 3장 `--font-client` 값으로
 
 ## 5. 모양 (기본 테마 기준)
-radius · 그림자 · 사진 비율(카드 썸네일 등) — 테마별로 다른 값은 3장 변수로 뺀다
+모서리·높이 값은 3장 변수(`--radius-*` · `--control-h-*`)에 있다. 여기는 토큰 밖 규칙 — 그림자 쓰임, 사진 비율(카드 썸네일 등)
 
 ## 6. 레이아웃 (기본 테마 기준 — 테마가 바뀌어도 그대로)
 모바일 우선 여부, 내비게이션(하단 탭 등), 본문 최대 폭, 터치 영역 최소 크기
 
-## 7. 만들 컴포넌트
-| 컴포넌트 | 위치 | 쓰는 페이지(P-ID) | 템플릿 재사용 |
+## 7. 만들 컴포넌트 — 프로젝트 전용만
+킷(`component/client/ui` · `layout`, DESIGN.md 8장)에 있는 것은 적지 않는다. 없으면 "없음 — 킷만으로 된다".
+| 컴포넌트 | 위치 | 쓰는 페이지(P-ID) | 무엇으로 |
 | --- | --- | --- | --- |
-| PlanCard | component/client/ui/planCard.tsx | P2, P4 | 신규 |
-| Modal | component/admin/ui/feedback/modal.tsx | P5 | 재사용(토큰만) |
+| PlanCard | component/client/plan/planCard.tsx | P2, P4 | Card + Badge + Button 조합 |
+| QuantityStepper | component/client/ui/quantityStepper.tsx | P3 | 킷에 없는 컨트롤 — 토큰 클래스로 새로 |
 
 ## 8. 범위
 - 고객 화면(`.theme-client`): P…
@@ -101,5 +114,5 @@ radius · 그림자 · 사진 비율(카드 썸네일 등) — 테마별로 다�
 
 ## 메인에게 반환할 것
 
-- 파일 경로, 테마 수와 기본 테마 + 고른 근거 한 줄, 덮어쓰는 토큰 수(신규 포함), 만들 컴포넌트 수(신규 / 재사용)
+- 파일 경로, 테마 수와 기본 테마 + 고른 근거 한 줄, 덮어쓰는 토큰 수(색 / 모양·글꼴), 프로젝트 전용 컴포넌트 수
 - 대비 미달로 바꾼 조합, 리서치 후보 밖에서 가져온 값과 이유, 토큰 밖 차이가 있는 테마

@@ -9,14 +9,16 @@ src/
 ├── App.tsx                  # 루트 라우터 (여기만 function 키워드 허용)
 ├── container/               # 라우터 연결 페이지 (비즈니스 로직 + 훅)
 │   ├── admin/               # layout, login, main, group
-│   └── client/              # layout, main, auth/(google, kakao)
+│   ├── client/              # layout(.theme-client), main, auth/(google, kakao)
+│   └── dev/                 # uiPreview — /dev/ui, 개발 서버에서만
 ├── component/               # 순수 UI (props만 받아 렌더링)
 │   ├── common/              # errorBoundary · themeToggle (관리자·고객 공통)
-│   └── admin/               # layout/(sideBar, login) modal/
-│                            # ui/(form, feedback, table) + statCard skeleton pagination loading
+│   ├── admin/               # layout/(sideBar, login) modal/
+│   │                        # ui/(form, feedback, table) + statCard skeleton pagination loading
+│   └── client/              # 고객 화면 킷 — ui/(button, textField, modal …) layout/(clientHeader, bottomTab, pageContainer)
 ├── hooks/
 │   ├── auth/                # OAuth 로그인·콜백, publicRoute, privateRoute
-│   └── common/              # useAPI.ts useAuth.ts getCookie.ts
+│   └── common/              # useAPI.ts useAuth.ts getCookie.ts useScrollLock.ts
 ├── context/AuthProvider.tsx
 ├── types/                   # auth.ts user.ts errorCode.ts admin/
 ├── test/setup.ts            # vitest 공통 설정 (jsdom, 쿠키 초기화)
@@ -27,8 +29,20 @@ src/
 `AuthProvider`가 Router 안에 있어야 인증 로직에서 `navigate`를 쓸 수 있다.
 `QueryClient`는 **컴포넌트 밖**에서 만든다. 안에서 만들면 리렌더마다 캐시가 날아간다.
 
-`component/admin/ui/`의 컴포넌트(button, inputbox, modal, table 등)는 참고용.
+`component/admin/ui/`의 컴포넌트(button, inputbox, modal, table 등)는 관리자 화면용 참고 구현이다.
 프로젝트마다 필요한 컴포넌트를 새로 만들어 사용해도 된다.
+
+## 고객 화면 킷 — `component/client/ui` · `component/client/layout`
+
+**고객 화면은 이 킷만 쓴다.** 목록 · 덮어쓸 수 있는 토큰 · 주의점은 루트 [`DESIGN.md`](../DESIGN.md) 8장.
+
+- `container/client/**` · `component/client/**` 에서 날 `<button>` `<input>` `<select>` `<textarea>` 는 **린트 에러**다
+  (`ui/` · `layout/` 만 예외). 없는 컨트롤이면 페이지에 그리지 말고 `ui/` 에 추가한다
+- API 는 관리자 킷과 같은 이름 — `variant="main"|"sub1"|"sub2"|"danger"`(+ghost) · `size` · `leftIcon` · `full` ·
+  `onChange(값)`. 다른 점: 높이 `h-control-*`(md 44px) · `rounded-control`/`card`/`sheet` · `font-client` 라 테마가 모양까지 바꾼다
+- 진행 중인 버튼은 `loading`(disabled + `aria-busy` + 스피너). 확인 창은 `ConfirmModal`, 고르기·폼은 `Modal`(모바일 바텀시트)
+- 테마는 `container/client/layout.tsx` 의 `.theme-client` 요소에 `data-theme` 으로 건다 — 모달 portal 이 이 요소에서 테마를 읽어 간다
+- 화면으로 확인: `npm run dev` 후 **`/dev/ui`** (운영 빌드에는 빠진다)
 
 ## 코딩 컨벤션
 
@@ -236,6 +250,7 @@ hover·focus에서 요소가 밀리지 않는다. 그 외 `shadow-subtle` `shado
 **트래킹**: `tracking-display`(−0.06em) `tracking-heading` `tracking-title`(−0.04em) `tracking-tight`(−0.02em).
 큰 글자일수록 조인다.
 **radius**: `rounded-micro`(2) `rounded-subtle`(4) `rounded`(6) `rounded-comfy`(8) `rounded-image`(12) `rounded-tab`.
+고객 화면 킷은 테마가 바꾸는 변수형만 — `rounded-control`(8) `rounded-card`(12) `rounded-sheet`(16) · 높이 `h-control-sm/md/lg`(36/44/52) · `font-client`.
 **폰트**: Geist → Pretendard (`font-sans`) / Geist Mono (`font-mono`, 식별자·코드에만).
 폰트 크기는 임의값(`text-[13px]`)을 쓴다 — 기본 스케일은 이 밀도에 비해 성기다.
 숫자가 세로로 정렬되는 곳(표·지표)에는 `tabular-nums`.
@@ -250,10 +265,12 @@ hover·focus에서 요소가 밀리지 않는다. 그 외 `shadow-subtle` `shado
 조용히 무시된다 — 실제로 어드민 레이아웃이 `bg-adminMain`(존재하지 않는 클래스)을 쓰고 있어서
 배경색이 통째로 안 먹고 있었다.
 
-**`npm run lint` 가 이걸 막는다 (디자인 린트, `eslint.config.js`)** — 셋 다 에러로 잡는다:
+**`npm run lint` 가 이걸 막는다 (디자인 린트, `eslint.config.js`)** — 넷 다 에러로 잡는다:
 - 고정색 (`bg-white`·`gray-*`·`[#hex]`) — `no-restricted-syntax`
 - `tailwind.config.js`·`src/**/*.css` 에 없는 클래스 — `tailwindcss/no-custom-classname`.
   런타임에 붙이는 클래스는 `whitelist` 에 넣는다 (지금은 `theme-client`)
 - `-DEFAULT` 클래스 (`rounded-DEFAULT` 등) — 플러그인이 놓치는 패턴이라 따로 막는다. Tailwind 는 `rounded` 만 만든다
+- 고객 화면의 날 `<button>`·`<input>`·`<select>`·`<textarea>` — `container/client/**`·`component/client/**`(킷 `ui/`·`layout/` 제외).
+  같은 `no-restricted-syntax` 라 그 블록에 디자인 규칙을 다시 적어 두었다 (뒤 블록의 옵션이 앞을 통째로 바꾼다)
 
 `className` 속성·`clsx`·`cn` 밖(객체 맵 등)에 둔 클래스 문자열은 "없는 클래스" 검사가 못 본다 — 고정색 검사는 본다.

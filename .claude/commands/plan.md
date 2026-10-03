@@ -26,7 +26,7 @@ PRD/
     competitors.md · ux.md · design.md · integrations.md · regulations.md
   02_PRD.md                  ← 범위 · 기능 · 기능별 완료 기준 · 크리티컬 패스 · 리스크 · U*(기본값 포함)
   03_PAGE.md                 ← 화면 목록 · 라우트 · 대상 · 포함 F-ID · 흐름 · 필요한 UI 패턴
-  04_DESIGN.md               ← 고객 화면 테마 전부(토큰 라이트·다크) · 기본 테마 · 만들 컴포넌트
+  04_DESIGN.md               ← 고객 화면 테마 전부(토큰 라이트·다크) · 기본 테마 · 프로젝트 전용 컴포넌트
 PROJECT.md · PROGRESS.md     ← phase 계획
 DECISIONS.md                 ← 사람이 아침에 보는 페이지의 원본 — 결정 필요 · 사람이 할 일 · 막힌 곳
 ```
@@ -134,11 +134,13 @@ AskUserQuestion 으로 최대 2라운드, 라운드당 4개까지. 아이디어 
 
 - **phase 0 "준비"** 를 맨 앞에 둔다 — PRD 6장 크리티컬 패스와 7장 "사람이 할 것"(사업자·심사 신청·약관 등).
   개발 phase 가 아니라 사람이 할 일 목록이다. 무인 개발은 phase 0 을 건너뛰고 테스트 키로 진행한다
-- **phase 1 "디자인 기반"** 을 개발 맨 앞에 둔다 — `04_DESIGN.md` 를 실제로 적용한다:
-  `DESIGN.md` 에 고객 화면 절 추가, `index.css` 에 **테마 전부**(`.theme-client[data-theme="x"]` · `.dark .theme-client[data-theme="x"]`),
-  신규 토큰의 `tailwind.config.js` 클래스, 고객 레이아웃 최상단에 `class="theme-client" data-theme="{기본}"`, 폰트 로딩,
-  `04_DESIGN.md` 7장 중 여러 페이지가 쓰는 공통 컴포넌트. 완료 기준은 기능이 아니라 이것들이다 —
-  "고객 화면에서 주 색이 기본 테마 값", "`data-theme` 만 바꾸면 다른 테마 값", "관리자 화면은 그대로", "다크모드에서 각 테마의 다크 값"
+- **phase 1 "디자인 기반"** 을 개발 맨 앞에 둔다 — `04_DESIGN.md` 를 실제로 적용한다. 고객 화면 킷(`component/client/ui` · `layout`,
+  `DESIGN.md` 8장)은 이미 있으니 **토큰과 프로젝트 전용 컴포넌트만** 한다 — 킷 컴포넌트(버튼 · 입력 · 모달 …)를 다시 만들지 않는다:
+  `index.css` 에 **테마 전부**(`.theme-client[data-theme="x"]` · `.dark .theme-client[data-theme="x"]` — 색 + 모양 `--radius-*` · `--control-h-*` + `--font-client`),
+  고객 레이아웃(`container/client/layout.tsx`)의 `.theme-client` 에 `data-theme="{기본}"`, 폰트 로딩, `DESIGN.md` 8장에 프로젝트 테마 한 줄,
+  `04_DESIGN.md` 7장의 프로젝트 전용 컴포넌트(킷을 묶은 조합 · 킷에 없는 컨트롤). 완료 기준은 기능이 아니라 이것들이다 —
+  "고객 화면에서 주 색·모서리가 기본 테마 값", "`data-theme` 만 바꾸면 다른 테마 값", "관리자 화면은 그대로", "다크모드에서 각 테마의 다크 값"
+  (`/dev/ui` 의 "프로젝트 테마" 칸에 테마 이름을 넣어 눈으로 확인할 수 있다)
 - phase 2 부터는 must 기능을 의존 순서로 묶는다 (데이터 모델·인증 → 핵심 기능 → 관리자 → 외부 연동 순이 흔하다).
   템플릿에 "있음"인 기능은 phase 로 만들지 않는다. 각 phase 에 **"페이지: P3, P5"** 를 단다 (`03_PAGE.md` P-ID)
 - **U\* 가 걸린 phase 에는 "설정값: U1(수수료 비율), U4(마감 시각)" 줄을 단다** — 그 phase 는 해당 결정을

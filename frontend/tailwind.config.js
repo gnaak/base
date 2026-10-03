@@ -7,6 +7,29 @@ export default {
       fontFamily: {
         sans: ['"Geist"', '"Pretendard"', "-apple-system", "BlinkMacSystemFont", "sans-serif"],
         mono: ['"Geist Mono"', "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+        // 고객 화면 글꼴 — 테마가 --font-client 를 덮어쓰면 바뀐다 (index.css)
+        client: "var(--font-client)",
+      },
+      // 고객 화면 킷의 컨트롤 높이 — 테마가 --control-h-* 를 덮어쓰면 바뀐다. 정사각 아이콘 버튼 때문에 width 도 둔다
+      height: {
+        "control-sm": "var(--control-h-sm)",
+        "control-md": "var(--control-h-md)",
+        "control-lg": "var(--control-h-lg)",
+      },
+      minHeight: {
+        "control-sm": "var(--control-h-sm)",
+        "control-md": "var(--control-h-md)",
+        "control-lg": "var(--control-h-lg)",
+      },
+      width: {
+        "control-sm": "var(--control-h-sm)",
+        "control-md": "var(--control-h-md)",
+        "control-lg": "var(--control-h-lg)",
+      },
+      minWidth: {
+        "control-sm": "var(--control-h-sm)",
+        "control-md": "var(--control-h-md)",
+        "control-lg": "var(--control-h-lg)",
       },
       letterSpacing: {
         // Vercel display compression
@@ -24,6 +47,10 @@ export default {
         image: "12px",
         tab: "64px",
         "nav-pill": "100px",
+        // 고객 화면 킷 — 값은 index.css 의 변수라 테마가 모양을 바꿀 수 있다 (위 고정값들은 관리자용)
+        control: "var(--radius-control)",
+        card: "var(--radius-card)",
+        sheet: "var(--radius-sheet)",
       },
       boxShadow: {
         // Shadow-as-border (the signature) — index.css 의 --shadow-border 로 테마 전환
@@ -75,6 +102,11 @@ export default {
           "0%": { opacity: "1" },
           "100%": { opacity: "0.15" },
         },
+        // 고객 화면 바텀시트 — 모바일에서 아래에서 올라온다 (sm 이상은 가운데 모달이라 fade-slide)
+        "sheet-up": {
+          "0%": { transform: "translateY(100%)" },
+          "100%": { transform: "translateY(0)" },
+        },
       },
       animation: {
         "fade-slide": "fade-slide 150ms ease-out",
@@ -83,6 +115,7 @@ export default {
         "drawer-in": "drawer-in 180ms ease-out",
         "fade-in": "fade-in 180ms ease-out",
         "needle-fade": "needle-fade 1.2s linear infinite",
+        "sheet-up": "sheet-up 180ms ease-out",
       },
       colors: {
         // CSS 변수 기반 시맨틱 토큰 (라이트/다크 자동 전환).
