@@ -1,5 +1,4 @@
 import { useMutation, useQuery, keepPreviousData } from "@tanstack/react-query";
-import { useRef } from "react";
 
 import { clearAuthCookies } from "@/hooks/common/getCookie";
 import { AuthType } from "@/types/auth";
@@ -329,67 +328,4 @@ export const useDelete = <
       return json.data;
     },
   });
-};
-
-export const useChatStream = <TRequest extends object>(
-  url: string,
-  authType: AuthType = currentAuthType(),
-) => {
-  const controllerRef = useRef<AbortController | null>(null);
-
-  const sendMessage = async (
-    body: TRequest,
-    onChunk: (chunk: string) => void,
-  ) => {
-    const controller = new AbortController();
-    controllerRef.current = controller;
-
-    const response = await fetchWithRefresh(
-      () =>
-        fetch(`${baseURL}/${url}`, {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-          signal: controller.signal,
-        }),
-      authType,
-    );
-
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`Chat API Error ${response.status}: ${text}`);
-    }
-
-    if (!response.body) throw new Error("No stream body");
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-
-    try {
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-
-        if (value) {
-          const chunk = decoder.decode(value, { stream: true });
-          onChunk(chunk);
-        }
-      }
-    } catch (err) {
-      if (err instanceof Error && err.name === "AbortError") {
-        console.log("Chat stream aborted");
-      } else {
-        throw err;
-      }
-    } finally {
-      controllerRef.current = null;
-    }
-  };
-
-  const abort = () => {
-    controllerRef.current?.abort();
-  };
-
-  return { sendMessage, abort };
 };

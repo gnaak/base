@@ -38,7 +38,6 @@ class ServiceProvider:
         self._user_service = None
         self._auth_service = None
         self._admin_service = None
-        self._gpt_service = None
         self._kakao_service = None
         self._google_service = None
 
@@ -84,13 +83,6 @@ class ServiceProvider:
 
             self._redis_service = RedisService()
         return self._redis_service
-
-    @property
-    def gpt_service(self):
-        if not self._gpt_service:
-            from app.module.infra.gpt.gpt_service import GPTService
-            self._gpt_service = GPTService(self.redis_service)
-        return self._gpt_service
 
     @property
     def google_service(self):

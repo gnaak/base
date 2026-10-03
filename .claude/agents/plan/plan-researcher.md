@@ -73,7 +73,8 @@ tools: WebSearch, WebFetch, ToolSearch, Read, Write, Glob
 - **업종 제한을 꼭 확인한다** — PG 업종 심사, 알림톡 발신 프로필·템플릿 승인, 위치정보사업 신고처럼
   "사업자만 있으면 되는 줄 알았는데 막히는" 것들
 - 이 템플릿에 이미 있는 것은 "있음"으로 표시하고 넘어간다: Google·Kakao OAuth 로그인,
-  외부 HTTP 공통 래퍼(`backend/app/core/utils/http_client.py`), OpenAI 키 자리.
+  외부 HTTP 공통 래퍼(`backend/app/core/utils/http_client.py`). AI(Claude · OpenAI · Gemini) 채팅은 템플릿에 없고
+  `.claude/skills/modules` 의 ai 레시피로 넣는다 — 업체 비교(가격 · 한국어 품질 · 데이터 정책)는 리서치할 것.
   업로드 파일은 서버 로컬(`media/`)에 저장된다 (S3 아님)
 - 결론: **개발 전에 신청해야 하는 것** 목록 — 리드타임이 긴 순서로
 

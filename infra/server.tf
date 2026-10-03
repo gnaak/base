@@ -59,9 +59,9 @@ resource "random_password" "redis" {
 }
 
 # ── SSM /<project>/backend/<키> → deploy.sh 가 backend/.env 로 쓴다 ──────
-# DB 접속 정보는 rds.tf. OAuth·OpenAI 키는 여기 없다 — 콘솔(SSM Parameter Store)에서
+# DB 접속 정보는 rds.tf. OAuth·외부 API 키는 여기 없다 — 콘솔(SSM Parameter Store)에서
 # 같은 경로에 SecureString 으로 넣으면 다음 배포부터 실린다:
-#   /<project>/backend/kakao_client_id · kakao_client_secret · google_client_id · google_client_secret · openai_api_key
+#   /<project>/backend/kakao_client_id · kakao_client_secret · google_client_id · google_client_secret (외부 API 키도 같은 경로에 RawEnv 필드 이름으로)
 locals {
   backend_env = {
     prod_domain              = var.domain

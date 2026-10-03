@@ -47,7 +47,6 @@ dependencies = [
     # ── 기타 ──
     "httpx>=0.28.1",          # OAuth 토큰 교환
     "pytz>=2026.1.post1",
-    "openai>=2.29.0",
 ]
 
 [dependency-groups]

@@ -52,7 +52,7 @@ app/
 └── module/
     ├── __init__.py                  # 모델 import + setup_routers()
     ├── auth/ user/ admin/ upload/ web_socket/
-    └── infra/ (google/ kakao/ redis/ gpt/)
+    └── infra/ (google/ kakao/ redis/)
 ```
 
 ## 도메인 모듈 — 5파일 세트
@@ -117,7 +117,6 @@ sudo -u ubuntu env APP_ENV=prod uv run python -m scripts.create_admin …   # �
 
 | 모듈                           | 역할                               |
 | ------------------------------ | ---------------------------------- |
-| `infra/gpt/`                   | OpenAI SDK 래핑 (스트리밍, 오디오) |
 | `infra/google/` `infra/kakao/` | OAuth 호출                         |
 | `infra/redis/`                 | Redis 전용 repository              |
 
@@ -539,7 +538,7 @@ url = await save_upload(file, "image", allowed=IMAGE_EXTENSIONS)   # → "/media
 | `app.log` | 전부 |
 | `access.log` | 2xx · 3xx 요청 (latency 포함. uvicorn 기본 액세스 로그는 꺼져 있다) |
 | `error.log` | 4xx · 5xx 요청 + `ERROR` 이상 |
-| `openai.log` | `app.module.infra.gpt` 하위 로거 (`app.log` 에도 같이) |
+| `<이름>.log` | `EXTRA_LOG_CHANNELS` 에 더한 영역 (아래) — `app.log` 에도 같이 |
 
 - 자정 로테이션 · 14일 보관. `QueueHandler` → 리스너 스레드가 파일을 쓴다 (이벤트 루프를 막지 않는다)
 - 채널은 **로거가 아니라 핸들러의 필터**가 가른다. 로거에 핸들러를 직접 붙이지 말 것 — 쓰기가 루프 스레드로 돌아온다
@@ -551,14 +550,13 @@ url = await save_upload(file, "image", allowed=IMAGE_EXTENSIONS)   # → "/media
 
 ```python
 EXTRA_LOG_CHANNELS: dict[str, str] = {
-    "openai": "app.module.infra.gpt",
-    "gemini": "app.module.infra.gemini",   # → logs/gemini.log
+    "payment": "app.module.infra.payment",   # → logs/payment.log
 }
 ```
 
 - 값은 **로거 이름의 앞부분**이다. `get_logger(__name__)` 이면 로거 이름 = 모듈 경로라, 패키지
-  (`app.module.infra.gemini`)를 적으면 그 아래 파일이 전부 들어온다. 경로와 무관하게 묶으려면 `get_logger("llm.gemini")` + `"llm.gemini"`
-- 점 경계로만 맞춘다 — `app.module.infra.gpt` 는 `gpt_v2` 를 잡지 않는다
+  (`app.module.infra.payment`)를 적으면 그 아래 파일이 전부 들어온다. 경로와 무관하게 묶으려면 `get_logger("pg.toss")` + `"pg.toss"`
+- 점 경계로만 맞춘다 — `app.module.infra.payment` 는 `payment_v2` 를 잡지 않는다
 - 전용 파일에 남는 로그는 `app.log` 에도 남는다 (복사지 이동이 아니다)
 - **오타는 에러 없이 빈 파일이 된다.** 0바이트면 앞부분을 의심할 것
 - 채널마다 파일 핸들이 하나씩 열린다. 수십 개가 필요하면 stdout + 외부 수집기(Loki 등)
@@ -589,6 +587,8 @@ EXTRA_LOG_CHANNELS: dict[str, str] = {
   - `upstream_errors=True` 면 업체의 4xx·5xx 를 `UpstreamError(status_code, body)` 로 받는다 —
     결제 거절 사유처럼 업체 본문을 읽어야 할 때. body 를 클라이언트에 그대로 내보내지 말 것
   - 테스트는 `hc._build_client(httpx.MockTransport(handler))` 로 업체만 바꿔 끼운다 (`tests/test_http_client.py`)
+- 주기 작업(매일 정리 · 마감 시각 처리)은 템플릿에 없다 — `.claude/skills/modules/references/scheduler.md` 레시피로 넣는다
+  (앱 안 APScheduler + Redis 잠금. **트리거에 `timezone="Asia/Seoul"` 필수** — 서버는 UTC)
 - 무인증 헬스체크는 `GET /api/health` — 도메인이 아니라서 `main.py`에 직접 선언되어 있다.
   경로 상수는 `middleware/request_id.py`의 `HEALTH_PATH` (액세스 로그 제외 대상과 공유)
 - 보안 헤더는 `middleware/security.py`. HSTS는 prod에서만 붙는다

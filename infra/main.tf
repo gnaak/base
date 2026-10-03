@@ -70,7 +70,7 @@ resource "aws_security_group" "app" {
     }
   }
 
-  # 패키지 설치·RDS·외부 API(OAuth·OpenAI) — 나가는 건 막지 않는다
+  # 패키지 설치·RDS·외부 API(OAuth·AI·결제 등) — 나가는 건 막지 않는다
   egress {
     from_port        = 0
     to_port          = 0

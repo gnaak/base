@@ -19,7 +19,6 @@ from app.core.utils.response import success
 # (module/__init__.py가 최상단에서 모델을 import한다). 예전엔 `import *` 였는데,
 # 이름이 어디서 왔는지 안 보이고 린터도 못 따라가서 명시 import로 바꿨다.
 from app.module import setup_routers
-from app.module.infra.gpt.gpt_service import close_openai_client
 
 # 로깅 설정
 setup_logging()
@@ -59,7 +58,6 @@ async def lifespan(app: FastAPI):
     logger.info("🛑 Backend 종료 중...")
     await close_redis()
     await close_http_client()
-    await close_openai_client()
     # 예: await ws_manager.close_all()
 
 

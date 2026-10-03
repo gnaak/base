@@ -18,10 +18,8 @@ BACKUP_DAYS = 14
 
 # 도메인별로 파일을 더 쪼개고 싶을 때 여기에 추가한다. {파일명 stem: 로거 이름 프리픽스}
 # 해당 프리픽스 하위 로거는 전용 파일과 app.log에 **동시에** 남는다.
-#   "anthropic": "app.module.infra.claude",
-EXTRA_LOG_CHANNELS: dict[str, str] = {
-    "openai": "app.module.infra.gpt",
-}
+#   "ai": "app.module.infra.ai",   → logs/ai.log
+EXTRA_LOG_CHANNELS: dict[str, str] = {}
 
 
 class RequestIdFilter(logging.Filter):

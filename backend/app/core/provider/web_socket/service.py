@@ -12,7 +12,6 @@ class WebSocketProvider:
         self.db = db
         self.auth: Auth | None = None
         self._redis_service = None
-        self._gpt_service = None
         self._web_socket_service = None
 
     @property
@@ -21,13 +20,6 @@ class WebSocketProvider:
             from app.module.infra.redis.redis_service import RedisService
             self._redis_service = RedisService()
         return self._redis_service
-
-    @property
-    def gpt_service(self):
-        if not self._gpt_service:
-            from app.module.infra.gpt.gpt_service import GPTService
-            self._gpt_service = GPTService(self.redis_service)
-        return self._gpt_service
 
     @property
     def web_socket_service(self):

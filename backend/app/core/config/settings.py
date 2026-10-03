@@ -54,9 +54,6 @@ class RawEnv(BaseSettings):
     access_token_minutes: int = 30
     refresh_token_hours: int = 168  # 7일 (2주는 336)
 
-    # API keys
-    openai_api_key: str | None = None
-
     # KAKAO
     kakao_client_id: str | None = None
     kakao_client_secret: str | None = None
@@ -215,11 +212,7 @@ class Settings:
     def refresh_token_hours(self) -> int:
         return self.raw.refresh_token_hours
 
-    # API Keys
-    @property
-    def openai_api_key(self) -> str | None:
-        return self.raw.openai_api_key
-
+    # OAuth
     @property
     def kakao_client_id(self) -> str | None:
         return self.raw.kakao_client_id

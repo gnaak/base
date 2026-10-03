@@ -88,7 +88,7 @@ CI 의 `e2e` 잡은 빈 DB 에 마이그레이션을 처음부터 적용하고 `
 
 ## API 호출 — `@/hooks/common/useAPI`
 
-`useGet` `usePost` `usePatch` `useDelete` (+ SSE용 `useChatStream`)
+`useGet` `usePost` `usePatch` `useDelete` — AI 채팅처럼 스트리밍(SSE)이 필요하면 `.claude/skills/modules` 의 ai 레시피가 `useChatStream` 을 넣는다
 
 ```typescript
 const { data, isLoading } = useGet<MyType>("api/resource", ["query-key"]);

@@ -116,7 +116,7 @@ macOS·Linux·Git Bash 는 `sh infra/tf.sh …`. 실행 정책에 막히면
 나온 세 줄을 `gh` CLI 로 실행하거나, 저장소 **Settings → Secrets and variables → Actions → Variables**
 에 손으로 넣는다 (비밀이 아니라 Variables 다). 넣기 전까지 CI 의 `deploy` 잡은 **건너뛴다** — 실패가 아니다.
 
-### OAuth · OpenAI 키 (쓰는 것만)
+### OAuth · 외부 API 키 (쓰는 것만)
 
 **AWS 콘솔 → Systems Manager → Parameter Store** 에 이 이름으로 넣는다. 다음 배포부터 실린다.
 
@@ -124,7 +124,7 @@ macOS·Linux·Git Bash 는 `sh infra/tf.sh …`. 실행 정책에 막히면
 |---|---|---|
 | `/<project>/backend/kakao_client_id` · `kakao_client_secret` | SecureString | 카카오 REST API 키 · 시크릿 |
 | `/<project>/backend/google_client_id` · `google_client_secret` | SecureString | 구글 OAuth |
-| `/<project>/backend/openai_api_key` | SecureString | |
+| `/<project>/backend/<RawEnv 필드>` | SecureString | 외부 API 키 (AI · 결제 · 알림톡 …) — 모듈 · 연동을 넣을 때 그 이름으로 |
 | `/<project>/frontend/VITE_APP_PUBLIC_KAKAO_REST_API_KEY` | String | 카카오 REST API 키 (위와 같은 값) |
 | `/<project>/frontend/VITE_APP_PUBLIC_GOOGLE_CLIENT_ID` | String | 구글 클라이언트 ID (위와 같은 값) |
 
