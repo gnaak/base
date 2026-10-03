@@ -74,7 +74,7 @@
 | — | 정리 — clone 체크리스트, 고객 첫 화면 · 테마 토글 · 확인 모달 | ✅ | `44fb586` `8434972` |
 | 8 | 무인 실행 — `/autopilot` + Stop·PreToolUse 훅(근거로 판정, 상한, push·배포 차단) | 🔌 연결 | 아래 커밋 |
 | 9 | 배포 롤백 — 릴리스 폴더 + `current` 링크, 확인 실패 시 자동 복귀, `rollback.sh` | 🔌 연결 | 아래 커밋 |
-| 10 | 배포 스킬 | ⬜ | |
+| 10 | 배포 스킬 — `skills/deploy/` (앞단별 · 증상 → 원인 · 롤백) | ✅ | 아래 커밋 |
 
 순서는 "사람이 안 보는 동안 지켜줄 장치부터" — 고칠 것·만들 것(3·4)을 먼저 하고, 검증(5)이 그 전부를 덮게 했다.
 8 은 1~7 의 통합 검증을 겸한다 — 샘플 아이디어로 끝까지 돌리면 앞 단계가 전부 한 번에 검증된다.
@@ -131,7 +131,11 @@
 
 ## D10. 배포 스킬
 
-- [ ] 처리
+- [x] 처리 (2026-10-03) — 새 에이전트에게 "배포했는데 526 떠" 를 물었더니 이 스킬을 쓰고 reference → 원문 순으로 확인했다
+
+**만든 것** — `SKILL.md`(구성 한 장 · 원칙 · 상황별 reference · **함정 표** · 진단 보고 형식) +
+`references/{cloudflare,aws,troubleshoot,rollback}.md`. Anthropic 의 스킬 글이 "가장 값진 건 함정(gotchas) 절" 이라고 해서
+함정 표를 SKILL.md 본문에 뒀다. 아래는 처음에 적어 둔 설계.
 
 - `skills/deploy/SKILL.md` + `references/` — `cloudflare.md` · `aws.md`(edge 별 DNS·TLS·real IP·비용·전환),
   `troubleshoot.md`(526·52x·APP_ENV·세션 안 잡힘·429 → 원인), `rollback.md`

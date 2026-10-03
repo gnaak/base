@@ -100,6 +100,7 @@ CI에서 다시 볼 일이 없다. (terraform 은 `./infra/tf.ps1` 을 한 번 �
 | `.claude/hooks/` · `settings.json` | 무인 실행 게이트 — Stop 훅(남은 phase 가 있으면 다음 지시, 진전 없으면 ❌ 로 넘김) · PreToolUse 훅(무인 중 push·merge·배포 차단). `/autopilot` 이 켜 둔 동안만 동작한다 |
 | `.claude/agents/` | 단계별 서브에이전트 — `plan/`(리서치·PRD·페이지 맵·디자인) · `dev/backend/`(탐색·모델·API·**외부 연동**) · `dev/frontend/`(탐색·작성) · `verify/`(테스트 작성·보안 검토·완료 기준 대조) |
 | `.claude/skills/security/` | 이 템플릿 기준 보안 체크리스트 — sec-reviewer·`/verify` 가 쓴다 |
+| `.claude/skills/deploy/` | 배포 길 찾기·장애 진단 — 앞단(cloudflare·aws)·CI·526/52x·세션·429·롤백. 원문(`infra/README.md`·`deploy/README.md`)을 요약하고 가리킬 뿐 베끼지 않는다 |
 | `.claude/skills/seo/` | SEO·AEO·GEO·LLMO·NEO 진단·구현 ([원본](https://github.com/leopard627/fire-your-seo-agency), MIT) |
 
 > **에이전트 파일 규칙** — 폴더는 사람이 보기 위한 정리일 뿐, Claude는 `description` 만 보고 고른다.

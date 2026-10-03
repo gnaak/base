@@ -964,6 +964,7 @@ Claude Code로 개발한다면 `CLAUDE.md`, `frontend/CLAUDE.md`, `backend/CLAUD
 | `hooks/` · `settings.json` | 무인 실행 게이트 — Stop 훅이 근거(phase 커밋 · 검증 줄)를 보고 다음 지시, 진전 없으면 ❌ 로 넘김. PreToolUse 훅이 무인 중 push·merge·배포를 막는다. 꺼져 있으면 아무것도 안 한다 |
 | `commands/seo_check.md` | `/seo_check` — 검색·AI 인용이 조용히 0이 되는 사고를 정적 점검 (푸시 전) |
 | `skills/security/` | 이 템플릿 기준 보안 체크리스트 (권한·쿠키·OAuth·업로드·nginx 헤더·WebSocket·외부 연동 등) |
+| `skills/deploy/` | 배포 길 찾기·장애 진단 ("배포 실패", "526 떠", "롤백해줘") — 앞단별 안내 · 증상 → 원인 · 롤백과 마이그레이션 호환 |
 | `skills/seo/` | SEO·AEO·GEO·LLMO·NEO(네이버) 진단·구현 스킬 |
 
 > `skills/seo` 는 [fire-your-seo-agency](https://github.com/leopard627/fire-your-seo-agency)(MIT)를
