@@ -152,7 +152,7 @@ Windows 확인 창이 뜨면 '예' 만 눌러 주세요. (준비 30분 안팎, �
   ```
   그래도 못 찾을 때만 "VS Code 를 껐다 켜고 `/start` 를 다시 쳐 주세요" 로 멈춘다
 - winget 이 없거나(오래된 Windows) 설치가 실패하면 그때 `docs/guides/02-tools.html` 을 열어 손으로 하게 한다
-- `curl … | sh` 로 설치하지 않는다 (`.claude/settings.local.json` 이 막아 둔 형태다)
+- `curl … | sh` 로 설치하지 않는다 (`.claude/settings.json` 이 막아 둔 형태다)
 
 ## 5. 이 PC 에서 돌아가게 — 묻지 않고 한다
 

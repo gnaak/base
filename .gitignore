@@ -22,6 +22,10 @@ dist-ssr/
 # 고객 대화 · 계약서 원본 (/start 가 받는다) — 개인정보 · 기밀. 브리프(PRD/00_brief.md)에 요약만 남긴다
 PRD/sources/
 
+# Claude Code 개인 설정 — 팀이 같이 쓰는 권한 · 훅은 .claude/settings.json 에 있다.
+# 이 파일을 커밋하면 Claude Code 가 "저장소가 준 설정" 으로 보고 규칙을 보류한다 (새로 받은 폴더에서 허용이 안 먹는다)
+.claude/settings.local.json
+
 # 무인 실행 상태 (.claude/hooks/autopilot-gate.mjs 가 쓴다 — run 마다 다르다)
 .claude/autopilot/
 

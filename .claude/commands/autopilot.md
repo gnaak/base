@@ -26,7 +26,7 @@ $ARGUMENTS
 이것들이 안 맞으면 밤새 한 칸도 못 가고 멈춰 있다. 사람이 이 커맨드를 불렀다면 짧게 확인시키고 시작한다.
 
 - **권한 창이 뜨면 거기서 멈춘다.** 편집 자동 승인(`acceptEdits` — Shift+Tab 또는 VS Code 의 모드 선택)과
-  `Bash`·`PowerShell` 허용(`.claude/settings.local.json`)이 있어야 한다
+  `Bash`·`PowerShell`·`Skill` 허용(`.claude/settings.json` — 폴더를 신뢰해야 적용된다)이 있어야 한다
 - **다른 Stop 훅과 같이 켜지 않는다** — Claude Code 기본 `/goal`, `ralph-loop`, `security-guidance` 같은 플러그인.
   Stop 훅이 둘이면 서로 다른 지시가 섞인다
 - **외부 mod·플러그인은 끈다** — mod 는 PreToolUse 훅이 막은 명령도 승인할 수 있어서 아래 "넘지 않는 선"이 무력해진다
