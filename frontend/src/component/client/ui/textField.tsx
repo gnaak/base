@@ -42,7 +42,7 @@ const TextField = ({
   error,
   required,
   disabled = false,
-  size = "md",
+  size = "sm",
   leftIcon,
   rightIcon,
   full = true,

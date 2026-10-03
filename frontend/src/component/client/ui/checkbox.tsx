@@ -26,7 +26,7 @@ const sizeStyles: Record<Size, { row: string; box: string; icon: string; text: s
  * 네이티브 input 을 그대로 쓰고 모양만 입혔다 — 키보드(스페이스)·폼 제출·화면 읽기가 따라온다.
  * 모서리는 컨트롤 토큰의 절반이라 테마가 각지면 같이 각진다.
  */
-const Checkbox = ({ label, checked, onChange, disabled = false, size = "md", className = "", ...props }: CheckboxProps) => {
+const Checkbox = ({ label, checked, onChange, disabled = false, size = "sm", className = "", ...props }: CheckboxProps) => {
   const s = sizeStyles[size];
 
   return (

@@ -103,8 +103,8 @@ Pretendard는 CDN에서 받아 한글을 맡는다.
 | `rounded-control` | `--radius-control` | 8px (관리자 버튼의 `rounded-lg`) | 버튼 · 입력칸 · 뱃지 · 체크박스(절반) |
 | `rounded-card` | `--radius-card` | 12px | 카드 · 목록 묶음 · 토스트 |
 | `rounded-sheet` | `--radius-sheet` | 16px | 모달 · 바텀시트 윗모서리 |
-| `h-control-sm` · `min-h-` · `w-` · `min-w-` | `--control-h-sm` | 36px | 작은 버튼 · 입력칸 |
-| `h-control-md` · … | `--control-h-md` | 44px — **손가락 터치 최소 크기** | 기본 버튼 · 입력칸 · 아이콘 버튼 |
+| `h-control-sm` · `min-h-` · `w-` · `min-w-` | `--control-h-sm` | 36px | **기본** — 버튼 · 입력칸 · 아이콘 버튼 · 선택 · 체크 · 토글 · 뱃지 (size 를 안 적으면 sm) |
+| `h-control-md` · … | `--control-h-md` | 44px — 손가락 터치 권장 크기 | 모바일에서 자주 누르는 주요 버튼 · 입력칸에 `size="md"` |
 | `h-control-lg` · … | `--control-h-lg` | 52px | 결제 같은 주 버튼 · 목록 한 줄 |
 | `font-client` | `--font-client` | Geist → Pretendard (`font-sans` 와 같다) | 고객 화면 전체 (`.theme-client` 아래는 자동) |
 

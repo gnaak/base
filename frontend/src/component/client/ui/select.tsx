@@ -41,7 +41,7 @@ const Select = ({
   error,
   required,
   disabled = false,
-  size = "md",
+  size = "sm",
   full = true,
   className = "",
   ...props

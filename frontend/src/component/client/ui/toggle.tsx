@@ -29,7 +29,7 @@ const Toggle = ({
   checked,
   defaultChecked = false,
   onChange,
-  size = "md",
+  size = "sm",
   disabled = false,
   className = "",
   ...props

@@ -58,7 +58,7 @@ const iconSizes: Record<ButtonSize, string> = {
 const Button = ({
   children,
   variant = "main",
-  size = "md",
+  size = "sm",
   leftIcon = null,
   rightIcon = null,
   full = false,

@@ -31,7 +31,7 @@ const sizes = {
 /**
  * 상태 뱃지 (결제 완료 · 배송 중 · 취소됨 …). 모서리는 컨트롤 토큰을 따른다.
  */
-const Badge = ({ children, tone = "neutral", size = "md", dot, icon, className = "" }: BadgeProps) => {
+const Badge = ({ children, tone = "neutral", size = "sm", dot, icon, className = "" }: BadgeProps) => {
   const t = tones[tone];
   const showDot = !icon && (dot ?? tone !== "neutral");
 

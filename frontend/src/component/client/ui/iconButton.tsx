@@ -40,7 +40,7 @@ const IconButton = ({
   icon,
   label,
   variant = "ghost",
-  size = "md",
+  size = "sm",
   className = "",
   type = "button",
   ...props
