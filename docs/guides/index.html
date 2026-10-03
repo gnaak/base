@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>따라 하기 안내</title>
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+<main>
+<h1>따라 하기 안내</h1>
+<p class="lead">개발 도구가 하나도 없어도 이 순서대로 하면 됩니다. 1·2 를 하고 나면 나머지는 Claude 가 <code>/start</code> 에서 필요할 때 이 페이지들을 열어 줍니다.</p>
+
+<h2>처음 한 번 — 직접</h2>
+<ul class="card-list">
+  <li><a href="00-claude-code.html">1. VS Code 와 Claude Code 설치<small>Claude 를 쓸 프로그램. 유료 플랜(Pro 이상) 계정이 필요해요 · 10분</small></a></li>
+  <li><a href="01-get-template.html">2. 템플릿 받아서 열고 <code>/start</code><small>GitHub 에서 내 저장소로 복사 → PC 로 받기 → <code>/start</code> · 10분</small></a></li>
+</ul>
+
+<h2><code>/start</code> 가 필요할 때 열어 주는 것</h2>
+<ul class="card-list">
+  <li><a href="02-tools.html">uv · Node.js 설치<small>파이썬은 uv 가 알아서 받아요. 보통은 Claude 가 대신 설치하고 "예" 만 누르면 돼요</small></a></li>
+  <li><a href="03-docker.html">Docker Desktop 설치<small>데이터베이스(MySQL)와 로그인 저장소(Redis)를 한 번에 띄우는 프로그램 · 재부팅 필요할 수 있음</small></a></li>
+  <li><a href="04-mysql-redis.html">Docker 없이 MySQL · Redis 직접 설치<small>Docker 를 못 쓰는 PC 일 때만</small></a></li>
+  <li><a href="05-github.html">내 GitHub 에 올리기<small>ZIP 으로 받았거나, 만든 걸 온라인에 보관하고 싶을 때</small></a></li>
+</ul>
+
+<h2>나중에 필요한 것 <span class="tag">준비 중</span></h2>
+<p>아래는 지금은 글 안내만 있어요 — <code>infra/README.md</code> · <code>README.md</code> 에 있습니다. 같은 형식의 페이지로 옮길 예정이에요.</p>
+<table>
+  <tr><th>무엇</th><th>언제</th></tr>
+  <tr><td>카카오 · 구글 로그인 키</td><td>실제 소셜 로그인을 붙일 때 (로컬 관리자 로그인은 없어도 돼요)</td></tr>
+  <tr><td>AWS 계정 · 액세스 키</td><td>서버에 올릴 때</td></tr>
+  <tr><td>Cloudflare 사이트 · 토큰 (또는 Route 53)</td><td>도메인을 연결할 때</td></tr>
+  <tr><td>GitHub 저장소 변수 3개 · Parameter Store</td><td>자동 배포를 켤 때</td></tr>
+</table>
+</main>
+<script src="guide.js"></script>
+</body>
+</html>

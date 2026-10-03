@@ -61,6 +61,12 @@ Spring은 프레임워크가 계층을 강제하지만 FastAPI는 아무것도 �
 
 ## 3. 빠른 시작
 
+> **개발 도구가 하나도 없어도 된다 — Claude Code 로 `/start`.** VS Code + Claude Code 를 깔고(`docs/guides/00-claude-code.html`),
+> 템플릿을 받아 열고(`01-get-template.html`), Claude 패널에 `/start 만들고 싶은 것 한두 줄`. 만들 것을 대화로 정하고 →
+> 필요한 도구(uv · Node · Docker)를 설치하고 → DB · 시크릿 · 이름 · git 을 셋업하고 → 로그인까지 브라우저로 확인한 뒤 → `/plan` 으로 넘어간다.
+> 사람이 직접 해야 하는 일(설치 확인 창 · 프로그램 실행)은 그때 `docs/guides/` 의 안내 페이지를 브라우저로 띄운다.
+> 아래는 손으로 할 때의 순서다.
+
 ### 3.1 사전 준비
 
 - **uv** — 파이썬 인터프리터까지 uv 가 관리하므로 파이썬을 따로 설치할 필요가 없습니다 (설치법은 3.3)
@@ -845,9 +851,10 @@ const adminMenu: AdminMenuItem[] = [
 
 ## 9. 새 프로젝트로 가져갈 때
 
-clone 부터 운영 배포까지 순서대로. **Claude Code 를 쓴다면 clone 직후 `/setup` 한 번** — 아래
-9.2~9.4 를 훑어서 아직 템플릿 기본값인 것을 표로 보여주고, 항목별로 승인받아 고칩니다.
-그다음 **`/plan {아이디어 한두 줄}`** 이 인터뷰 → 외부 리서치(경쟁·UX·디자인·연동·규제) → PRD →
+clone 부터 운영 배포까지 순서대로. **Claude Code 를 쓴다면 받은 직후 `/start` 한 번** — 아이디어를 대화로 정하고,
+아래 9.2~9.4 중 로컬에 필요한 것(도구 · DB · 시크릿 · 이름 · git 새로 시작)을 기본값으로 셋업한 뒤 `/plan` 으로 넘어갑니다.
+(GitHub 의 **Use this template** 로 받으면 기록 없이 커밋 하나로 시작합니다. `/setup` 은 하나씩 확인하며 고치고 싶을 때와 배포 설정용)
+**`/plan {아이디어 한두 줄}`** 은 인터뷰 → 외부 리서치(경쟁·UX·디자인·연동·규제) → PRD →
 페이지 맵 · 고객 화면 테마 → `PROJECT.md` 의 phase 계획까지 만듭니다. 사람이 붙는 건 처음 인터뷰뿐이고,
 돈·법처럼 사람이 정해야 하는 것은 기본값으로 진행하면서 `DECISIONS.md` 에 모입니다. 개발은 phase 1(디자인 기반)부터입니다.
 **`/autopilot`** 을 부르면 phase 1 부터 마지막까지 사람 없이 돕니다 — phase 마다 구현 → E2E → 테스트 → `/verify` → 커밋,
@@ -957,7 +964,8 @@ Claude Code로 개발한다면 `CLAUDE.md`, `frontend/CLAUDE.md`, `backend/CLAUD
 |---|---|
 | `commands/` | `/feature` `/design` `/fullstack` `/fix` `/test` — 에이전트 호출 순서를 묶은 슬래시 커맨드 |
 | `agents/` | 단계별 서브에이전트 — `plan/`(리서치·PRD·페이지 맵·디자인) · `dev/backend/`(외부 연동 포함) · `dev/frontend/`(탐색·작성) · `verify/`(테스트 작성·보안 검토·완료 기준 대조) |
-| `commands/setup.md` | `/setup` — 템플릿을 새 프로젝트로 가져왔을 때 바꿀 것들 (clone 직후 1회, 위 9.2~9.4) |
+| `commands/start.md` | `/start` — 처음 한 번. 아이디어 대화 → 도구 설치 → 로컬 셋업 → git 새로 시작 → `/plan`. 개발 도구가 없는 사람 기준 (`docs/guides/` 안내 페이지를 띄운다) |
+| `commands/setup.md` | `/setup` — 템플릿 기본값을 하나씩 확인하며 고친다 (위 9.2~9.4) · 배포 설정 |
 | `commands/plan.md` | `/plan` — 아이디어 → 인터뷰 → 리서치 → `PRD/` → 페이지 맵·디자인 테마 → `PROJECT.md` · `DECISIONS.md` (`/setup` 다음 1회, 인터뷰 뒤로 무인) |
 | `commands/verify.md` | `/verify` — 린트·타입·테스트·빌드·디자인 린트 + 보안 검토 + 의존성 취약점 + 완료 기준 대조 (phase 끝·푸시 전) |
 | `commands/autopilot.md` | `/autopilot` — `PROJECT.md` 의 phase 를 사람 없이 끝까지 (`status` · `stop`). `/plan` 다음 |

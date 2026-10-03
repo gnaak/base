@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>템플릿 받기</title>
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+<main>
+<a class="back" href="index.html">← 안내 목록</a>
+<h1>템플릿 받아서 열고 <code>/start</code></h1>
+<p class="lead">템플릿을 내 저장소로 복사해서 PC 로 받고, VS Code 로 열어 <code>/start</code> 를 칩니다. 그다음은 Claude 가 안내해요.</p>
+<ul class="meta"><li>10분</li><li>필요: GitHub 계정 (없으면 아래 "계정 없이")</li></ul>
+
+<h2>GitHub 계정으로 (권장)</h2>
+<ol class="steps">
+  <li>
+    <strong>GitHub 가입</strong>
+    <a href="https://github.com/signup">github.com/signup</a> — 이미 있으면 건너뛰어요.
+  </li>
+  <li>
+    <strong>"Use this template" → "Create a new repository"</strong>
+    받은 템플릿 주소(예: <code>github.com/gnaak/base</code>)로 가서 오른쪽 위 초록 버튼을 눌러요.
+    <figure class="shot" data-shot="01-1.png" data-what="템플릿 페이지 오른쪽 위 — 'Use this template' 버튼과 펼친 메뉴의 'Create a new repository'"></figure>
+  </li>
+  <li>
+    <strong>이름 정하고 만들기</strong>
+    Repository name 에 영문 이름을 쓰고, <b>Private</b> 를 고른 뒤 <kbd>Create repository</kbd>.
+    <figure class="shot" data-shot="01-2.png" data-what="새 저장소 만들기 화면 — 이름 칸, Private 선택, Create repository 버튼"></figure>
+  </li>
+  <li>
+    <strong>주소 복사</strong>
+    만들어진 저장소에서 초록 <kbd>Code</kbd> 버튼 → HTTPS 주소 옆 복사 버튼.
+    <figure class="shot" data-shot="01-3.png" data-what="Code 버튼을 누른 상태 — HTTPS 주소와 복사 버튼"></figure>
+  </li>
+  <li>
+    <strong>VS Code 로 받기</strong>
+    VS Code 에서 <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> (Mac: <kbd>⌘</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>) →
+    <code>Git: Clone</code> → 주소 붙여넣기 → 저장할 폴더 고르기 → 오른쪽 아래 알림에서 <b>열기</b>.
+    <figure class="shot" data-shot="01-4.png" data-what="명령 팔레트에 'Git: Clone' 을 친 화면"></figure>
+    <figure class="shot" data-shot="01-5.png" data-what="받기가 끝난 뒤 오른쪽 아래 '열기(Open)' 알림"></figure>
+  </li>
+</ol>
+
+<h2>계정 없이 (일단 시험만)</h2>
+<ol class="steps">
+  <li>
+    <strong>ZIP 으로 받기</strong>
+    템플릿 페이지의 초록 <kbd>Code</kbd> → <b>Download ZIP</b> → 압축 풀기 → VS Code 에서 <span class="path"><span>파일</span><span>폴더 열기</span></span>.
+    <figure class="shot" data-shot="01-6.png" data-what="Code 메뉴의 'Download ZIP'"></figure>
+    나중에 내 GitHub 에 올리고 싶으면 <a href="05-github.html">내 GitHub 에 올리기</a>.
+  </li>
+</ol>
+
+<h2>마지막 — <code>/start</code></h2>
+<p>VS Code 의 Claude 패널에 <code>/start</code> 를 치고, 만들고 싶은 걸 한두 줄로 말해요. 예: <code>/start 동네 원데이 클래스 예약 서비스</code></p>
+<figure class="shot" data-shot="01-7.png" data-what="Claude 패널 입력창에 '/start ...' 를 친 화면"></figure>
+<div class="box note"><p>"이 폴더의 파일을 믿나요(Trust)?" 같은 창이 뜨면 <b>믿음(Trust)</b> 을 골라요 — 내가 받은 내 폴더예요.</p></div>
+</main>
+<script src="guide.js"></script>
+</body>
+</html>

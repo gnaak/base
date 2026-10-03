@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude Code 설치</title>
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+<main>
+<a class="back" href="index.html">← 안내 목록</a>
+<h1>VS Code 와 Claude Code 설치</h1>
+<p class="lead">Claude 와 대화하면서 프로그램을 만드는 작업 공간을 준비합니다. 한 번만 하면 돼요.</p>
+<ul class="meta"><li>10분</li><li>필요: Claude 유료 플랜(Pro 이상) 계정</li><li>Windows · macOS</li></ul>
+
+<h2>순서</h2>
+<ol class="steps">
+  <li>
+    <strong>VS Code 설치</strong>
+    <a href="https://code.visualstudio.com/">code.visualstudio.com</a> 에서 내려받아 설치해요. 설치 옵션은 기본값 그대로 두면 돼요.
+    <figure class="shot" data-shot="00-1.png" data-what="VS Code 다운로드 페이지 — 큰 다운로드 버튼이 보이는 화면"></figure>
+  </li>
+  <li>
+    <strong>(Windows 만) Git 설치</strong>
+    <a href="https://git-scm.com/download/win">git-scm.com/download/win</a> 에서 내려받아 설치해요. 질문이 많이 나오는데 전부 기본값으로 <kbd>Next</kbd> 를 누르면 돼요.
+    VS Code 와 Claude Code 가 내부적으로 씁니다.
+    <figure class="shot" data-shot="00-2.png" data-what="Git 설치 마지막 화면 (Finish 버튼)"></figure>
+  </li>
+  <li>
+    <strong>Claude Code 확장 설치</strong>
+    VS Code 왼쪽 세로 막대에서 <span class="path"><span>확장(네모 네 개 아이콘)</span><span>"Claude Code" 검색</span><span>게시자 Anthropic 확인</span><span>설치</span></span>
+    <figure class="shot" data-shot="00-3.png" data-what="확장 검색 결과 — 'Claude Code', 게시자 Anthropic, 설치 버튼이 보이게"></figure>
+  </li>
+  <li>
+    <strong>로그인</strong>
+    VS Code 에 생긴 Claude 아이콘을 눌러 패널을 열고 로그인 버튼을 눌러요. 브라우저가 열리면 Claude 계정으로 승인해요.
+    <figure class="shot" data-shot="00-4.png" data-what="VS Code 안의 Claude 패널과 로그인 버튼"></figure>
+    <figure class="shot" data-shot="00-5.png" data-what="브라우저의 승인(Authorize) 화면"></figure>
+  </li>
+  <li>
+    <strong>편집 자동 승인 켜기 (권장)</strong>
+    Claude 입력창 근처의 모드 선택에서 <b>편집을 자동으로 허용</b>하는 모드를 골라요 (이름은 버전에 따라 조금 달라요).
+    꺼져 있으면 파일을 고칠 때마다 "허용할까요?" 를 물어서, 자리를 비운 사이 일이 멈춰요.
+    <figure class="shot" data-shot="00-6.png" data-what="입력창 근처의 모드 선택 — 편집 자동 허용 모드를 고른 상태"></figure>
+  </li>
+</ol>
+
+<div class="box ok"><strong>됐는지 확인</strong><p>Claude 패널에 "안녕" 이라고 써 보세요. 답이 오면 끝이에요. 다음: <a href="01-get-template.html">템플릿 받기</a></p></div>
+
+<h2>막히면</h2>
+<ul>
+  <li><b>로그인 뒤 사용할 수 없다고 나와요</b> — 무료 계정은 Claude Code 를 쓸 수 없어요. claude.ai 에서 Pro 이상으로 바꿔요</li>
+  <li><b>회사 PC 라 설치가 막혀요</b> — 관리자 권한이 필요해요. 사내 IT 에 VS Code · Git 설치를 요청해요</li>
+</ul>
+</main>
+<script src="guide.js"></script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>uv · Node.js 설치</title>
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+<main>
+<a class="back" href="index.html">← 안내 목록</a>
+<h1>uv · Node.js 설치</h1>
+<p class="lead">서버(파이썬)와 화면(Node.js)을 돌리는 도구예요. <b>파이썬은 따로 설치하지 않아요</b> — uv 가 필요한 버전을 알아서 받아 옵니다.</p>
+<ul class="meta"><li>5~10분</li><li>보통은 Claude 가 대신 설치해요</li></ul>
+
+<h2>Claude 가 설치할 때 (Windows)</h2>
+<ol class="steps">
+  <li>
+    <strong>"예" 누르기</strong>
+    Claude 가 설치를 시작하면 "이 앱이 디바이스를 변경하도록 허용하시겠어요?" 창이 떠요. <kbd>예</kbd> 를 눌러요.
+    <figure class="shot" data-shot="02-1.png" data-what="Windows 사용자 계정 컨트롤 창 — '예' 버튼"></figure>
+  </li>
+  <li>
+    <strong>VS Code 를 완전히 껐다 켜기</strong>
+    새로 설치한 프로그램은 지금 열려 있는 창에서 안 보여요. VS Code 창을 모두 닫고 다시 연 뒤, Claude 패널에 <code>/start</code> 를 다시 쳐요.
+    했던 단계는 건너뛰고 이어서 해요.
+  </li>
+</ol>
+
+<h2>손으로 설치할 때</h2>
+<table>
+  <tr><th>도구</th><th>Windows</th><th>macOS</th></tr>
+  <tr>
+    <td>uv</td>
+    <td>PowerShell 에서 아래 한 줄</td>
+    <td>터미널에서 아래 두 번째 줄</td>
+  </tr>
+  <tr>
+    <td>Node.js</td>
+    <td colspan="2"><a href="https://nodejs.org/">nodejs.org</a> 에서 <b>LTS</b> 를 내려받아 기본값으로 설치</td>
+  </tr>
+</table>
+<pre><code>powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"</code></pre>
+<pre><code>curl -LsSf https://astral.sh/uv/install.sh | sh</code></pre>
+<figure class="shot" data-shot="02-2.png" data-what="nodejs.org 첫 화면 — LTS 다운로드 버튼"></figure>
+
+<div class="box ok"><strong>됐는지 확인</strong><p>VS Code 메뉴 <span class="path"><span>터미널</span><span>새 터미널</span></span> 에서 아래를 쳐서 버전이 나오면 돼요 (Node 는 v20 이상).</p>
+<pre><code>uv --version
+node --version</code></pre></div>
+
+<h2>막히면</h2>
+<ul>
+  <li><b>"winget 을 찾을 수 없습니다"</b> — 오래된 Windows 예요. 위 "손으로 설치" 로 해요</li>
+  <li><b>설치했는데 "찾을 수 없음"</b> — VS Code 를 완전히 껐다 켰는지 확인해요. 그래도 안 되면 PC 를 다시 시작해요</li>
+</ul>
+</main>
+<script src="guide.js"></script>
+</body>
+</html>

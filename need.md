@@ -75,6 +75,7 @@
 | 8 | 무인 실행 — `/autopilot` + Stop·PreToolUse 훅(근거로 판정, 상한, push·배포 차단) | 🔌 연결 | `bca03df` |
 | 9 | 배포 롤백 — 릴리스 폴더 + `current` 링크, 확인 실패 시 자동 복귀, `rollback.sh` | 🔌 연결 | `b1402fb` |
 | 10 | 배포 스킬 — `skills/deploy/` (앞단별 · 증상 → 원인 · 롤백) | ✅ | `89ca049` |
+| 11 | 처음 쓰는 사람의 입구 — `/start` + `docs/guides/` 안내 페이지 (개발 도구가 없는 사람 기준) | 🔌 연결 | D11 |
 
 순서는 "사람이 안 보는 동안 지켜줄 장치부터" — 고칠 것·만들 것(3·4)을 먼저 하고, 검증(5)이 그 전부를 덮게 했다.
 8 은 1~7 의 통합 검증을 겸한다 — 샘플 아이디어로 끝까지 돌리면 앞 단계가 전부 한 번에 검증된다.
@@ -141,6 +142,28 @@
   `troubleshoot.md`(526·52x·APP_ENV·세션 안 잡힘·429 → 원인), `rollback.md`
 - 원문(`infra/README.md`, `deploy/README.md`)을 복사하지 말고 요약 + 위치 링크 — 복사본은 어긋난다
 - **완료 기준**: "배포 실패 526" 같은 질문에 이 스킬이 걸린다
+
+## D11. 처음 쓰는 사람의 입구 — `/start`
+
+- [x] 연결 (2026-10-03) — 처음부터 끝까지는 아직. 새 폴더에 받아 **새 VS Code 창**에서 `/start` 로 확인한다 (그 창엔 대화 · 메모리가 없다)
+
+**왜** clone 뒤 `/setup` → `/plan` 을 따로 알아야 했고, `/setup` 은 아이디어도 없는데 프로젝트 이름 · DB 이름부터 물었다.
+그리고 쓰는 사람이 개발자가 아닐 수 있다 — 파이썬도 Node 도 없다.
+
+**만든 것**
+- `/start` — 아이디어 대화(= `/plan` 인터뷰) → 이름 → 브리프 → 도구(git · uv · Node, Windows 는 묻고 `winget`) →
+  로컬 셋업(`.env` · 시크릿 · DB 이름 · Docker 또는 이미 떠 있는 MySQL · Redis · 마이그레이션 · 로컬 관리자 · 브랜딩) →
+  pytest · E2E 로 로그인까지 확인 → git 새로 시작 → `/plan`. 다시 쳐도 했던 단계는 건너뛴다 (설치 뒤 VS Code 재시작 때문에 끊길 수밖에 없다)
+- `backend/scripts/prepare_local.py` — 이미 떠 있는 MySQL · Redis 를 같이 쓴다: `CREATE DATABASE IF NOT EXISTS` 와 비어 있는 Redis 번호만 (남의 것은 안 건드림)
+- `docs/guides/` — 사람이 직접 해야 하는 일(설치 확인 창 · Docker Desktop · GitHub)의 안내 페이지. `/start` 가 필요할 때 브라우저로 띄운다.
+  사진은 `docs/guides/img/` 에 정해진 이름(`img/README.md`)으로 넣으면 자동으로 나타난다
+- `/plan` 은 `/start` 의 브리프가 있으면 인터뷰를 건너뛴다. 받는 쪽 기록은 GitHub **Use this template** 이나 `/start` 의 git 새로 시작으로 커밋 하나
+
+**처음부터 확인할 때 볼 것** — 아래는 추측이라 실제로 봐야 한다
+- `winget` 패키지 ID (`Git.Git` · `astral-sh.uv` · `OpenJS.NodeJS.LTS` · `Docker.DockerDesktop`) 로 실제로 설치되는가
+- Windows 에서 설치 직후 Claude Code 셸이 새 프로그램을 못 찾는가 (VS Code 재시작 안내가 맞는가)
+- VS Code 확장의 "편집 자동 허용" 모드 이름 (`00-claude-code.html`)
+- 권한 창이 어디서 뜨는가 (스킬 호출 · 설치 명령)
 
 ## 아침 확인 순서
 

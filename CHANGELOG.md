@@ -51,6 +51,20 @@ CI 는 빨갛게, 사이트는 살아 있게. 손으로는 `rollback.sh`(S3 에�
 - 스모크 16개는 서버 명령(aws · systemctl · nginx · curl · uv …)을 PATH 앞의 가짜로 바꾸고 `deploy/` 의 진짜 설정을 렌더링한다.
   자동 복귀 · 정리를 일부러 끄면 해당 시나리오가 실패하는 것까지 확인했다. 진짜 서버는 아직이다
 
+### 처음 쓰는 사람의 입구 — `/start`
+
+**기존** clone → `/setup`(하나씩 묻는다) → `/plan`(인터뷰) 를 알아서 이어 불러야 했다. `/setup` 은 아이디어도 없는데 이름부터 물었다.
+**변경** `/start` 하나 — 아이디어 대화 → 도구 설치 → 로컬 셋업 → 로그인까지 확인 → git 새로 시작 → `/plan`. 사람이 직접 할 일은
+`docs/guides/` 안내 페이지를 브라우저로 띄운다(사진은 `img/` 에 이름대로 넣으면 자동으로 들어간다).
+**왜** 쓰는 사람이 개발자가 아닐 수 있다. 파이썬은 uv 가 받아 오니 설치시키지 않고, 로컬 값(DB 이름 · 시크릿)은 되돌리기 쉬우니 묻지 않는다.
+
+**함정**
+- 한 PC 에 다른 프로젝트의 MySQL · Redis 가 이미 떠 있으면 새 docker compose 는 포트 · 컨테이너 이름(`base-mysql`)이 부딪힌다 →
+  `prepare_local` 이 먼저 붙어 보고, 붙으면 같이 쓴다 (DB 는 `IF NOT EXISTS`, Redis 는 키가 없는 번호만)
+- 한글 Windows 의 기본 출력(cp949)은 `✓` · `—` 를 못 찍고 죽는다 → 스크립트 출력을 UTF-8 로
+- fakeredis 는 `INFO` 를 모른다 → 비어 있는 번호는 `DBSIZE` 로 센다 (옛 Redis 3.x 에서도 된다)
+- 클론한 사람의 원격이 base 를 가리키면 그대로 푸시하려 든다 → `/start` 가 원격을 떼고 `--orphan` 으로 새 기록 (`rm -rf .git` 은 안 쓴다)
+
 ### 배포 스킬 — `89ca049`
 
 **변경** `skills/deploy/` — 구성 한 장 · 원칙 · 상황별 reference(cloudflare · aws · troubleshoot · rollback) · 함정 표 · 진단 보고 형식.

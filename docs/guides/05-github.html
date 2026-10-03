@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>내 GitHub 에 올리기</title>
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+<main>
+<a class="back" href="index.html">← 안내 목록</a>
+<h1>내 GitHub 에 올리기</h1>
+<p class="lead">만든 코드를 온라인에 보관해요. PC 가 고장 나도 남고, 나중에 서버에 올릴 때(자동 배포)도 여기서 가져가요.</p>
+<ul class="meta"><li>5분</li><li>필요: GitHub 계정</li></ul>
+
+<div class="box note"><p>"Use this template" 으로 만들었다면 이미 내 저장소와 연결돼 있어요 — 이 페이지는 필요 없어요.</p></div>
+
+<h2>순서</h2>
+<ol class="steps">
+  <li>
+    <strong>빈 저장소 만들기</strong>
+    <a href="https://github.com/new">github.com/new</a> → 이름 쓰기 → <b>Private</b> → <b>Add a README</b> 는 <b>끈 채로</b> → <kbd>Create repository</kbd>.
+    <figure class="shot" data-shot="05-1.png" data-what="새 저장소 화면 — Private 선택, README 체크 꺼진 상태"></figure>
+  </li>
+  <li>
+    <strong>주소 복사</strong>
+    만들어진 페이지 위쪽의 HTTPS 주소를 복사해요.
+    <figure class="shot" data-shot="05-2.png" data-what="빈 저장소 페이지 — HTTPS 주소와 복사 버튼"></figure>
+  </li>
+  <li>
+    <strong>Claude 에게 맡기기</strong>
+    "이 주소로 올려 줘: (붙여넣기)" 라고 말하면 Claude 가 아래 두 줄을 실행해요. 처음 한 번은 GitHub 로그인 창이 떠요 — 로그인해서 승인해요.
+    <pre><code>git remote add origin https://github.com/내아이디/저장소이름.git
+git push -u origin main</code></pre>
+    <figure class="shot" data-shot="05-3.png" data-what="처음 올릴 때 뜨는 GitHub 로그인 · 승인 창"></figure>
+  </li>
+</ol>
+
+<div class="box warn"><strong>무인 실행 중에는</strong><p><code>/autopilot</code> 이 도는 동안에는 올리기(push)가 막혀 있어요. 결과를 확인한 뒤 직접 올려요.</p></div>
+</main>
+<script src="guide.js"></script>
+</body>
+</html>
