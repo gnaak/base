@@ -176,6 +176,12 @@ const CATEGORY_OPTIONS = [
 ];
 
 type ToastKind = "info" | "success" | "warning" | "error";
+const ENTRY_OPTIONS = [
+  { label: "공동현관 비밀번호 있음", value: "code" },
+  { label: "경비실 호출", value: "guard" },
+  { label: "자유 출입", value: "free" },
+];
+
 const TOAST_COPY: Record<ToastKind, { title: string; description?: string }> = {
   info: { title: "새 쿠폰이 도착했어요" },
   success: { title: "주문이 접수됐어요", description: "사장님이 확인하면 알림으로 알려 드릴게요." },
@@ -219,6 +225,7 @@ const UiPreview = () => {
   const [pickup, setPickup] = useState<string | number>("delivery");
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [entry, setEntry] = useState<string | number | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [confirm, setConfirm] = useState<"default" | "warning" | "danger" | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -460,7 +467,7 @@ const UiPreview = () => {
         <Section title="피드백" desc="Modal(모바일은 바텀시트) · ConfirmModal · Toast — 창 너비를 640px 아래로 줄이면 시트로 바뀐다">
           <Row label="Modal">
             <Button variant="sub1" onClick={() => setModalOpen(true)}>
-              기본 모달
+              입력 모달
             </Button>
             <Button variant="sub1" onClick={() => setSheetOpen(true)}>
               본문 있는 시트
@@ -511,17 +518,23 @@ const UiPreview = () => {
         </Section>
       </PageContainer>
 
+      {/* Modal 은 안에 내용(입력 · 선택 · 목록)이 있을 때. "~할까요?" 같은 예/아니오 질문은 ConfirmModal */}
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title="장바구니를 비울까요?"
-        description="담아 둔 메뉴 3개가 모두 빠져요."
-        primaryText="비우기"
+        title="배달 요청"
+        description="가게와 기사님께 전달돼요."
+        primaryText="저장"
         onPrimary={() => {
           setModalOpen(false);
           setToast("success");
         }}
-      />
+      >
+        <div className="flex flex-col gap-3">
+          <Select label="출입 방법" options={ENTRY_OPTIONS} value={entry} onChange={setEntry} />
+          <TextField label="요청 사항" placeholder="예) 문 앞에 두고 벨 눌러 주세요" />
+        </div>
+      </Modal>
       <Modal
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}

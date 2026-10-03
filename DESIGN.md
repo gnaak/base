@@ -242,12 +242,14 @@ const columns: Column<UserRow>[] = [
 | `ui/button.tsx` | **Button** — main · sub1(흰 면+링) · sub2(옅은 회색) · danger · ghost / `loading` | Button. `type` 기본 "button". ghost · loading 은 고객에만 |
 | `ui/iconButton.tsx` | **IconButton** — 글자 없는 버튼, `label` 필수(aria-label) | — (뒤로 · 닫기 · 장바구니) |
 | `ui/textField.tsx` · `textArea.tsx` | **TextField** · **TextArea** — label · hint · error · required, aria 연결 | InputBox · TextareaBox. 글자 14px · 손가락 기기만 16px(iOS 확대 방지) · 포커스는 테두리 색만 |
-| `ui/select.tsx` | **Select** — 직접 그린 둥근 목록 (combobox + listbox · 키보드 · Esc 는 목록만 닫음) | SelectBox 와 같은 방식. 부모가 overflow-hidden 이면 목록이 잘릴 수 있다 |
+| `ui/select.tsx` | **Select** — 직접 그린 둥근 목록 (combobox + listbox · 키보드 · Esc 는 목록만 닫음 · 포커스는 진한 2px 선) | SelectBox 와 같은 방식. 목록은 body 로 portal 해서 모달 안에서도 안 잘린다 · 아래가 좁으면 위로 펼친다 |
 | `ui/checkbox.tsx` · `toggle.tsx` · `radioGroup.tsx` | **Checkbox** · **Toggle**(`role="switch"`) · **RadioGroup**(카드형 선택) | Checkbox · Toggle · RadioButton |
 | `ui/card.tsx` · `badge.tsx` · `listRow.tsx` | **Card**(flat · raised) · **Badge**(neutral · success · warning · error · info) · **ListRow**(`to` → 링크, `onClick` → 버튼) | — |
 | `ui/emptyState.tsx` · `skeleton.tsx` · `spinner.tsx` | **EmptyState** · **Skeleton** · Spinner | Skeleton · Loading |
 | `ui/modal.tsx` · `confirmModal.tsx` · `toast.tsx` | **Modal**(모바일 바텀시트 · sm 이상 가운데) · **ConfirmModal** · **Toast** | Modal · ConfirmModal · Toast 와 같은 API (+ children · loading) |
 | `layout/clientHeader.tsx` · `bottomTab.tsx` · `pageContainer.tsx` | **ClientHeader**(뒤로 · 제목 · 오른쪽) · **BottomTab**(NavLink, safe-area) · **PageContainer**(최대 폭 · 여백) | — |
+
+**Modal 과 ConfirmModal 을 가르는 기준** — "~할까요?" 같은 예/아니오 질문은 **ConfirmModal**(아이콘 · 제목 · 버튼 둘). 안에 **내용**(입력 · 선택 · 목록)이 있으면 **Modal**. 본문 없는 Modal 은 ConfirmModal 과 같아 보이니 쓰지 않는다.
 
 킷 내부용: `dialogShell.tsx`(모달 껍데기 — ESC · 스크롤 잠금 · 포커스) · `themePortal.tsx` · `field.tsx` · `fieldStyle.ts`.
 

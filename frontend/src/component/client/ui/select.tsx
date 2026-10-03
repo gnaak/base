@@ -1,7 +1,8 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Check, ChevronDown } from "lucide-react";
 import Field from "./field";
 import { controlFrame, controlHeight, controlText, describedBy } from "./fieldStyle";
+import ThemePortal from "./themePortal";
 
 export interface SelectOption {
   label: string;
@@ -36,7 +37,9 @@ interface SelectProps {
  * 접근성은 combobox + listbox 패턴 — ↑↓ · Home/End · Enter/Space · Esc · Tab. 포커스는 버튼에 남고
  * 지금 가리키는 옵션은 aria-activedescendant 로 알린다. 옵션 안에 그림 · 설명이 필요하면 RadioGroup 이나 Modal.
  *
- * ⚠️ 목록은 버튼 아래에 absolute 로 뜬다 — `overflow-hidden` 인 부모(스크롤되는 바텀시트 등) 안에서는 잘릴 수 있다.
+ * 목록은 body 로 portal 해서 버튼 위치에 fixed 로 띄운다 — 모달 판처럼 넘치면 잘라 내는(overflow) 부모 안에서도
+ * 안 잘린다 (처음엔 absolute 였는데 /dev/ui 의 입력 모달에서 판 끝에 잘렸다). 아래 공간이 모자라면 위로 펼친다.
+ * z-index 는 모달(100) 위 · 토스트(110) 아래.
  */
 const Select = ({
   id,
@@ -59,18 +62,46 @@ const Select = ({
   const listId = `${selectId}-list`;
   const invalid = !!error;
   const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
+  const [place, setPlace] = useState<{ left: number; width: number; top?: number; bottom?: number } | null>(null);
 
   const selectedIndex = options.findIndex((o) => o.value === value);
   const selected = selectedIndex >= 0 ? options[selectedIndex] : null;
   const enabled = options.flatMap((o, i) => (o.disabled ? [] : [i]));
 
-  // 바깥을 누르면 닫는다
+  // 버튼 자리에 붙인다 — 스크롤 · 창 크기가 바뀌면 다시
+  const measure = useCallback(() => {
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const below = window.innerHeight - rect.bottom;
+    const up = below < 240 && rect.top > below;
+    setPlace(
+      up
+        ? { left: rect.left, width: rect.width, bottom: window.innerHeight - rect.top + 6 }
+        : { left: rect.left, width: rect.width, top: rect.bottom + 6 },
+    );
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    measure();
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", measure, true); // 모달 판 같은 안쪽 스크롤까지
+    return () => {
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", measure, true);
+    };
+  }, [open, measure]);
+
+  // 바깥을 누르면 닫는다 (목록은 portal 이라 버튼 묶음 밖에 있다)
   useEffect(() => {
     if (!open) return;
     const handlePointerDown = (e: PointerEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (!rootRef.current?.contains(target) && !listRef.current?.contains(target)) setOpen(false);
     };
     document.addEventListener("pointerdown", handlePointerDown);
     return () => document.removeEventListener("pointerdown", handlePointerDown);
@@ -138,6 +169,7 @@ const Select = ({
     <Field id={selectId} label={label} hint={hint} error={error} required={required} full={full} className={className}>
       <div ref={rootRef} className={["relative", full ? "w-full" : ""].join(" ")}>
         <button
+          ref={buttonRef}
           type="button"
           id={selectId}
           role="combobox"
@@ -156,7 +188,7 @@ const Select = ({
             controlHeight[size],
             controlText,
             controlFrame(invalid, disabled),
-            open && !invalid ? "border-line-focus" : "",
+            open && !invalid ? "border-primary ring-1 ring-primary" : "",
           ].join(" ")}
         >
           <span className={["truncate", selected ? "text-text-main" : "text-text-placeholder"].join(" ")}>
@@ -170,38 +202,42 @@ const Select = ({
         {name && <input type="hidden" name={name} value={value ?? ""} />}
 
         {open && (
-          <ul
-            id={listId}
-            role="listbox"
-            className="absolute left-0 right-0 top-full z-50 mt-1.5 max-h-64 overflow-auto rounded-card bg-bg-card p-1 shadow-card dark:shadow-card-dark animate-fade-in"
-          >
-            {options.map((option, i) => {
-              const isSelected = option.value === value;
-              return (
-                <li
-                  key={option.value}
-                  id={`${listId}-${i}`}
-                  role="option"
-                  aria-selected={isSelected}
-                  aria-disabled={option.disabled || undefined}
-                  // 누르는 순간 버튼에서 포커스가 빠지지 않게 — 키보드 · 스크린리더가 계속 버튼을 본다
-                  onPointerDown={(e) => e.preventDefault()}
-                  onPointerMove={() => !option.disabled && setActive(i)}
-                  onClick={() => pick(i)}
-                  className={[
-                    "flex items-center justify-between gap-2 rounded-control px-2.5 py-2",
-                    controlText,
-                    option.disabled ? "cursor-not-allowed text-text-disabled" : "cursor-pointer text-text-main",
-                    i === active ? "bg-bg-hover" : "",
-                    isSelected ? "font-medium" : "",
-                  ].join(" ")}
-                >
-                  <span className="truncate">{option.label}</span>
-                  {isSelected && <Check className="h-4 w-4 shrink-0" aria-hidden="true" />}
-                </li>
-              );
-            })}
-          </ul>
+          <ThemePortal>
+            <ul
+              ref={listRef}
+              id={listId}
+              role="listbox"
+              style={place ?? undefined}
+              className="fixed z-[105] max-h-64 overflow-auto rounded-card bg-bg-card p-1 font-client shadow-card dark:shadow-card-dark animate-fade-in"
+            >
+              {options.map((option, i) => {
+                const isSelected = option.value === value;
+                return (
+                  <li
+                    key={option.value}
+                    id={`${listId}-${i}`}
+                    role="option"
+                    aria-selected={isSelected}
+                    aria-disabled={option.disabled || undefined}
+                    // 누르는 순간 버튼에서 포커스가 빠지지 않게 — 키보드 · 스크린리더가 계속 버튼을 본다
+                    onPointerDown={(e) => e.preventDefault()}
+                    onPointerMove={() => !option.disabled && setActive(i)}
+                    onClick={() => pick(i)}
+                    className={[
+                      "flex items-center justify-between gap-2 rounded-control px-2.5 py-2",
+                      controlText,
+                      option.disabled ? "cursor-not-allowed text-text-disabled" : "cursor-pointer text-text-main",
+                      i === active ? "bg-bg-hover" : "",
+                      isSelected ? "font-medium" : "",
+                    ].join(" ")}
+                  >
+                    <span className="truncate">{option.label}</span>
+                    {isSelected && <Check className="h-4 w-4 shrink-0" aria-hidden="true" />}
+                  </li>
+                );
+              })}
+            </ul>
+          </ThemePortal>
         )}
       </div>
     </Field>
