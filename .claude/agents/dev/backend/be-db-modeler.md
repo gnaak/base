@@ -20,5 +20,10 @@ be-researcher 탐색 결과를 바탕으로:
    - ForeignKey 컬럼 + relationship() 정의
    - 양방향 관계라면 상대 모델에 back_populates 추가
 
+5. 기존 모델을 바꿀 때는 **이전 코드가 새 스키마 위에서도 돌게** 한다 — 배포가 실패하면 코드만 되돌아가고 DB 는 그대로다
+   (`backend/CLAUDE.md` "되돌릴 수 있게 — expand / contract"):
+   - 새 컬럼은 `nullable=True` 또는 `server_default` — 이전 코드의 INSERT 가 그 컬럼을 모른다
+   - 컬럼 삭제 · 이름 변경은 이번에 하지 않는다. 코드에서 안 쓰게만 하고, 삭제는 다음 릴리스로 (보고에 적는다)
+
 마이그레이션 파일 생성 금지 (개발자가 직접 실행).
 완료 후 파일 경로와 주요 필드 요약 반환.

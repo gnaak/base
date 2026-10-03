@@ -7,35 +7,70 @@
 # 이 스크립트도 릴리스 안에 들어 있어서, 고치면 **다음 배포부터 바로** 적용된다.
 # (cloud-init.sh 는 첫 부팅 1회라 고쳐도 떠 있는 서버에 안 먹는다 — 바뀔 일은 여기에 둔다)
 #
-# 순서: 파일 교체 → .env → uv sync → 마이그레이션 → nginx·systemd → 재시작 → 확인
-# 하나라도 실패하면 거기서 멈춘다. 되돌리려면 이전 릴리스를 다시 배포한다.
+# 서버 구조는 lib.sh 맨 위. 릴리스마다 폴더를 따로 만들고 /srv/app/current 링크만 바꿔 끼운다.
+#
+# 순서: 새 릴리스 준비(복사 · .env · uv sync) → 마이그레이션 → 인증서 · real IP → nginx·systemd → current 전환
+#       → 재시작 → 확인
+# - 전환 전에 실패하면 지금 사이트는 그대로다 (새 릴리스 폴더만 지운다)
+# - 전환 뒤 확인이 실패하면 **이전 릴리스로 되돌리고** exit 1 — CI 는 빨갛게, 사이트는 살아 있게
+# - **DB 는 되돌리지 않는다.** 이전 코드가 새 스키마 위에서 돌 수 있어야 한다 — 마이그레이션은 expand/contract
+#   (backend/CLAUDE.md "마이그레이션 — 되돌릴 수 있게")
+# 손으로 되돌리려면 rollback.sh (infra/README.md "롤백")
 set -euo pipefail
 
+here=$(cd "$(dirname "$0")" && pwd)
+# shellcheck source=lib.sh
+. "$here/lib.sh"
+
 src=$(cd "$1" && pwd)
-app=/srv/app
-user=ubuntu
-# shellcheck disable=SC1091
-. /etc/app.env # PROJECT · AWS_REGION · DOMAIN · RELEASE_BUCKET (cloud-init.sh)
+# shellcheck disable=SC1090
+. "$app_env_file" # PROJECT · AWS_REGION · DOMAIN · RELEASE_BUCKET (cloud-init.sh)
 
-[ -f /var/lib/app-setup.done ] || { echo "서버 준비(cloud-init)가 안 끝났습니다. /var/log/app-setup.log 확인" >&2; exit 1; }
-step() { printf '\n── %s\n' "$*"; }
+[ -f "$setup_done" ] || { echo "서버 준비(cloud-init)가 안 끝났습니다. /var/log/app-setup.log 확인" >&2; exit 1; }
 
-# ⚠️ 아래 rsync --delete 는 src 에 없는 걸 지운다. 다운로드가 반쯤 깨진 릴리스(빈 폴더)로
-#    돌면 /srv/app 이 통째로 비워진다 — 필요한 게 다 있는지 먼저 본다
+# 다운로드가 반쯤 깨진 릴리스(빈 폴더)로 돌지 않게 필요한 게 다 있는지 먼저 본다
 for f in backend/pyproject.toml backend/uv.lock backend/migrate_server.sh frontend/dist/index.html \
-  deploy/nginx.conf deploy/site.conf deploy/fastapi.service; do
+  deploy/nginx.conf deploy/site.conf deploy/fastapi.service infra/server/lib.sh infra/server/rollback.sh; do
   [ -f "$src/$f" ] || { echo "릴리스에 $f 가 없습니다 — 배포를 멈춥니다 (서버는 그대로)" >&2; exit 1; }
 done
 
-# ── 1. 파일 교체 ─────────────────────────────────────────────────
-step "파일 교체: $src → $app"
-# 릴리스에 없는 것 = 서버에서 생긴 것. 여기 적지 않으면 --delete 가 지운다.
-# CHANGE — 앱이 서버에 쓰는 폴더가 더 있으면 추가 (fastapi.service 의 ReadWritePaths 와 맞출 것)
-keep=(backend/.venv backend/.env backend/logs backend/media)
-excludes=()
-for k in "${keep[@]}"; do excludes+=("--exclude=/$k"); done
-rsync -a --delete --chown="$user:$user" "${excludes[@]}" "$src/" "$app/"
-for d in backend/logs backend/media; do install -d -o "$user" -g "$user" "$app/$d"; done
+# 릴리스 이름 = 시각 + 커밋. 이름순 = 시간순이라 정리 · 롤백이 이름으로 고른다
+sha=$(basename "$src")
+sha=${sha#release-}
+name="$(date +%Y%m%d-%H%M%S)-${sha:0:12}"
+rel=$app/releases/$name
+[ ! -e "$rel" ] || { echo "$rel 이 이미 있습니다" >&2; exit 1; }
+
+# 되돌릴 곳 — 지금 current, 없고 예전 구조(/srv/app/backend)면 legacy, 둘 다 없으면 첫 배포
+prev=$(current_release)
+if [ -z "$prev" ] && [ -d "$app/backend" ]; then prev=legacy; fi
+
+# 전환 전에 실패하면 만들던 릴리스를 지운다 (사이트는 그대로)
+switched=""
+trap '[ -n "$switched" ] || rm -rf "$rel"' EXIT
+
+install -d -o "$user" -g "$group" "$app" "$app/releases"
+for d in "${shared_dirs[@]}"; do
+  # 예전 구조에서 처음 바뀌는 배포 — 로그 · 업로드를 shared 로 옮기고, 옛 자리엔 링크를 남긴다.
+  # 옛 코드도 그대로 돌 수 있어야 이번 배포가 실패했을 때 예전 구조로 되돌릴 수 있다 (한 번만 돈다)
+  if [ -d "$app/$d" ] && [ ! -L "$app/$d" ] && [ ! -e "$app/shared/$d" ]; then
+    install -d -o "$user" -g "$group" "$(dirname "$app/shared/$d")"
+    mv "$app/$d" "$app/shared/$d"
+    ln -s "$app/shared/$d" "$app/$d"
+    echo "보존: $d → shared/$d"
+  fi
+  install -d -o "$user" -g "$group" "$app/shared/$d"
+done
+
+# ── 1. 새 릴리스 준비 ─────────────────────────────────────────────
+step "새 릴리스: $name (이전: ${prev:-없음})"
+mkdir "$rel"
+cp -a "$src/." "$rel/"
+for d in "${shared_dirs[@]}"; do
+  rm -rf "${rel:?}/$d"
+  ln -s "$app/shared/$d" "$rel/$d"
+done
+chown -R "$user:$group" "$rel"
 
 # ── 2. backend/.env — SSM /<project>/backend/* 에서 만든다 ─────────────
 step "backend/.env 생성 (SSM /$PROJECT/backend/)"
@@ -43,44 +78,35 @@ step "backend/.env 생성 (SSM /$PROJECT/backend/)"
 # ⚠️ RawEnv 에 없는 이름을 넣으면 pydantic 이 기동을 거부한다 (오타가 조용히 무시되지 않는다)
 tmp=$(mktemp)
 {
-  echo "# deploy.sh 가 SSM /$PROJECT/backend/ 에서 만든 파일. 손으로 고치지 말 것 — 다음 배포에 덮인다"
+  echo "# deploy.sh 가 SSM /$PROJECT/backend/ 에서 만든 파일. 손으로 고치지 말 것 — 다음 배포에 새로 만든다"
   # RawEnv 는 local_* 이 필수라 없으면 기동하다 죽는다. prod 에서는 안 읽으므로 자리만 채운다
   printf '%s\n' local_mysql_user=unused local_mysql_password=unused local_mysql_host=unused \
     local_mysql_db=unused local_redis_host=unused local_redis_port=6379
   aws ssm get-parameters-by-path --region "$AWS_REGION" --path "/$PROJECT/backend/" \
     --with-decryption --query 'Parameters[].[Name,Value]' --output text |
-    while IFS=$'\t' read -r name value; do
+    while IFS=$'\t' read -r key value; do
       # 작은따옴표로 감싸 # · 공백이 그대로 들어가게 한다. 그 안에서 못 쓰는 두 글자만 막는다
       case $value in *"'"* | *\\*)
-        echo "SSM ${name} 값에 ' 또는 \\ 가 있습니다. 다른 값으로 바꾸세요." >&2
+        echo "SSM ${key} 값에 ' 또는 \\ 가 있습니다. 다른 값으로 바꾸세요." >&2
         exit 1
         ;;
       esac
-      printf "%s='%s'\n" "${name##*/}" "$value"
+      printf "%s='%s'\n" "${key##*/}" "$value"
     done
 } > "$tmp"
-install -m 600 -o "$user" -g "$user" "$tmp" "$app/backend/.env"
+install -m 600 -o "$user" -g "$group" "$tmp" "$rel/backend/.env"
 rm -f "$tmp"
 
 # ── 3. 의존성 · 마이그레이션 ────────────────────────────────────────
-cd "$app/backend"
+cd "$rel/backend"
 step "uv sync"
 sudo -u "$user" -H uv sync --frozen --no-dev --group prod
 step "마이그레이션"
+# 여기서부터 DB 가 앞으로 간다. 이 뒤에 실패해서 이전 릴리스로 돌아가도 DB 는 그대로다
 sudo -u "$user" -H env APP_ENV=prod sh migrate_server.sh
 
-# ── 4. nginx · systemd — 저장소의 deploy/ 를 그대로 깐다 ────────────────
-step "nginx · systemd 설정"
-# 자리표시만 바꾼다. 설정의 본체는 deploy/ 에 있고, 프로젝트마다 거기서 고친다
-render() {
-  sed -e 's#/etc/letsencrypt/live/example\.com/fullchain\.pem#/etc/ssl/app/cert.pem#' \
-    -e 's#/etc/letsencrypt/live/example\.com/privkey\.pem#/etc/ssl/app/key.pem#' \
-    -e "s#/srv/example#$app#g" \
-    -e "s#example\\.com#$DOMAIN#g" \
-    -e 's/[[:space:]]*# CHANGE.*$//' \
-    "$1"
-}
-
+# ── 4. 인증서 · 방문자 실제 IP — 서버 단위 설정 (릴리스와 무관) ─────────────
+step "인증서 · real IP"
 ssm_get() {
   aws ssm get-parameter --region "$AWS_REGION" --name "/$PROJECT/$1" \
     --with-decryption --query Parameter.Value --output text 2>/dev/null
@@ -89,28 +115,29 @@ ssm_get() {
 edge=$(ssm_get server/edge) || edge=cloudflare
 echo "앞단: $edge"
 
-# nginx -t 가 실패하면 옛 설정으로 되돌린다 — 그대로 두면 다음 재부팅에 nginx 가 안 뜬다
-realip=/etc/nginx/conf.d/edge-realip.conf
-backup=$(mktemp -d)
-cp -a /etc/nginx/nginx.conf /etc/ssl/app/cert.pem /etc/ssl/app/key.pem "$backup/"
-[ -f /etc/nginx/sites-available/app ] && cp -a /etc/nginx/sites-available/app "$backup/"
-[ -f "$realip" ] && cp -a "$realip" "$backup/"
-rm -f /etc/nginx/conf.d/cloudflare-realip.conf # 예전 이름
+# 아래가 바꾼 것을 nginx -t 실패 때 되돌릴 수 있게 둔다
+realip=$nginx_dir/conf.d/edge-realip.conf
+edge_backup=$(mktemp -d)
+cp -a "$ssl_dir/cert.pem" "$ssl_dir/key.pem" "$edge_backup/"
+if [ -f "$realip" ]; then cp -a "$realip" "$edge_backup/"; fi
+rm -f "$nginx_dir/conf.d/cloudflare-realip.conf" # 예전 이름
+restore_edge() {
+  cp -a "$edge_backup/cert.pem" "$edge_backup/key.pem" "$ssl_dir/"
+  if [ -f "$edge_backup/edge-realip.conf" ]; then cp -a "$edge_backup/edge-realip.conf" "$realip"; else rm -f "$realip"; fi
+}
 
-# ── 인증서 ──
 # cloudflare: SSM 의 Origin 인증서 (cloudflare.tf). CF Full (strict) 가 이걸 검증한다
 # aws:        cloud-init 의 임시 인증서 그대로 — ALB 는 서버 인증서를 검증하지 않는다 (사용자는 ACM 을 본다)
 if [ "$edge" = cloudflare ]; then
   if cert=$(ssm_get tls/cert) && key=$(ssm_get tls/key) && [ -n "$cert" ] && [ -n "$key" ]; then
-    printf '%s\n' "$cert" > /etc/ssl/app/cert.pem
-    (umask 077 && printf '%s\n' "$key" > /etc/ssl/app/key.pem)
+    printf '%s\n' "$cert" > "$ssl_dir/cert.pem"
+    (umask 077 && printf '%s\n' "$key" > "$ssl_dir/key.pem")
     echo "Origin 인증서 설치"
   else
     echo "⚠️ SSM 에 Origin 인증서가 없어 임시 인증서를 씁니다 — CF Full (strict) 에서는 526 이 납니다" >&2
   fi
 fi
 
-# ── 방문자 실제 IP ──
 # 앞단 뒤에서는 $remote_addr 가 앞단(CF 서버 / ALB) IP 다. 안 풀면 nginx 레이트리밋(limit_req_zone)이
 # 앞단 IP 몇 개에 **전 사용자를 묶는다**
 if [ "$edge" = aws ]; then
@@ -145,54 +172,51 @@ else
   fi
 fi
 
-render "$src/deploy/nginx.conf" > /etc/nginx/nginx.conf
-render "$src/deploy/site.conf" > /etc/nginx/sites-available/app
-ln -sf /etc/nginx/sites-available/app /etc/nginx/sites-enabled/app
-if ! nginx -t; then
-  cp -a "$backup/nginx.conf" /etc/nginx/nginx.conf
-  cp -a "$backup/cert.pem" "$backup/key.pem" /etc/ssl/app/
-  if [ -f "$backup/app" ]; then cp -a "$backup/app" /etc/nginx/sites-available/app; else rm -f /etc/nginx/sites-enabled/app; fi
-  if [ -f "$backup/edge-realip.conf" ]; then cp -a "$backup/edge-realip.conf" "$realip"; else rm -f "$realip"; fi
-  echo "nginx 설정이 틀려서 되돌렸습니다. deploy/nginx.conf · site.conf 를 확인하세요." >&2
+# ── 5. 전환 · 재시작 ─────────────────────────────────────────────
+step "전환: current → $name"
+since=$(date '+%Y-%m-%d %H:%M:%S')
+if ! activate "$name"; then
+  restore_edge
+  rm -rf "$edge_backup"
+  exit 1 # nginx 설정이 틀렸다 — current 는 그대로, 새 릴리스는 trap 이 지운다
+fi
+rm -rf "$edge_backup"
+switched=1
+
+# ── 6. 확인 — 실패하면 이전 릴리스로 ────────────────────────────────
+step "확인"
+if ! health "$since"; then
+  show_logs "$since"
+  if [ -z "$prev" ]; then
+    echo "✗ 첫 배포라 되돌릴 이전 릴리스가 없습니다 — 위 로그를 보고 고친 뒤 다시 배포하세요" >&2
+    exit 1
+  fi
+  step "되돌림: current → $prev"
+  since=$(date '+%Y-%m-%d %H:%M:%S')
+  if activate "$prev" && health "$since"; then
+    rm -rf "$rel"
+    echo "✗ $name 배포 실패 — $prev 로 되돌렸습니다 (사이트는 살아 있음, DB 마이그레이션은 그대로)" >&2
+  else
+    show_logs "$since"
+    echo "✗✗ $name 배포 실패, $prev 로 되돌리기도 실패 — 서버에 들어가 확인하세요 (infra/README.md \"롤백\")" >&2
+  fi
   exit 1
 fi
-rm -rf "$backup"
 
-render "$src/deploy/fastapi.service" > /etc/systemd/system/fastapi.service
-systemctl daemon-reload
-systemctl enable fastapi
+# 예전 구조에서 처음 바뀐 배포가 성공했다 — 옛 파일은 더 안 쓴다. 지우지 않고 한쪽으로만 치운다
+if [ "$prev" = legacy ]; then
+  legacy=$app/legacy-$(date +%Y%m%d-%H%M%S)
+  mkdir "$legacy"
+  for f in "$app"/* "$app"/.[!.]*; do
+    [ -e "$f" ] || [ -L "$f" ] || continue
+    case $(basename "$f") in releases | shared | current | legacy-*) continue ;; esac
+    mv "$f" "$legacy/"
+  done
+  echo "예전 구조의 파일: $legacy — 확인 뒤 지워도 된다 (로그 · 업로드는 shared 로 옮겨졌다)"
+fi
 
-# ── 5. 재시작 ─────────────────────────────────────────────────────
-step "재시작"
-since=$(date '+%Y-%m-%d %H:%M:%S')
-systemctl restart fastapi
-systemctl reload nginx
-
-# ── 6. 확인 — deploy/README.md 의 "배포 후 확인" 중 서버 안에서 되는 것 ─────────
-step "확인"
-fail() {
-  echo "✗ $*" >&2
-  journalctl -u fastapi --since "$since" --no-pager | tail -n 40 >&2
-  exit 1
-}
-
-ok=""
-for _ in $(seq 1 30); do
-  curl -fsS -o /dev/null http://127.0.0.1:8000/api/health && ok=1 && break
-  sleep 1
-done
-[ -n "$ok" ] || fail "앱이 30초 안에 뜨지 않았습니다"
-echo "✓ 앱 헬스체크"
-
-# ① env=local 로 뜨면 쿠키가 secure=False 로 나가서 세션이 안 잡힌다 — 다른 무엇보다 먼저
-journalctl -u fastapi --since "$since" --no-pager | grep -q '근거: APP_ENV' ||
-  fail "기동 로그에 '근거: APP_ENV' 가 없습니다 — fastapi.service 의 APP_ENV=prod 확인"
-echo "✓ env=prod (근거: APP_ENV)"
-
-# ② nginx 경유 (서버 인증서는 CF Origin / 자체 서명이라 브라우저용이 아니다 → -k)
-curl -fsSk -o /dev/null --resolve "$DOMAIN:443:127.0.0.1" "https://$DOMAIN/api/health" ||
-  fail "nginx 를 거친 헬스체크 실패 — deploy/site.conf 확인"
-echo "✓ nginx 경유 헬스체크"
+step "정리 (최근 $keep_releases 개만)"
+prune
 
 echo
-echo "배포 완료: $src"
+echo "배포 완료: $name"

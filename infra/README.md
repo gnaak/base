@@ -152,7 +152,7 @@ main 에 푸시하거나 **Actions → CI → Run workflow**. 초록불이면 �
 |---|---|
 | 배포 | main 에 푸시 (테스트 통과 시) |
 | 재배포 | Actions → CI → Run workflow |
-| 롤백 | `git revert` → 푸시 |
+| 롤백 | **확인에 실패한 배포는 자동으로 이전 릴리스로 돌아간다.** 손으로는 아래 "롤백" (`rollback.sh`). 코드로 고치려면 `git revert` → 푸시 — 단, 마이그레이션이 든 커밋은 revert 말고 forward-fix |
 | 서버 접속 | 콘솔 EC2 → 연결 → **Session Manager** (22번은 닫혀 있다) |
 | 앱 로그 | `sudo journalctl -u fastapi -f` · `/srv/app/backend/logs/app.log` |
 | 설정값 바꾸기 | Parameter Store 수정 → 재배포 (`backend/.env` 는 배포마다 새로 만들어진다) |
@@ -164,14 +164,41 @@ main 에 푸시하거나 **Actions → CI → Run workflow**. 초록불이면 �
 
 | 경로 | |
 |---|---|
-| `/srv/app` | 릴리스를 푼 것. 배포마다 `rsync --delete` 로 교체 (`.venv`·`.env`·`logs`·`media` 는 보존) |
+| `/srv/app/releases/<시각>-<sha>/` | 릴리스마다 한 폴더 (최근 3개). `backend/.venv` · `backend/.env` 도 릴리스마다 — `.env` 는 그 배포 때의 SSM 값 |
+| `/srv/app/shared/backend/{logs,media}` | 릴리스가 바뀌어도 남는 것. 각 릴리스의 `backend/` 에 링크로 걸린다 |
+| `/srv/app/current` | 지금 켜진 릴리스로 가는 링크. nginx · systemd 는 이 경로만 본다 |
 | `/etc/app.env` | `PROJECT` · `AWS_REGION` · `DOMAIN` · `RELEASE_BUCKET` (cloud-init) |
 | `/etc/ssl/app/` | cloudflare: Origin 인증서 (배포마다 SSM 에서) / aws: cloud-init 의 임시 인증서 (ALB 는 검증 안 함) |
 | `/etc/nginx/conf.d/edge-realip.conf` | 방문자 실제 IP — 배포마다 edge 에 맞춰 만든다 (cloudflare: CF 대역 / aws: VPC 대역 + `CF-Connecting-IP` 덮어쓰기) |
 | `/var/log/app-setup.log` | 첫 부팅 로그 |
 
-앱이 서버에 쓰는 폴더를 추가했다면(예: 기록 데이터를 쓰는 `backend/data`) `infra/server/deploy.sh` 의 `keep`
-과 `deploy/fastapi.service` 의 `ReadWritePaths` 둘 다에 넣는다 — 안 넣으면 배포 때 지워진다.
+앱이 서버에 쓰는 폴더를 추가했다면(예: 기록 데이터를 쓰는 `backend/data`) `infra/server/lib.sh` 의 `shared_dirs`
+와 `deploy/fastapi.service` 의 `ReadWritePaths` 둘 다에 넣는다 — 안 넣으면 릴리스가 바뀔 때마다 비어 있는 새 폴더가 된다.
+
+> 예전 구조(`/srv/app` 에 바로 풀던 것)의 서버는 **처음 이 방식으로 배포할 때 한 번 자동으로 바뀐다** — 로그·업로드는
+> `shared/` 로 옮겨지고, 그 배포가 성공하면 옛 파일은 `/srv/app/legacy-<시각>/` 로 치워진다(지우지 않는다). 그 첫 배포가
+> 확인에 실패하면 예전 구조 그대로 되돌린다.
+
+### 롤백
+
+배포가 확인(헬스체크 · `근거: APP_ENV` · nginx 경유)에 실패하면 `deploy.sh` 가 **스스로 이전 릴리스로 되돌리고** 실패로 끝난다
+— CI 는 빨갛게, 사이트는 살아 있게. 배포는 성공했는데 나중에 문제가 보이면 손으로 되돌린다:
+
+```bash
+# 남아 있는 릴리스 보기 / 바로 전으로 / 골라서
+aws ssm send-command --instance-ids <instance_id> --document-name AWS-RunShellScript \
+  --parameters 'commands=["bash /srv/app/current/infra/server/rollback.sh --list"]'
+aws ssm send-command --instance-ids <instance_id> --document-name AWS-RunShellScript \
+  --parameters 'commands=["bash /srv/app/current/infra/server/rollback.sh"]'
+# 결과: aws ssm get-command-invocation --command-id <위 출력의 CommandId> --instance-id <instance_id>
+```
+
+Session Manager 로 들어가 `sudo bash /srv/app/current/infra/server/rollback.sh` 를 쳐도 같다.
+
+- **DB 는 되돌리지 않는다** — 그래서 마이그레이션은 이전 코드와 같이 돌게 만든다 (`backend/CLAUDE.md` "expand / contract")
+- 롤백한 릴리스의 `.env` 는 그 릴리스를 배포할 때 것이다. 그 뒤 Parameter Store 에서 비번을 바꿨다면 롤백 대신 이전 커밋을 다시 배포한다
+  (`.env` 를 릴리스마다 두는 이유: 설정은 모르는 키가 있으면 기동을 거부해서, 새 키가 든 `.env` 로는 이전 릴리스가 안 뜬다)
+- 다음 main 푸시가 다시 최신을 배포한다 — 롤백은 고칠 때까지 버티는 용도다
 
 ---
 

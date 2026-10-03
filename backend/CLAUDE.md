@@ -84,6 +84,22 @@ module/[domain]/
 - **CI(e2e 잡)가 빈 DB 에 `alembic upgrade head` → `alembic check` 를 돌린다.** pytest 는 `create_all` 로 테이블을 만들어서
   리비전이 깨져도 모른다 — 여기서 잡는다. 모델을 바꾸고 리비전을 안 만들었으면 `alembic check` 가 실패한다
 
+### 되돌릴 수 있게 — expand / contract
+
+배포가 확인에 실패하면 서버는 **이전 릴리스로 되돌아가지만 DB 는 되돌리지 않는다** (`infra/server/deploy.sh`,
+`rollback.sh`). 그래서 마이그레이션은 **이전 코드가 새 스키마 위에서도 돌게** 만든다:
+
+| 하고 싶은 것 | 이번 릴리스 (expand) | 다음 릴리스 이후 (contract) |
+| --- | --- | --- |
+| 컬럼 추가 | `nullable=True` 또는 `server_default` 를 준다 — 이전 코드의 INSERT 가 그 컬럼을 모른다 | 필요하면 NOT NULL 로 |
+| 컬럼 삭제 | 코드에서 안 쓰게만 한다 (컬럼은 둔다) | 그다음 릴리스에서 drop |
+| 이름 변경 | 새 컬럼 추가 + 둘 다 쓰기 + 데이터 옮기기 | 옛 컬럼 drop |
+| 타입 좁히기 · NOT NULL 추가 | 데이터부터 정리 | 제약 추가 |
+
+- **마이그레이션이 든 커밋은 `git revert` 하지 않는다 — forward-fix.** revert 하면 리비전 파일이 사라져서
+  DB 의 `alembic_version` 이 저장소에 없는 리비전을 가리키고, 다음 배포의 `alembic upgrade` 가 멈춘다
+- 하나의 리비전에 expand 와 contract 를 같이 넣지 않는다 — 롤백할 곳이 없어진다
+
 ## 관리자 계정 — `scripts/create_admin.py`
 
 관리자 가입 API 는 일부러 없다. 첫 관리자(운영 포함)는 이 스크립트로 만든다:

@@ -231,7 +231,7 @@ jobs:
 
   # 인프라 코드 — 키 없이 돈다 (mock provider). edge 두 방식이 다 plan 되는지 본다
   infra:
-    name: infra (terraform validate · test)
+    name: infra (terraform validate · test · 배포 스모크)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -253,7 +253,14 @@ jobs:
           terraform test
 
       - name: 서버 스크립트 문법
-        run: bash -n infra/server/deploy.sh && bash -n infra/server/cloud-init.sh && sh -n infra/tf.sh
+        run: |
+          for f in infra/server/*.sh infra/tests/*.sh; do bash -n "$f"; done
+          sh -n infra/tf.sh
+
+      # 배포 · 롤백 — 서버 명령을 가짜로 바꾼 임시 폴더에서 (정상 · 확인 실패 되돌림 · nginx · 마이그레이션 실패 ·
+      # 정리 · rollback.sh · 예전 구조 첫 전환)
+      - name: 배포 스모크
+        run: bash infra/tests/deploy_smoke.sh
 
   # Docker 는 배포에 쓰지 않는다 — EC2 에 nginx + systemd 로 직접 올린다 (infra/server/deploy.sh)
   deploy:

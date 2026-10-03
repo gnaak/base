@@ -81,6 +81,7 @@ cd frontend && npm run build
 cd frontend && npm run e2e                           # 화면·세션 흐름을 바꿨다면 (전용 포트 3100/8100 · DB db_base_e2e)
 node --test .claude/hooks/autopilot-gate.test.mjs   # .claude/hooks 를 건드렸다면 (무인 실행 게이트)
 ./infra/.bin/<버전>/terraform -chdir=infra test     # infra/ 를 건드렸다면 (키 불필요, mock)
+bash infra/tests/deploy_smoke.sh                     # infra/server 를 건드렸다면 (Windows 는 wsl bash …)
 ```
 
 이 줄들이 `.github/workflows/ci.yml`이 돌리는 것과 같다 — 푸시 전에 여기서 걸러내면
@@ -188,7 +189,10 @@ CI 가 테스트 → 빌드 → S3 → SSM 으로 서버의 `infra/server/deploy
   OAuth 키 등은 Parameter Store 에 넣는다 (이름이 `RawEnv` 필드와 다르면 기동 거부)
 - AWS 연결 전(템플릿 그대로)에는 CI 의 `deploy` 잡이 **건너뛴다** — 실패가 아니다
 - EC2 는 교체되지 않게 막혀 있다 (Redis 에 세션 무효화 상태가 있다). 교체되면 `jwt_secret` 이 같이 바뀐다
-- 앱이 서버에 쓰는 폴더를 추가하면 `deploy.sh` 의 `keep` + `fastapi.service` 의 `ReadWritePaths` 둘 다에
+- **릴리스마다 폴더**(`/srv/app/releases/*`, 최근 3개)를 두고 `current` 링크를 바꿔 끼운다. 확인에 실패하면 **이전 릴리스로 자동 복귀**,
+  손으로는 `rollback.sh` (`infra/README.md` "롤백"). **DB 는 되돌리지 않는다** — 마이그레이션은 expand/contract,
+  마이그레이션 커밋은 revert 말고 forward-fix (`backend/CLAUDE.md`)
+- 앱이 서버에 쓰는 폴더를 추가하면 `infra/server/lib.sh` 의 `shared_dirs` + `fastapi.service` 의 `ReadWritePaths` 둘 다에
 - ⚠️ 앱 레이트리밋은 `CF-Connecting-IP` 를 1순위로 믿는다. CF 는 이 헤더를 덮어쓰지만 **ALB 는 사용자 값을
   그대로 넘긴다** — `edge=aws` 에서 nginx 가 덮어쓰는 줄(`edge-realip.conf`)을 지우면 위조로 한도가 뚫린다
 
