@@ -11,6 +11,8 @@ _client: redis.Redis | None = None
 
 def get_redis() -> redis.Redis:
     global _client
+    if _client is None and settings.redis_in_memory:
+        _client = _memory_client()
     if _client is None:
         _client = redis.Redis(
             host=settings.redis_host,
@@ -26,6 +28,18 @@ def get_redis() -> redis.Redis:
             socket_keepalive=True,     # 방화벽/NAT의 idle 컷 방어
         )
     return _client
+
+
+def _memory_client() -> redis.Redis:
+    """`local_redis_host=memory` — Redis 를 설치하지 않은 로컬 PC 용. 이 프로세스 메모리에만 있다.
+
+    재시작하면 비워진다 (레이트리밋 카운터 · 끊은 세션 목록 · 세션 버전). 대개 로그인은 그대로다 —
+    버전을 올린 적 있는 계정(비번 변경 등)만 다음 refresh 에서 다시 로그인하게 된다 (`ver` 불일치).
+    운영은 settings 가 거부하고, fakeredis 는 dev 의존성이라 운영 설치(--no-dev)에는 아예 없다.
+    """
+    import fakeredis.aioredis  # dev 의존성 — 메모리 모드에서만 불러온다
+
+    return fakeredis.aioredis.FakeRedis(decode_responses=True)
 
 
 async def close_redis() -> None:

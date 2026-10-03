@@ -7,7 +7,8 @@
 | 무엇 | 상태 | 메모 |
 | --- | --- | --- |
 | `/start` 처음부터 끝까지 | 🔌 진행 중 | 새 폴더 · 새 VS Code 창에서. 문제 나오면 바로 고친다 |
-| 기능 넣고 빼기 설계 | ⬜ | Docker 는 선택 · Redis 는 핵심(세션 · 레이트리밋) · 스케줄러는 레시피로 |
+| 로컬 메모리 Redis | ✅ | `local_redis_host=memory` — 로컬은 Redis 설치 없이, 운영은 기동 거부 · `/start` 는 Redis 가 없으면 이걸로 |
+| 모듈 레시피 | 🔄 | 스케줄러 넣기 · Docker · OAuth · WebSocket · GPT · 업로드 빼기 → `/plan` 이 고른다 |
 
 ## 남은 것
 
@@ -45,6 +46,7 @@ wsl bash infra/tests/deploy_smoke.sh                            # 16 (Windows �
 | 질문 | 전부 선택지 · 요약은 질문 본문에 |
 | 자료 | 계약서 · 대화 → `PRD/sources/` (git 제외) · 고정 조건 |
 | 비밀번호 | 메모장으로 열고 적게 · 대화로 안 물음 |
+| Redis | 이미 있으면 같이 씀 · 없으면 메모리 (설치 안 함) · Docker 는 MySQL 이 없을 때만 |
 | 끝 | pytest · E2E 통과 → `/plan` |
 
 **3. `/autopilot`** — 장난감 `PROJECT.md` 로 한 바퀴 (옆 폴더)

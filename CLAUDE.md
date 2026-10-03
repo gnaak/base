@@ -235,6 +235,7 @@ nginx 가 443 을 듣는지가 갈린다.
 **로컬**: 프론트 · 백엔드 호스트를 통일한다 (`localhost` 끼리 · `127.0.0.1` 끼리). 섞으면 cross-site 라 `SameSite=Lax` 쿠키가 안 실려 로그인은 되는데 세션이 안 잡힌다.
 MySQL · Redis 는 `docker compose up -d` (DB 3개 자동 생성, 값은 `backend/.env.example` 과 맞춰져 있다). 직접 설치한 것도 되지만
 `local_*` 를 맞출 것 — 기동 시 연결을 검증하고, 실패하면 원인을 로그에 남기고 종료한다.
+Redis 가 없으면 `local_redis_host=memory`(로컬 전용 메모리 Redis — 운영에서는 기동 거부). 운영 서버는 cloud-init 이 깐 진짜 Redis 를 쓴다.
 
 ## 트러블슈팅
 

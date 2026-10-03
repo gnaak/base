@@ -182,20 +182,26 @@ Windows 확인 창이 뜨면 '예' 만 눌러 주세요. (준비 30분 안팎, �
 2. **템플릿 이름 바꾸기** — `frontend/e2e/env.ts` 의 `db_base_e2e` → `db_{slug}_e2e`, `docker/mysql/init.sql` 의 DB 이름 3개,
    `docker-compose.yml` 의 `container_name`(`base-mysql` · `base-redis` → `{slug}-mysql` · `{slug}-redis`)과 `MYSQL_DATABASE`
 3. **파이썬 · 패키지** — `uv --directory backend sync` (파이썬이 없으면 uv 가 받아 온다. 처음엔 몇 분)
-4. **DB · Redis** — `uv --directory backend run python -m scripts.prepare_local check`
-   - **둘 다 OK** (이미 이 PC 에 떠 있다 — 다른 프로젝트와 같이 써도 된다):
-     `PP databases db_{slug} db_{slug}_test db_{slug}_e2e`, `PP redis-db` 가 준 번호로 `PP set redis_db <번호>`
-   - **Redis 인증 실패 "no password is set"** — `PP set local_redis_password ""` (비우기) → 다시 check
-   - **비밀번호가 필요하다**(MySQL "Access denied" · Redis 비밀번호 틀림) — **대화로 묻지 않는다** (답이 대화 기록에 남고 서버로 간다).
+4. **DB · Redis** — `uv --directory backend run python -m scripts.prepare_local check` (MySQL · Redis 를 따로 알려 준다)
+
+   **Redis 는 설치하지 않는다:**
+   - OK (이미 이 PC 에 떠 있다 — 다른 프로젝트와 같이 써도 된다) → `PP redis-db` 가 준 번호로 `PP set redis_db <번호>`
+   - 인증 실패 "no password is set" → `PP set local_redis_password ""` (비우기) → 다시 check
+   - 그 밖의 실패(접속 안 됨 · 비밀번호 틀림) → **묻지 않고** `PP set local_redis_host memory` — 로컬 전용 메모리 Redis.
+     설치가 필요 없고 재시작하면 비워질 뿐이다. 운영 서버는 서버에 깔린 진짜 Redis 를 쓴다 (운영에서 memory 면 기동 거부)
+
+   **MySQL:**
+   - OK → `PP databases db_{slug} db_{slug}_test db_{slug}_e2e`
+   - **비밀번호가 필요하다**("Access denied") — **대화로 묻지 않는다** (답이 대화 기록에 남고 서버로 간다).
      **다른 프로젝트 폴더의 `.env` 에서 가져오지도 않는다.** 사람이 메모장으로 직접 적게 한다:
-     1. `PP line local_mysql_password`(Redis 면 `local_redis_password`)로 줄 번호를 얻는다
+     1. `PP line local_mysql_password` 로 줄 번호를 얻는다
      2. 메모장으로 연다 — Windows `start "" notepad "backend\.env"`(Git Bash) / `Start-Process notepad "backend\.env"`(PowerShell) ·
         macOS `open -t backend/.env` · Linux `xdg-open backend/.env`. 끝날 때까지 기다리는 형태로 열지 않는다
      3. AskUserQuestion — "메모장의 ○번째 줄 `local_mysql_password=` 뒤에 MySQL 비밀번호를 적고 저장해 주세요 (사용자가 root 가 아니면 바로 위 `local_mysql_user` 도)"
         [다 적었어요 / 모르겠어요 → 이 프로젝트 전용으로 Docker 에 새로 띄우기]
-     4. "다 적었어요" 면 다시 check (값은 보지 않는다). "모르겠어요" 면 아래 Docker — 이미 3306 · 6379 를 쓰고 있으니 저장소 루트 `.env` 에
-        `MYSQL_PORT=3307` · `REDIS_PORT=6380`, `PP set mysql_port 3307` · `PP set local_redis_port 6380`, 비밀번호 줄은 `PP set … ""` 로 비운다
-   - **접속 안 됨** — Docker 로 띄운다. 할 수 있는 건 다 알아서:
+     4. "다 적었어요" 면 다시 check (값은 보지 않는다). "모르겠어요" 면 아래 Docker — 이미 3306 을 쓰고 있으니 저장소 루트 `.env` 에
+        `MYSQL_PORT=3307`, `PP set mysql_port 3307`, 비밀번호 줄은 `PP set local_mysql_password ""` 로 비운다
+   - **접속 안 됨** — Docker 로 MySQL 만 띄운다. 할 수 있는 건 다 알아서:
      1. `docker` 가 없으면 설치 — Windows `winget install --id Docker.DockerDesktop -e --accept-package-agreements --accept-source-agreements`
         ("예" 한 번). WSL 이 없다고 나오면 `wsl --install --no-distribution`(PowerShell, "예" 한 번). 둘 다 **재부팅이 필요할 수 있다** —
         그러면 "PC 를 다시 시작하고 VS Code 를 열어 `/start` 를 쳐 주세요" 로 멈춘다. macOS 는 `brew install --cask docker`, 없으면 `03-docker.html`
@@ -203,8 +209,8 @@ Windows 확인 창이 뜨면 '예' 만 눌러 주세요. (준비 30분 안팎, �
         `docker info` 가 될 때까지 10초 간격으로 2분 기다린다
      3. 2분이 지나도 안 켜지면 대개 첫 실행의 약관 화면이다 → `docs/guides/03-docker.html` 을 열고 AskUserQuestion "Docker Desktop 의 약관에 동의(Accept)해 주세요" [다 했어요 / 막혔어요] 로 기다린다.
         가상화가 꺼져 있다는 메시지면 같은 문서의 "막히면" (BIOS) — 그래도 안 되면 `04-mysql-redis.html`(직접 설치)
-     4. 켜지면 저장소 루트에서 `docker compose up -d` → `docker compose ps` 가 둘 다 healthy 가 될 때까지 기다림 → 다시 `check` →
-        `databases` · `redis-db` (위와 같이)
+     4. 켜지면 저장소 루트에서 `docker compose up -d mysql` → `docker compose ps` 가 healthy 가 될 때까지 기다림 → 다시 `check` →
+        `databases` (위와 같이). Redis 는 위에서 정한 대로 둔다
 5. **테이블** — `uv --directory backend run alembic upgrade head`
 6. **로컬 관리자** — `PP admin`. 이메일은 `admin@example.com`, 비밀번호는 `backend/admin-password.local`(git 에 안 올라간다)에만 적힌다.
    비밀번호를 화면이나 대화에 옮기지 않는다 — 마지막에 그 파일을 메모장으로 열어 준다
@@ -233,7 +239,7 @@ git 은 0 에서 이미 새 기록으로 시작했다. 여기서는 브리프 ·
 | 항목 | 결과 |
 | --- | --- |
 | 이름 | 표시명 · slug |
-| DB · Redis | `db_{slug}` · `_test` · `_e2e` / Redis 번호 / 이미 있던 걸 썼는지, Docker 로 띄웠는지 |
+| DB · Redis | `db_{slug}` · `_test` · `_e2e` — 이미 있던 MySQL 인지, Docker 로 띄웠는지 / Redis — 이미 있던 것(번호) 또는 메모리 |
 | 관리자 | `admin@example.com` — 비밀번호는 `backend/admin-password.local` (메모장으로 열어 준다). 화면: `cd frontend && npm run dev` 와 `cd backend && sh run.sh` 뒤 http://localhost:3000/admin |
 | 확인 | pytest · 화면 테스트 · E2E 통과 여부 |
 | git | 새 기록 · 원격 |

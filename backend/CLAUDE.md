@@ -574,6 +574,9 @@ EXTRA_LOG_CHANNELS: dict[str, str] = {
 - CORS 허용 오리진은 `.env`의 `{local|prod}_domain`에서 유도된다 (위 "도메인 설정" 참고)
 - Redis 연결은 `core/database/redis.py`의 `get_redis()` 하나를 공유한다.
   `RedisService`도 이걸 쓴다 — 클라이언트를 따로 만들지 말 것 (password를 빠뜨리기 쉽다)
+  - `local_redis_host=memory` 면 메모리 Redis(fakeredis) — Redis 를 설치하지 않은 PC 용. 같은 코드 경로를 타고
+    재시작하면 비워진다. **운영에서는 기동을 거부한다** (끊은 세션 목록이 사라지면 끊은 세션이 되살아난다).
+    fakeredis 는 dev 의존성이라 운영 설치에는 없다
 - 외부 HTTP 호출은 `core/utils/http_client.py`의 `request_json()`을 쓴다 —
   `httpx.AsyncClient`를 직접 만들지 말 것. 타임아웃·아웃바운드 로깅·에러→`fail()` 변환·쿠키 격리가
   전부 여기에 있다 (공유 클라이언트는 lifespan이 열고 닫는다)

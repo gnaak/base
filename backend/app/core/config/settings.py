@@ -8,6 +8,9 @@ from urllib.parse import quote_plus
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# local_redis_host 에 이 값을 주면 메모리 Redis (core/database/redis.py)
+REDIS_MEMORY = "memory"
+
 
 class RawEnv(BaseSettings):
     # MySQL 설정
@@ -67,6 +70,8 @@ class RawEnv(BaseSettings):
     prod_google_redirect_uri: str | None = None
 
     # REDIS
+    # local_redis_host=memory 면 Redis 를 설치하지 않은 PC 용 메모리 Redis (core/database/redis.py).
+    # 재시작하면 비워진다 — 로컬 전용이라 운영(prod)에서는 기동을 거부한다
     local_redis_host: str
     local_redis_port: int
     local_redis_password: str | None = None
@@ -115,6 +120,16 @@ class Settings:
         self.BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
         self.APP_DIR = self.BASE_DIR / "app"
         self.MEDIA_ROOT = self.BASE_DIR / "media"
+        self._refuse_memory_redis_in_prod()
+
+    def _refuse_memory_redis_in_prod(self) -> None:
+        # 메모리 Redis 는 재시작하면 끊은 세션 목록 · 세션 버전이 사라진다 —
+        # 로그아웃 · 비번 변경으로 끊은 세션이 되살아난다.
+        # 운영 설치(--no-dev)에는 fakeredis 도 없지만, 그 전에 이유를 말하고 멈춘다
+        if self.env == "prod" and self.redis_in_memory:
+            raise RuntimeError(
+                f"prod_redis_host={REDIS_MEMORY} 는 로컬 전용입니다 — 운영은 실제 Redis 주소를 주세요"
+            )
 
     def _detect_env(self) -> tuple[str, str]:
         """
@@ -242,6 +257,10 @@ class Settings:
     def redis_password(self) -> str | None:
         return getattr(self.raw, f"{self.env}_redis_password")
 
+    @property
+    def redis_in_memory(self) -> bool:
+        return self.redis_host.strip().lower() == REDIS_MEMORY
+
     # 도메인 설정 — CORS 오리진과 쿠키 도메인을 {env}_domain 하나에서 유도한다
     @property
     def domains(self) -> list[str]:
@@ -351,11 +370,16 @@ class Settings:
         return (
             f"env={self.env} (근거: {self.env_source}) | "
             f"db={self.mysql_host}:{self.mysql_port}/{self.mysql_db} | "
-            f"redis={self.redis_host}:{self.redis_port} | "
+            f"redis={self._redis_label()} | "
             f"cors={self.cors_origins} | "
             f"cookie(domain={self.cookie_domain or 'host-only'}, "
             f"secure={self.cookie_secure}, samesite={self.cookie_samesite})"
         )
+
+    def _redis_label(self) -> str:
+        if self.redis_in_memory:
+            return "memory(로컬 전용 · 재시작하면 비워짐)"
+        return f"{self.redis_host}:{self.redis_port}"
 
 
 # 전역 인스턴스

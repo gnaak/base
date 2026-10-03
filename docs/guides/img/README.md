@@ -30,7 +30,6 @@
 | `03-5.png` | Docker Desktop | 왼쪽 아래 초록 "Engine running" |
 | `04-1.png` | MySQL · Redis 직접 | MySQL Installer — "Server only" |
 | `04-2.png` | MySQL · Redis 직접 | root 비밀번호 정하는 화면 |
-| `04-3.png` | MySQL · Redis 직접 | Memurai 다운로드 — Developer 버전 |
 | `05-1.png` | 내 GitHub 에 올리기 | 새 저장소 — Private, README 체크 꺼짐 |
 | `05-2.png` | 내 GitHub 에 올리기 | 빈 저장소 페이지 — HTTPS 주소와 복사 버튼 |
 | `05-3.png` | 내 GitHub 에 올리기 | 처음 올릴 때 GitHub 로그인 · 승인 창 |

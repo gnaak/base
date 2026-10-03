@@ -3,16 +3,66 @@
 남의 데이터를 건드리지 않는 것이 핵심이라 그 부분만 본다 (실제 MySQL · Redis 접속은 /start 가 확인한다).
 """
 
+from types import SimpleNamespace
+
 import fakeredis
 
 from scripts import prepare_local
 
 
+def _raw(monkeypatch, redis_host="localhost"):
+    # 개발 PC 의 backend/.env 가 아니라 테스트가 정한 값으로 (memory 로 적어 둔 PC 에서도 같은 결과)
+    raw = SimpleNamespace(
+        local_redis_host=redis_host, local_redis_port=6379,
+        local_mysql_host="127.0.0.1", mysql_port=3306,
+    )
+    monkeypatch.setattr(prepare_local, "_raw", lambda: raw)
+
+
 def _fake_redis(monkeypatch, used: tuple[int, ...]):
+    _raw(monkeypatch)
     server = fakeredis.FakeServer()
     for n in used:
         fakeredis.FakeRedis(server=server, db=n).set("someone-else", "1")
     monkeypatch.setattr(prepare_local, "_redis", lambda db=0: fakeredis.FakeRedis(server=server, db=db))
+
+
+class _FakeMySQL:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def cursor(self):
+        return self
+
+    def execute(self, sql):
+        pass
+
+    def fetchone(self):
+        return ("8.0.0",)
+
+
+def _no_redis(db=0):
+    raise AssertionError("메모리 Redis 인데 접속하려 했다")
+
+
+def test_메모리_Redis면_접속하지_않고_통과한다(monkeypatch, capsys):
+    _raw(monkeypatch, redis_host="memory")
+    monkeypatch.setattr(prepare_local, "_mysql", _FakeMySQL)
+    monkeypatch.setattr(prepare_local, "_redis", _no_redis)
+
+    assert prepare_local.check() == 0
+    assert "Redis 메모리" in capsys.readouterr().out
+
+
+def test_메모리_Redis면_번호를_고르지_않는다(monkeypatch, capsys):
+    _raw(monkeypatch, redis_host="memory")
+    monkeypatch.setattr(prepare_local, "_redis", _no_redis)
+
+    assert prepare_local.free_redis_db() == 0
+    assert capsys.readouterr().out.strip() == "0"
 
 
 def test_키가_있는_번호는_건너뛰고_비어_있는_가장_작은_번호를_고른다(monkeypatch, capsys):

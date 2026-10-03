@@ -41,12 +41,13 @@ Claude Code 로 쓰면 아이디어 → 기획 → 개발 → 검증까지 이�
 2. GitHub 의 **Use this template** 로 받아 VS Code 로 연다 — [`01-get-template.html`](docs/guides/01-get-template.html)
 3. Claude 패널에 만들고 싶은 것을 말한다 — 한 줄도, 고객과 나눈 대화도, 계약서 파일(docx · hwpx · pdf)도 된다
 
-처음 연 폴더면 시작 훅이 `/start` 로 이어 준다. 만들 것을 대화로 정하고 → 도구(uv · Node · Docker) 설치 →
+처음 연 폴더면 시작 훅이 `/start` 로 이어 준다. 만들 것을 대화로 정하고 → 도구(uv · Node · MySQL 이 없을 때만 Docker) 설치 →
 DB · 시크릿 · 이름 · git 셋업 → 테스트 통과 → `/plan`. 사람이 직접 할 일(설치 확인 창 · 비밀번호)은 안내 페이지와 메모장을 띄운다.
 
 ### 손으로
 
-필요한 것: [uv](https://docs.astral.sh/uv/)(파이썬은 uv 가 받는다) · Node 20+ · Docker(MySQL · Redis 용 — 이미 있으면 없어도 된다)
+필요한 것: [uv](https://docs.astral.sh/uv/)(파이썬은 uv 가 받는다) · Node 20+ · MySQL 8 (없으면 Docker 로).
+Redis 는 없어도 된다 — `backend/.env` 에 `local_redis_host=memory` (로컬 전용. 운영 서버는 진짜 Redis 를 쓴다)
 
 ```bash
 docker compose up -d                       # MySQL 8 + Redis 7, DB 3개 생성

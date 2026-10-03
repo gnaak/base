@@ -3,15 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MySQL · Redis 직접 설치</title>
+<title>MySQL 직접 설치</title>
 <link rel="stylesheet" href="guide.css">
 </head>
 <body>
 <main>
 <a class="back" href="index.html">← 안내 목록</a>
-<h1>Docker 없이 MySQL · Redis 직접 설치</h1>
+<h1>Docker 없이 MySQL 직접 설치</h1>
 <p class="lead">Docker Desktop 을 못 쓰는 PC 일 때만 이 방법을 써요. 할 수 있다면 <a href="03-docker.html">Docker Desktop</a> 쪽이 훨씬 간단해요.</p>
 <ul class="meta"><li>20~40분</li></ul>
+
+<div class="box ok"><strong>Redis 는 설치하지 않아도 돼요</strong><p>로그인 상태를 기억하는 Redis 는 내 PC 에서는 Claude 가 메모리로 대신해요. 실제 서버에는 배포할 때 자동으로 깔려요.</p></div>
 
 <h2>Windows</h2>
 <ol class="steps">
@@ -23,23 +25,18 @@
     <figure class="shot" data-shot="04-2.png" data-what="root 비밀번호를 정하는 화면"></figure>
   </li>
   <li>
-    <strong>Redis 설치</strong>
-    Windows 용 공식 Redis 는 없어요. Redis 와 똑같이 동작하는 <a href="https://www.memurai.com/get-memurai">Memurai Developer</a>(무료)를 설치해요. 설치하면 자동으로 켜져요.
-    <figure class="shot" data-shot="04-3.png" data-what="Memurai 다운로드 페이지 — Developer 버전 받기"></figure>
-  </li>
-  <li>
-    <strong>Claude 에게 알려 주기</strong>
-    "MySQL root 비밀번호는 ○○ 이야" 라고 말해 주면 Claude 가 설정 파일(<code>backend/.env</code>)에 넣고 이어서 해요.
+    <strong>Claude 에게 "다 했어요"</strong>
+    Claude 가 설정 파일(<code>backend/.env</code>)을 메모장으로 열어 줘요. 알려 주는 줄에 비밀번호를 직접 적고 저장해요.
+    <b>비밀번호를 대화창에 쓰지 마세요</b> — 대화 기록에 남아요.
   </li>
 </ol>
 
 <h2>macOS</h2>
 <p><a href="https://brew.sh/">Homebrew</a> 가 있으면 터미널에서:</p>
-<pre><code>brew install mysql redis
-brew services start mysql
-brew services start redis</code></pre>
+<pre><code>brew install mysql
+brew services start mysql</code></pre>
 
-<div class="box ok"><strong>됐는지 확인</strong><p>Claude 에게 "했어" 라고 말하면 접속을 확인해요 (<code>prepare_local check</code>).</p></div>
+<div class="box ok"><strong>됐는지 확인</strong><p>Claude 에게 "다 했어요" 를 누르면 접속을 확인해요 (<code>prepare_local check</code>).</p></div>
 </main>
 <script src="guide.js"></script>
 </body>

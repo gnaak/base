@@ -13,6 +13,7 @@
 
     secrets                  빈 jwt_secret · hash_key 채우기
     set local_mysql_db db_x  비밀이 아닌 값 바꾸기 (비밀값은 비우기만)
+    set local_redis_host memory   Redis 설치 없이 — 로컬 전용 메모리 Redis
     admin                    로컬 관리자 — 비밀번호는 backend/admin-password.local 에만
     line local_mysql_password  그 키의 줄 번호
     check                    MySQL · Redis 에 붙는지
@@ -35,6 +36,7 @@ ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
 ADMIN_FILE = ENV_FILE.parent / "admin-password.local"  # .gitignore 의 *.local
 SECRET_KEYS = ("jwt_secret", "hash_key")
 SECRET_HINT = re.compile(r"password|secret|token|api_key|hash_key|client_secret", re.I)
+REDIS_MEMORY = "memory"  # settings.REDIS_MEMORY — 여기서 settings 를 불러오면 막 받은 .env 에서 검증에 걸린다
 # 0 은 기본값이라 다른 프로젝트가 쓰고 있을 가능성이 가장 크고, 15 는 E2E 가 쓴다
 CANDIDATE_REDIS_DBS = range(1, 15)
 DB_NAME = re.compile(r"^[A-Za-z0-9_]{1,64}$")
@@ -124,6 +126,10 @@ def env_line(key: str, env_file: Path = ENV_FILE) -> int:
     return 1
 
 
+def _in_memory(raw) -> bool:
+    return raw.local_redis_host.strip().lower() == REDIS_MEMORY
+
+
 def _mysql() -> pymysql.connections.Connection:
     raw = _raw()
     return pymysql.connect(
@@ -159,6 +165,9 @@ def check() -> int:
         ok = False
         # "Access denied … (using password: YES/NO)" — 비밀번호가 틀렸는지 / 비어 있는지까지만 알 수 있다
         print(f"MySQL 실패 {e.args[-1]} — backend/.env 의 local_mysql_user · local_mysql_password 를 맞출 것")
+    if _in_memory(raw):
+        print("Redis 메모리 — 설치 없이 (로컬 전용 · 재시작하면 비워진다)")
+        return 0 if ok else 1
     try:
         info = _redis().info("server")
         print(f"Redis OK {info.get('redis_version')} ({raw.local_redis_host}:{raw.local_redis_port})")
@@ -188,6 +197,9 @@ def create_databases(names: list[str]) -> int:
 
 def free_redis_db() -> int:
     """키가 하나도 없는 번호 중 가장 작은 것을 출력한다. 없으면 1."""
+    if _in_memory(_raw()):
+        print(0)  # 메모리 Redis 는 이 프로젝트 혼자 쓴다
+        return 0
     for n in CANDIDATE_REDIS_DBS:
         with _redis(n) as client:
             if client.dbsize() == 0:
