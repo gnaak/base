@@ -18,6 +18,9 @@ $ARGUMENTS
   3. "했어" 가 오면 **다시 확인**하고 다음으로 간다 (확인이 안 되면 무엇이 안 됐는지 말한다)
 - **할 수 있는 건 묻지 않고 한다.** 있으면 건너뛰고, 없으면 설치한다 — 사람에게 넘기는 건 Claude 가 할 수 없는 것뿐이다
   (Windows 설치 확인 창의 "예" · 프로그램 첫 실행의 약관 동의 · 재부팅 · 사람만 아는 비밀번호). 설치 확인 창은 보안 장치다 — 우회하지 않는다
+- **명령은 저장소 루트에서, `cd` 를 섞지 않는다.** `cd … && …` 처럼 폴더를 옮기는 묶음 명령은 허용 설정이 있어도 확인 창이 뜬다 —
+  처음 쓰는 사람이 "허용" 을 계속 누르게 된다. 세션은 이미 저장소 루트에 있다. 하위 폴더는 `uv --directory backend …` ·
+  `npm --prefix frontend …` 로, 명령 하나에 한 가지 일만 (아래 명령들이 모두 그 형태다)
 - 끊겨도 괜찮다 — 다시 `/start` 하면 아래 0 에서 어디까지 했는지 보고 이어서 한다 (재부팅이 필요할 때가 그렇다)
 
 ## 0. 어디까지 했나
@@ -131,13 +134,13 @@ Windows 확인 창이 뜨면 '예' 만 눌러 주세요. (준비 20~40분, 기�
 처음 쓰는 사람에게는 이게 맞다). 운영 값(`prod_*` · 도메인 · `infra/`)은 건드리지 않는다.
 
 1. **설정 파일** — `backend/.env` · `frontend/.env` 가 없으면 `.env.example` 에서 복사. `backend/.env` 에서:
-   - `jwt_secret` · `hash_key` 가 비었으면 새로 만든다 — `cd backend && uv run python -c "import secrets; print(secrets.token_urlsafe(48))"`
+   - `jwt_secret` · `hash_key` 가 비었으면 새로 만든다 — `uv run --no-project python -c "import secrets; print(secrets.token_urlsafe(48))"`
    - `local_mysql_db` · `test_mysql_db` 가 템플릿 기본값(`db_example` · `db_base_test`)이면 `db_{slug}` · `db_{slug}_test`
    - 이미 사람이 바꾼 값은 덮어쓰지 않는다
 2. **템플릿 이름 바꾸기** — `frontend/e2e/env.ts` 의 `db_base_e2e` → `db_{slug}_e2e`, `docker/mysql/init.sql` 의 DB 이름 3개,
    `docker-compose.yml` 의 `container_name`(`base-mysql` · `base-redis` → `{slug}-mysql` · `{slug}-redis`)과 `MYSQL_DATABASE`
-3. **파이썬 · 패키지** — `cd backend && uv sync` (파이썬이 없으면 uv 가 받아 온다. 처음엔 몇 분)
-4. **DB · Redis** — `cd backend && uv run python -m scripts.prepare_local check`
+3. **파이썬 · 패키지** — `uv --directory backend sync` (파이썬이 없으면 uv 가 받아 온다. 처음엔 몇 분)
+4. **DB · Redis** — `uv --directory backend run python -m scripts.prepare_local check`
    - **둘 다 OK** (이미 이 PC 에 떠 있다 — 다른 프로젝트와 같이 써도 된다):
      `… prepare_local databases db_{slug} db_{slug}_test db_{slug}_e2e`, `… prepare_local redis-db` 가 준 번호를 `.env` 의 `redis_db` 에
    - **Redis 인증 실패** — "no password is set" 이면 `.env` 의 `local_redis_password` 를 비운다. 비밀번호가 틀렸다면 사용자에게 묻는다
@@ -152,19 +155,21 @@ Windows 확인 창이 뜨면 '예' 만 눌러 주세요. (준비 20~40분, 기�
         가상화가 꺼져 있다는 메시지면 같은 문서의 "막히면" (BIOS) — 그래도 안 되면 `04-mysql-redis.html`(직접 설치)
      4. 켜지면 저장소 루트에서 `docker compose up -d` → `docker compose ps` 가 둘 다 healthy 가 될 때까지 기다림 → 다시 `check` →
         `databases` · `redis-db` (위와 같이)
-5. **테이블** — `cd backend && uv run alembic upgrade head`
+5. **테이블** — `uv --directory backend run alembic upgrade head`
 6. **로컬 관리자** — 비밀번호를 만들어(위 secrets 명령, 16자) 환경변수로 넘긴다:
-   `ADMIN_PASSWORD=<만든 값> uv run python -m scripts.create_admin admin@example.com --password-env ADMIN_PASSWORD`.
+   `ADMIN_PASSWORD=<만든 값> uv --directory backend run python -m scripts.create_admin admin@example.com --password-env ADMIN_PASSWORD`.
    이메일 · 비밀번호는 마지막 보고에 **한 번** 보여 준다 (파일에 적지 않는다)
-7. **화면 쪽** — `cd frontend && npm install`, 이어서 `npx playwright install chromium`(자동 확인용 브라우저, 처음 한 번 · 수백 MB)
+7. **화면 쪽** — `npm --prefix frontend install`, 이어서 `npm --prefix frontend exec -- playwright install chromium`(자동 확인용 브라우저, 처음 한 번 · 수백 MB)
 8. **이름 입히기** — `frontend/index.html` 의 `BASE`(제목 · og:title · og:site_name · JSON-LD name) → 표시명,
    "프로젝트 한 줄 소개" 두 곳 → 한 줄 소개. `example.com`(도메인)은 그대로 — 운영 도메인을 정할 때 `/setup` ②
 9. **돌아가는지 확인** — 아래가 전부 통과하면 "로그인 · 세션 · 관리자 화면까지 브라우저로 확인됐다" 는 뜻이다
    ```bash
-   cd backend  && uv run pytest -q
-   cd frontend && npm run check:types && npm test && npm run e2e
+   uv --directory backend run pytest -q
+   npm --prefix frontend run check:types
+   npm --prefix frontend test
+   npm --prefix frontend run e2e
    ```
-   E2E 는 3100 · 8100 포트를 쓴다 — 다른 프로그램이 쓰고 있으면 빈 포트를 골라 `E2E_WEB_PORT=… E2E_API_PORT=… npm run e2e`.
+   E2E 는 3100 · 8100 포트를 쓴다 — 다른 프로그램이 쓰고 있으면 빈 포트를 골라 `E2E_WEB_PORT=… E2E_API_PORT=… npm --prefix frontend run e2e`.
    실패하면 설정 문제(DB 이름 · Redis 번호 등)를 찾아 고치고 다시. 두 번 실패하면 멈추고
    무엇이 실패했는지 쉬운 말로 보고한다 (코드를 고치지 않는다 — 템플릿 그대로는 통과해야 정상이다)
 
